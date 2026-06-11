@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 
 <img src="static/image/logo_compressed.png" alt="BettaFish Logo" width="100%">
@@ -794,3 +795,7 @@ class DeepSearchAgent:
 </a>
 
 ![Alt](https://repobeats.axiom.co/api/embed/e04e3eea4674edc39c148a7845c8d09c1b7b1922.svg "Repobeats analytics image")
+=======
+# SentinelGuard
+多模块Agent协同自动化安全研判平台
+>>>>>>> 5ab5c137e37ae6e308d32bcabeefdb31e0235343
