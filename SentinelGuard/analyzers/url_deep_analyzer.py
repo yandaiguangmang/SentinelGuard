@@ -11,29 +11,158 @@ from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
-DEEP_ANALYSIS_SYSTEM_PROMPT = """你是一名网络安全 URL 深度研判模型。\n你的任务不是替代静态规则，而是在静态检测结果基础上进行更深入的协同研判。\n你必须同时扮演以下五个角色，并以 JSON 返回：主持人、静态分析员、行为分析员、情报分析员、处置建议员。\n\n要求：\n1. 只能基于输入中的 URL、静态规则命中、跳转链、页面线索进行分析。\n2. 不要编造外部威胁情报；如果缺乏外部情报，要明确说明。\n3. 可以上调风险，但不要无依据地下调为完全安全。\n4. 输出必须是严格 JSON。\n5. JSON 结构必须包含：\n{\n  \"risk_level\": \"low|medium|high|critical\",\n  \"score\": 0-100整数,\n  \"summary\": \"总体结论\",\n  \"additional_findings\": [\n    {\n      \"rule_id\": \"DEEP_*\",\n      \"title\": \"标题\",\n      \"severity\": \"low|medium|high|critical\",\n      \"description\": \"说明\",\n      \"evidence\": \"证据\",\n      \"recommendation\": \"建议\"\n    }\n  ],\n  \"expert_opinions\": {\n    \"主持人\": \"...\",\n    \"静态分析员\": \"...\",\n    \"行为分析员\": \"...\",\n    \"情报分析员\": \"...\",\n    \"处置建议员\": \"...\"\n  }\n}\n"""
+
+ROLE_CONFIG_KEYS = {
+    "主持人": ("DETECTION_HOST_API_KEY", "DETECTION_HOST_BASE_URL", "DETECTION_HOST_MODEL_NAME"),
+    "静态分析员": ("DETECTION_STATIC_API_KEY", "DETECTION_STATIC_BASE_URL", "DETECTION_STATIC_MODEL_NAME"),
+    "行为分析员": ("DETECTION_BEHAVIOR_API_KEY", "DETECTION_BEHAVIOR_BASE_URL", "DETECTION_BEHAVIOR_MODEL_NAME"),
+    "情报分析员": ("DETECTION_INTEL_API_KEY", "DETECTION_INTEL_BASE_URL", "DETECTION_INTEL_MODEL_NAME"),
+    "处置建议员": ("DETECTION_ADVICE_API_KEY", "DETECTION_ADVICE_BASE_URL", "DETECTION_ADVICE_MODEL_NAME"),
+}
+
+ROLE_DEFAULT_MODELS = {
+    "主持人": "qwen3.5-plus",
+    "静态分析员": "deepseek-reasoner",
+    "行为分析员": "gemini-2.5-pro",
+    "情报分析员": "gpt-5",
+    "处置建议员": "gemini-2.5-flash",
+}
+
+ROLE_SYSTEM_PROMPTS = {
+    "主持人": """你是网络恶意网页深度研判的主持人。
+你的职责是综合四位专家意见，给出最终裁决式总结，并把各方结论整理成可直接写入报告的结构化 JSON。
+
+要求：
+1. 你必须基于静态检测结果与各专家意见进行总结，不要脱离证据链。
+2. 若外部情报不足，必须明确说明当前仅基于离线证据。
+3. 你的 summary 要体现最终结论，不能只是简单复述。
+4. expert_opinions 必须保留五个角色的原始意见或整理后的摘要。
+5. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_models、expert_opinions、additional_findings。
+""",
+    "静态分析员": """你是网络恶意网页深度研判中的静态分析员。
+关注域名结构、URL 参数、可疑关键词、编码混淆、跳转参数、主机特征等离线证据。
+
+请输出严格 JSON：
+{
+  "opinion": "静态证据分析结论",
+  "risk_hint": "low|medium|high|critical",
+  "additional_findings": [
+    {"rule_id":"DEEP_STATIC_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+  ]
+}
+""",
+    "行为分析员": """你是网络恶意网页深度研判中的行为分析员。
+关注跳转链、自动跳转、表单提交、脚本加载、下载落点与行为诱导。
+
+请输出严格 JSON：
+{
+  "opinion": "行为链分析结论",
+  "risk_hint": "low|medium|high|critical",
+  "additional_findings": [
+    {"rule_id":"DEEP_BEHAVIOR_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+  ]
+}
+""",
+    "情报分析员": """你是网络恶意网页深度研判中的情报分析员。
+你的职责是说明该目标若需要外网/VPN 节点才能访问，应如何理解这种环境差异；同时说明当前离线证据的边界。
+
+请输出严格 JSON：
+{
+  "opinion": "情报分析与局限说明",
+  "risk_hint": "low|medium|high|critical",
+  "additional_findings": [
+    {"rule_id":"DEEP_INTEL_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+  ]
+}
+""",
+    "处置建议员": """你是网络恶意网页深度研判中的处置建议员。
+你的任务是把前面所有证据落成可执行建议，包括是否拦截、是否隔离、是否沙箱复核、是否留痕。
+
+请输出严格 JSON：
+{
+  "opinion": "处置建议",
+  "risk_hint": "low|medium|high|critical",
+  "additional_findings": [
+    {"rule_id":"DEEP_ADVICE_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+  ]
+}
+""",
+}
 
 
 class URLDeepAnalyzer:
     def __init__(self) -> None:
-        self.api_key = settings.FORUM_HOST_API_KEY
-        self.base_url = settings.FORUM_HOST_BASE_URL
-        self.model_name = settings.FORUM_HOST_MODEL_NAME
-
-        if not self.api_key:
-            raise ValueError("未配置 FORUM_HOST_API_KEY，无法执行模型深度检查。")
-        if not self.model_name:
-            raise ValueError("未配置 FORUM_HOST_MODEL_NAME，无法执行模型深度检查。")
-
-        client_kwargs: Dict[str, Any] = {"api_key": self.api_key}
-        if self.base_url:
-            client_kwargs["base_url"] = self.base_url
-        self.client = OpenAI(**client_kwargs)
+        self.role_models = self._resolve_role_models()
+        self.role_clients = {role: self._build_client(role) for role in DEEP_ROLE_ORDER}
 
     def analyze(self, static_report: DetectionReport) -> Dict[str, Any]:
         payload = self._build_payload(static_report)
-        result = self._call_model(payload)
-        return self._normalize_result(result, static_report)
+
+        role_outputs: Dict[str, Dict[str, Any]] = {}
+        for role in DEEP_ROLE_ORDER[1:]:
+            role_result = self._call_role_model(role, payload)
+            role_outputs[role] = self._normalize_role_output(role, role_result)
+
+        host_payload = self._build_host_payload(static_report, role_outputs)
+        host_result = self._call_role_model("主持人", host_payload)
+        return self._normalize_result(host_result, static_report, role_outputs)
+
+    def _resolve_role_models(self) -> Dict[str, str]:
+        role_models: Dict[str, str] = {}
+        for role, keys in ROLE_CONFIG_KEYS.items():
+            api_key = _first_non_empty(getattr(settings, keys[0], ""))
+            base_url = _first_non_empty(getattr(settings, keys[1], ""))
+            model_name = _first_non_empty(getattr(settings, keys[2], ""), ROLE_DEFAULT_MODELS.get(role, ""))
+
+            role_models[role] = model_name
+            if api_key:
+                setattr(self, f"_{role}_api_key", api_key)
+            if base_url:
+                setattr(self, f"_{role}_base_url", base_url)
+        return role_models
+
+    def _build_client(self, role: str) -> OpenAI:
+        api_key, base_url = self._resolve_role_credentials(role)
+        if not api_key:
+            fallback_key = settings.FORUM_HOST_API_KEY or settings.DETECTION_HOST_API_KEY
+            api_key = fallback_key
+        if not api_key:
+            raise ValueError(f"未配置 {role} API Key，无法执行模型深度检查。")
+
+        client_kwargs: Dict[str, Any] = {"api_key": api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+
+        return OpenAI(**client_kwargs)
+
+    def _get_client(self, role: str) -> OpenAI:
+        return self.role_clients[role]
+
+    def _resolve_role_credentials(self, role: str) -> tuple[str, str]:
+        if role == "主持人":
+            return (
+                _first_non_empty(settings.DETECTION_HOST_API_KEY, settings.FORUM_HOST_API_KEY),
+                _first_non_empty(settings.DETECTION_HOST_BASE_URL, settings.FORUM_HOST_BASE_URL),
+            )
+        if role == "静态分析员":
+            return (
+                _first_non_empty(settings.DETECTION_STATIC_API_KEY, settings.DETECTION_HOST_API_KEY, settings.FORUM_HOST_API_KEY),
+                _first_non_empty(settings.DETECTION_STATIC_BASE_URL, settings.DETECTION_HOST_BASE_URL, settings.FORUM_HOST_BASE_URL),
+            )
+        if role == "行为分析员":
+            return (
+                _first_non_empty(settings.DETECTION_BEHAVIOR_API_KEY, settings.DETECTION_HOST_API_KEY, settings.FORUM_HOST_API_KEY),
+                _first_non_empty(settings.DETECTION_BEHAVIOR_BASE_URL, settings.DETECTION_HOST_BASE_URL, settings.FORUM_HOST_BASE_URL),
+            )
+        if role == "情报分析员":
+            return (
+                _first_non_empty(settings.DETECTION_INTEL_API_KEY, settings.DETECTION_HOST_API_KEY, settings.FORUM_HOST_API_KEY),
+                _first_non_empty(settings.DETECTION_INTEL_BASE_URL, settings.DETECTION_HOST_BASE_URL, settings.FORUM_HOST_BASE_URL),
+            )
+        return (
+            _first_non_empty(settings.DETECTION_ADVICE_API_KEY, settings.DETECTION_HOST_API_KEY, settings.FORUM_HOST_API_KEY),
+            _first_non_empty(settings.DETECTION_ADVICE_BASE_URL, settings.DETECTION_HOST_BASE_URL, settings.FORUM_HOST_BASE_URL),
+        )
 
     def _build_payload(self, static_report: DetectionReport) -> Dict[str, Any]:
         return {
@@ -46,15 +175,17 @@ class URLDeepAnalyzer:
                 "page_summary": static_report.page_summary,
                 "expert_opinions": static_report.expert_opinions,
             },
+            "expert_models": self.role_models,
+            "proxy_enabled": False,
         }
 
     @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
-    def _call_model(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            response = self.client.chat.completions.create(
-                model=self.model_name,
+            response = self._get_client(role).chat.completions.create(
+                model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
                 messages=[
-                    {"role": "system", "content": DEEP_ANALYSIS_SYSTEM_PROMPT},
+                    {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
                     {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
                 ],
                 temperature=0.3,
@@ -68,7 +199,63 @@ class URLDeepAnalyzer:
         except Exception as exc:
             return {"success": False, "error": f"模型调用异常: {exc}"}
 
-    def _normalize_result(self, result: Dict[str, Any], static_report: DetectionReport) -> Dict[str, Any]:
+    def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        return {
+            "target": static_report.target_ir.to_dict(),
+            "static_report": {
+                "risk_level": static_report.risk_level,
+                "score": static_report.score,
+                "findings": [finding.to_dict() for finding in static_report.findings],
+                "redirect_chain": static_report.redirect_chain,
+                "page_summary": static_report.page_summary,
+                "expert_opinions": static_report.expert_opinions,
+            },
+            "expert_models": self.role_models,
+            "role_outputs": self._serialize_role_outputs(role_outputs),
+            "proxy_enabled": False,
+        }
+
+    def _serialize_role_outputs(self, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        serialized: Dict[str, Dict[str, Any]] = {}
+        for role, output in role_outputs.items():
+            serialized_output = dict(output)
+            findings = serialized_output.get("additional_findings") or []
+            serialized_output["additional_findings"] = [
+                finding.to_dict() if isinstance(finding, DetectionFinding) else finding
+                for finding in findings
+            ]
+            serialized[role] = serialized_output
+        return serialized
+
+    def _normalize_role_output(self, role: str, result: Dict[str, Any]) -> Dict[str, Any]:
+        if not result.get("success"):
+            raise ValueError(f"{role} 模型调用失败: {result.get('error') or '未知错误'}")
+
+        try:
+            data = json.loads(result["content"])
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{role} 模型返回的 JSON 无法解析: {exc}") from exc
+
+        opinion = str(data.get("opinion") or data.get("summary") or "").strip()
+        if not opinion:
+            raise ValueError(f"{role} 模型输出缺少 opinion")
+
+        findings = _coerce_additional_findings(
+            data.get("additional_findings"),
+            default_role=role,
+            default_rule_prefix=f"DEEP_{role.upper()}_SIGNAL",
+            default_description=f"{role} 发现额外风险线索。",
+            default_evidence="",
+            default_recommendation="结合静态报告进一步复核。",
+        )
+
+        return {
+            "opinion": opinion,
+            "risk_hint": _normalize_risk_level(data.get("risk_hint"), "medium", 50),
+            "additional_findings": findings,
+        }
+
+    def _normalize_result(self, result: Dict[str, Any], static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         if not result.get("success"):
             raise ValueError(result.get("error") or "模型深度检查失败")
 
@@ -77,24 +264,29 @@ class URLDeepAnalyzer:
         except json.JSONDecodeError as exc:
             raise ValueError(f"模型返回的 JSON 无法解析: {exc}") from exc
 
-        expert_opinions = data.get("expert_opinions") or {}
-        normalized_opinions = {
-            role: str(expert_opinions.get(role) or "") for role in DEEP_ROLE_ORDER
-        }
+        expert_opinions = _coerce_mapping(data.get("expert_opinions"))
+        normalized_opinions = {role: str(expert_opinions.get(role) or "") for role in DEEP_ROLE_ORDER}
+        for role, role_output in role_outputs.items():
+            if not normalized_opinions.get(role):
+                normalized_opinions[role] = str(role_output.get("opinion") or "")
         missing_roles = [role for role, opinion in normalized_opinions.items() if not opinion.strip()]
         if missing_roles:
             raise ValueError(f"模型输出缺少角色意见: {', '.join(missing_roles)}")
 
+        expert_models = _coerce_mapping(data.get("expert_models")) or self.role_models
+        normalized_models = {role: str(expert_models.get(role) or self.role_models.get(role) or "unknown") for role in DEEP_ROLE_ORDER}
+
         additional_findings: List[DetectionFinding] = []
-        for item in data.get("additional_findings") or []:
-            additional_findings.append(DetectionFinding(
-                rule_id=str(item.get("rule_id") or "DEEP_MODEL_SIGNAL"),
-                title=str(item.get("title") or "模型补充风险"),
-                severity=_normalize_severity(item.get("severity")),
-                description=str(item.get("description") or "模型认为该目标存在额外风险线索。"),
-                evidence=str(item.get("evidence") or static_report.target_ir.original_input),
-                recommendation=str(item.get("recommendation") or "结合静态报告进一步复核。"),
-            ))
+        for role_output in role_outputs.values():
+            additional_findings.extend(_coerce_findings(role_output.get("additional_findings")))
+        additional_findings.extend(_coerce_additional_findings(
+            data.get("additional_findings"),
+            default_role="主持人",
+            default_rule_prefix="DEEP_MODEL_SIGNAL",
+            default_description="模型认为该目标存在额外风险线索。",
+            default_evidence=static_report.target_ir.original_input,
+            default_recommendation="结合静态报告进一步复核。",
+        ))
 
         score = _normalize_score(data.get("score"), static_report.score)
         risk_level = _normalize_risk_level(data.get("risk_level"), static_report.risk_level, score)
@@ -105,6 +297,8 @@ class URLDeepAnalyzer:
             "risk_level": risk_level,
             "score": score,
             "expert_opinions": normalized_opinions,
+            "expert_models": normalized_models,
+            "deep_summary": summary,
             "additional_findings": additional_findings,
         }
 
@@ -137,6 +331,92 @@ def _normalize_risk_level(value: Any, fallback: str, score: int) -> str:
     return fallback if fallback in {"low", "medium", "high", "critical"} else "low"
 
 
+def _coerce_mapping(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _coerce_findings(value: Any) -> List[DetectionFinding]:
+    findings: List[DetectionFinding] = []
+    if not isinstance(value, list):
+        return findings
+    for item in value:
+        if isinstance(item, DetectionFinding):
+            findings.append(item)
+        elif isinstance(item, dict):
+            findings.append(DetectionFinding(
+                rule_id=str(item.get("rule_id") or "DEEP_MODEL_SIGNAL"),
+                title=str(item.get("title") or "模型补充风险"),
+                severity=_normalize_severity(item.get("severity")),
+                description=str(item.get("description") or "模型认为该目标存在额外风险线索。"),
+                evidence=str(item.get("evidence") or ""),
+                recommendation=str(item.get("recommendation") or "结合静态报告进一步复核。"),
+            ))
+        elif item is not None:
+            findings.append(DetectionFinding(
+                rule_id="DEEP_MODEL_SIGNAL",
+                title="模型返回非结构化补充风险",
+                severity="medium",
+                description="模型返回了非字典结构的补充风险项，已降级为文本证据。",
+                evidence=str(item),
+                recommendation="检查模型输出格式或提示词约束。",
+            ))
+    return findings
+
+
+def _coerce_additional_findings(
+    value: Any,
+    *,
+    default_role: str,
+    default_rule_prefix: str,
+    default_description: str,
+    default_evidence: str,
+    default_recommendation: str,
+) -> List[DetectionFinding]:
+    findings: List[DetectionFinding] = []
+    if not isinstance(value, list):
+        return findings
+
+    for item in value:
+        if isinstance(item, DetectionFinding):
+            findings.append(item)
+            continue
+        if isinstance(item, dict):
+            findings.append(DetectionFinding(
+                rule_id=str(item.get("rule_id") or default_rule_prefix),
+                title=str(item.get("title") or f"{default_role}补充风险"),
+                severity=_normalize_severity(item.get("severity")),
+                description=str(item.get("description") or default_description),
+                evidence=str(item.get("evidence") or default_evidence),
+                recommendation=str(item.get("recommendation") or default_recommendation),
+            ))
+            continue
+        if item is not None:
+            findings.append(DetectionFinding(
+                rule_id=default_rule_prefix,
+                title=f"{default_role}非结构化补充风险",
+                severity="medium",
+                description=default_description,
+                evidence=str(item),
+                recommendation=default_recommendation,
+            ))
+    return findings
+
+
 def deep_analyze_url(static_report: DetectionReport) -> Dict[str, Any]:
     analyzer = URLDeepAnalyzer()
     return analyzer.analyze(static_report)
+
+
+def _first_non_empty(*values: Any) -> str:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def _build_proxy_map() -> Dict[str, str]:
+    # 深度研判的大语言模型调用不使用 VPN/代理；代理仅用于网页访问抓取。
+    return {}

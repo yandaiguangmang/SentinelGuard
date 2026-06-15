@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import ipaddress
+from pathlib import Path
 from typing import Optional
 from urllib.parse import parse_qs, urlparse, urlunparse
 
-from SentinelGuard.state import TargetIR, URLIR
-
-
-_ARCHIVE_EXTENSIONS = (".apk", ".hap", ".exe", ".msi", ".dmg", ".pkg", ".appx")
-_MINI_PROGRAM_HINTS = ("小程序", "mini program", "miniprogram", ".wxapkg")
+from SentinelGuard.state import APKIR, TargetIR, URLIR
 
 
 def parse_target(raw_input: str, target_type: Optional[str] = None) -> TargetIR:
@@ -18,56 +15,28 @@ def parse_target(raw_input: str, target_type: Optional[str] = None) -> TargetIR:
     if not value:
         return TargetIR("unknown", value, "invalid", message="输入为空，无法检测。")
 
-    if requested_type in {"small_program", "mini_program", "miniprogram"}:
-        return TargetIR(
-            "small_program",
-            value,
-            "not_implemented",
-            message="小程序检测入口已预留，当前版本尚未实现解析与研判。",
-        )
-
-    if requested_type in {"app", "software"}:
-        return TargetIR(
-            "app",
-            value,
-            "not_implemented",
-            message="应用软件检测入口已预留，当前版本尚未实现解析与研判。",
-        )
+    if requested_type == "apk":
+        apk_ir = _parse_apk(value)
+        if apk_ir:
+            return TargetIR("apk", value, "ready", apk=apk_ir)
+        return TargetIR("apk", value, "invalid", message="请输入有效的 APK 文件路径。")
 
     if requested_type in {"url", "website", "auto"}:
-        if requested_type == "auto" and "://" not in value and _looks_like_app(value):
-            return TargetIR(
-                "app",
-                value,
-                "not_implemented",
-                message="应用软件检测入口已预留，当前版本尚未实现解析与研判。",
-            )
         parsed = _parse_url(value)
         if parsed:
             return TargetIR("url", value, "ready", url=parsed)
 
-    if _looks_like_mini_program(value):
-        return TargetIR(
-            "small_program",
-            value,
-            "not_implemented",
-            message="小程序检测入口已预留，当前版本尚未实现解析与研判。",
-        )
+    apk_ir = _parse_apk(value)
+    if apk_ir:
+        return TargetIR("apk", value, "ready", apk=apk_ir)
 
-    if _looks_like_app(value):
-        return TargetIR(
-            "app",
-            value,
-            "not_implemented",
-            message="应用软件检测入口已预留，当前版本尚未实现解析与研判。",
-        )
+    if requested_type in {"app", "small_program"}:
+        return TargetIR(requested_type, value, "not_implemented", message="当前版本仅支持网址检测，APK 检测将在静态分析器中补全。")
 
-    return TargetIR(
-        "unknown",
-        value,
-        "invalid",
-        message="暂时只支持网址检测；小程序和应用软件检测能力已预留。",
-    )
+    if requested_type in {"url", "website", "auto"}:
+        return TargetIR("unknown", value, "invalid", message="请输入完整网址，例如 https://example.com/path。")
+
+    return TargetIR("unknown", value, "invalid", message="请输入完整网址或 APK 文件路径。")
 
 
 def _parse_url(value: str) -> Optional[URLIR]:
@@ -100,14 +69,16 @@ def _parse_url(value: str) -> Optional[URLIR]:
     )
 
 
-def _looks_like_mini_program(value: str) -> bool:
-    lowered = value.lower()
-    return any(hint in lowered for hint in _MINI_PROGRAM_HINTS)
+def _parse_apk(value: str) -> Optional[APKIR]:
+    path = Path(value)
+    if path.suffix.lower() != ".apk":
+        return None
 
-
-def _looks_like_app(value: str) -> bool:
-    lowered = value.lower()
-    return lowered.endswith(_ARCHIVE_EXTENSIONS)
+    normalized_path = str(path.as_posix() if path.exists() else path)
+    return APKIR(
+        normalized_path=normalized_path,
+        file_name=path.name,
+    )
 
 
 def _is_ip_address(hostname: str) -> bool:

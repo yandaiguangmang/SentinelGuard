@@ -1,6 +1,7 @@
 from SentinelGuard.analyzers import url_analyzer
 from SentinelGuard.judgement import run_detection
 from SentinelGuard.parsers.input_parser import parse_target
+from SentinelGuard.state import DetectionFinding
 
 
 class FakeRaw:
@@ -21,13 +22,23 @@ class FakeResponse:
         self.raw = FakeRaw(b"<html><head><title>Login</title></head><body><form action='/login'><input type='password'><input type='hidden'><a href='tool.apk'>download</a></form></body></html>")
 
 
+class FakeSession:
+    def __init__(self):
+        self.headers = {}
+        self.trust_env = False
+        self.proxies = {}
+
+    def get(self, *args, **kwargs):
+        return FakeResponse()
+
+
 class FakeRequests:
     class RequestException(Exception):
         pass
 
     @staticmethod
-    def get(*_args, **_kwargs):
-        return FakeResponse()
+    def Session():
+        return FakeSession()
 
 
 def test_url_structure_rules_without_fetch():
@@ -61,3 +72,35 @@ def test_run_detection_scores_high_for_phishing_signals(monkeypatch):
     assert report.risk_level in {"high", "critical"}
     assert report.score > 0
     assert report.html_report_path
+
+
+def test_score_reflects_severity_strength(monkeypatch):
+    from SentinelGuard import judgement
+
+    monkeypatch.setattr(judgement, "analyze_url", lambda *_args, **_kwargs: {
+        "findings": [
+            DetectionFinding(
+                rule_id="TEST_LOW",
+                title="低危证据",
+                severity="low",
+                description="",
+                evidence="low",
+                recommendation="",
+            ),
+            DetectionFinding(
+                rule_id="TEST_HIGH",
+                title="高危证据",
+                severity="high",
+                description="",
+                evidence="high",
+                recommendation="",
+            ),
+        ],
+        "redirect_chain": [],
+        "page_summary": {},
+    })
+
+    report = run_detection("http://example.com", fetch_page=False)
+
+    assert report.risk_level == "high"
+    assert report.score >= 50

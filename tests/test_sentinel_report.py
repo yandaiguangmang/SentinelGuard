@@ -22,6 +22,19 @@ def test_report_files_are_generated(tmp_path):
     assert "静态检测报告" in html_text
 
 
+def test_apk_report_mentions_apk_summary(tmp_path):
+    report = run_detection("sample.apk", target_type="apk")
+    save_detection_report(report, output_dir=tmp_path)
+
+    html_text = Path(report.html_report_path).read_text(encoding="utf-8")
+    md_text = Path(report.markdown_report_path).read_text(encoding="utf-8")
+
+    assert report.target_ir.target_type == "apk"
+    assert "sentinel_report_apk_static_" in report.html_report_path
+    assert "sentinel_report_apk_static_" in report.markdown_report_path
+    assert report.target_ir.apk.file_name == "sample.apk"
+
+
 def test_deep_report_mentions_parent_report(monkeypatch, tmp_path):
     from SentinelGuard import judgement
 

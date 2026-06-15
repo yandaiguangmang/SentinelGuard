@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import html.parser
 import re
 from typing import Any, Dict, List, Optional
@@ -10,6 +11,7 @@ try:
 except ImportError:  # pragma: no cover - dependency may be absent in minimal environments
     requests = None
 
+from config import settings
 from SentinelGuard.state import DetectionFinding, TargetIR
 
 
@@ -32,6 +34,30 @@ SENSITIVE_KEYWORDS = (
 REDIRECT_PARAM_NAMES = {"redirect", "redirect_uri", "url", "next", "target", "to", "return", "returnurl"}
 DOWNLOAD_EXTENSIONS = (".apk", ".exe", ".msi", ".scr", ".bat", ".cmd", ".js", ".vbs", ".jar", ".zip", ".rar")
 MAX_BODY_BYTES = 200_000
+
+
+def _build_request_proxies() -> Dict[str, str]:
+    proxies: Dict[str, str] = {}
+    http_proxy = settings.DETECTION_HTTP_PROXY or settings.DETECTION_ALL_PROXY
+    https_proxy = settings.DETECTION_HTTPS_PROXY or settings.DETECTION_ALL_PROXY
+
+    if http_proxy:
+        proxies["http"] = http_proxy
+    if https_proxy:
+        proxies["https"] = https_proxy
+
+    # 让 OpenAI/httpx 客户端也能自动继承代理环境变量，便于外网 / VPN 节点访问
+    if http_proxy and not os.environ.get("HTTP_PROXY"):
+        os.environ["HTTP_PROXY"] = http_proxy
+        os.environ.setdefault("http_proxy", http_proxy)
+    if https_proxy and not os.environ.get("HTTPS_PROXY"):
+        os.environ["HTTPS_PROXY"] = https_proxy
+        os.environ.setdefault("https_proxy", https_proxy)
+    if settings.DETECTION_ALL_PROXY and not os.environ.get("ALL_PROXY"):
+        os.environ["ALL_PROXY"] = settings.DETECTION_ALL_PROXY
+        os.environ.setdefault("all_proxy", settings.DETECTION_ALL_PROXY)
+
+    return proxies
 
 
 class _PageSignalParser(html.parser.HTMLParser):
@@ -230,6 +256,8 @@ def _fetch_page(url: str) -> Dict[str, Any]:
     findings: List[DetectionFinding] = []
     page_summary: Dict[str, Any] = {}
     redirect_chain = [url]
+    proxies = _build_request_proxies()
+
 
     if requests is None:
         findings.append(_finding(
@@ -242,12 +270,32 @@ def _fetch_page(url: str) -> Dict[str, Any]:
         ))
         return {"findings": findings, "redirect_chain": redirect_chain, "page_summary": page_summary}
 
+    # ---------- 伪装成真实浏览器 ----------
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": settings.DETECTION_USER_AGENT or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-User": "?1",
+        "Sec-Fetch-Dest": "document",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+    })
+    session.trust_env = True  # 继承系统代理
+    # 设置代理
+    if proxies:
+        session.proxies.update(proxies)
+    # -----------------------------------
+
     try:
-        response = requests.get(
+        response = session.get(
             url,
             allow_redirects=True,
-            timeout=6,
-            headers={"User-Agent": "SentinelGuard/1.0"},
+            timeout=settings.DETECTION_TIMEOUT_SECONDS,
             stream=True,
         )
         redirect_chain = [item.url for item in response.history] + [response.url]
@@ -296,7 +344,6 @@ def _fetch_page(url: str) -> Dict[str, Any]:
         ))
 
     return {"findings": findings, "redirect_chain": redirect_chain, "page_summary": page_summary}
-
 
 def _analyze_redirect_chain(redirect_chain: List[str]) -> List[DetectionFinding]:
     findings: List[DetectionFinding] = []

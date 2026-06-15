@@ -23,17 +23,43 @@ class URLIR:
 
 
 @dataclass
+class APKIR:
+    normalized_path: str
+    file_name: str
+    package_name: str = ""
+    version_name: str = ""
+    version_code: str = ""
+    sha256: str = ""
+    size_bytes: int = 0
+    permissions: List[str] = field(default_factory=list)
+    activities: List[str] = field(default_factory=list)
+    services: List[str] = field(default_factory=list)
+    receivers: List[str] = field(default_factory=list)
+    providers: List[str] = field(default_factory=list)
+    certificate_subject: str = ""
+    certificate_issuer: str = ""
+    certificate_sha256: str = ""
+    extracted_strings: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class TargetIR:
     target_type: str
     original_input: str
     status: str
     url: Optional[URLIR] = None
+    apk: Optional[APKIR] = None
     message: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
         if self.url:
             data["url"] = self.url.to_dict()
+        if self.apk:
+            data["apk"] = self.apk.to_dict()
         return data
 
 
@@ -57,8 +83,11 @@ class DetectionReport:
     score: int
     findings: List[DetectionFinding]
     expert_opinions: Dict[str, str]
+    expert_models: Dict[str, str] = field(default_factory=dict)
+    deep_summary: str = ""
     redirect_chain: List[str] = field(default_factory=list)
     page_summary: Dict[str, Any] = field(default_factory=dict)
+    apk_summary: Dict[str, Any] = field(default_factory=dict)
     placeholders: Dict[str, str] = field(default_factory=dict)
     analysis_mode: str = "static"
     deep_analysis_used: bool = False
@@ -74,8 +103,11 @@ class DetectionReport:
             "score": self.score,
             "findings": [finding.to_dict() for finding in self.findings],
             "expert_opinions": self.expert_opinions,
+            "expert_models": self.expert_models,
+            "deep_summary": self.deep_summary,
             "redirect_chain": self.redirect_chain,
             "page_summary": self.page_summary,
+            "apk_summary": self.apk_summary,
             "placeholders": self.placeholders,
             "analysis_mode": self.analysis_mode,
             "deep_analysis_used": self.deep_analysis_used,

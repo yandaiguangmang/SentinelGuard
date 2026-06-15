@@ -18,18 +18,26 @@ def test_parse_http_url_keeps_scheme():
     assert target.url.is_ip_address is True
 
 
-def test_small_program_placeholder():
-    target = parse_target("demo.wxapkg")
-
-    assert target.target_type == "small_program"
-    assert target.status == "not_implemented"
-
-
-def test_app_placeholder():
+def test_parse_apk_path():
     target = parse_target("sample.apk")
 
-    assert target.target_type == "app"
-    assert target.status == "not_implemented"
+    assert target.target_type == "apk"
+    assert target.status == "ready"
+    assert target.apk.file_name == "sample.apk"
+
+
+def test_parse_explicit_apk_type():
+    target = parse_target("C:/samples/demo.apk", target_type="apk")
+
+    assert target.target_type == "apk"
+    assert target.status == "ready"
+
+
+def test_url_with_apk_suffix_still_parses_as_url():
+    target = parse_target("https://example.com/files/tool.apk")
+
+    assert target.target_type == "url"
+    assert target.url.path.endswith("tool.apk")
 
 
 def test_invalid_input():
