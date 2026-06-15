@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
 
+from SentinelGuard.analyzers.url_deep_analyzer import URLDeepAnalyzer
 from SentinelGuard.judgement import run_deep_url_detection_from_static, run_static_detection
 from SentinelGuard.state import DetectionFinding
 
@@ -63,3 +65,82 @@ def test_deep_report_files_include_mode(monkeypatch, tmp_path):
 
     assert Path(static_report.html_report_path).name.startswith("sentinel_report_url_static_")
     assert Path(deep_report.html_report_path).name.startswith("sentinel_report_url_deep_")
+
+
+def test_host_payload_serializes_role_outputs(monkeypatch):
+    monkeypatch.setattr(URLDeepAnalyzer, "_build_client", lambda self, role: object())
+
+    analyzer = URLDeepAnalyzer()
+    payload = analyzer._build_host_payload(
+        static_report=run_static_detection("http://example.com/login?redirect=http://evil.test", fetch_page=False),
+        role_outputs={
+            "静态分析员": {
+                "opinion": "静态证据命中",
+                "risk_hint": "high",
+                "additional_findings": [
+                    DetectionFinding(
+                        rule_id="DEEP_STATIC_JSON",
+                        title="序列化回归测试",
+                        severity="high",
+                        description="确保深度分析结果可被 JSON 编码。",
+                        evidence="role_outputs contains DetectionFinding",
+                        recommendation="应先转换为 dict 再进入 host payload。",
+                    )
+                ],
+            }
+        },
+    )
+
+    assert payload["role_outputs"]["静态分析员"]["additional_findings"][0]["rule_id"] == "DEEP_STATIC_JSON"
+    json.dumps(payload, ensure_ascii=False)
+
+
+def test_deep_analyzer_tolerates_non_dict_findings(monkeypatch):
+    from SentinelGuard.analyzers import url_deep_analyzer
+
+    analyzer = URLDeepAnalyzer()
+    analyzer.role_clients = {role: object() for role in url_deep_analyzer.DEEP_ROLE_ORDER}
+
+    role_result = {
+        "success": True,
+        "content": json.dumps({
+            "opinion": "静态分析员输出正常。",
+            "risk_hint": "high",
+            "additional_findings": [
+                "unexpected text finding",
+                {
+                    "rule_id": "DEEP_TEXT_DICT",
+                    "title": "字典结构项",
+                    "severity": "critical",
+                    "description": "",
+                    "evidence": "evidence",
+                    "recommendation": "review",
+                },
+            ],
+        }, ensure_ascii=False),
+    }
+
+    normalized_role = analyzer._normalize_role_output("静态分析员", role_result)
+    assert normalized_role["opinion"] == "静态分析员输出正常。"
+    assert len(normalized_role["additional_findings"]) == 2
+    assert normalized_role["additional_findings"][0].severity == "medium"
+
+    host_result = {
+        "success": True,
+        "content": json.dumps({
+            "risk_level": "high",
+            "score": 70,
+            "summary": "主持人总结。",
+            "expert_opinions": "not a dict",
+            "expert_models": ["not", "a", "dict"],
+            "additional_findings": ["host text finding"],
+        }, ensure_ascii=False),
+    }
+
+    report = run_static_detection("https://baksmany.org/", fetch_page=False)
+    normalized = analyzer._normalize_result(host_result, report, {"静态分析员": normalized_role})
+
+    assert normalized["risk_level"] == "high"
+    assert normalized["score"] == 70
+    assert normalized["expert_opinions"]["静态分析员"] == "静态分析员输出正常。"
+    assert normalized["additional_findings"][0].evidence == "host text finding"

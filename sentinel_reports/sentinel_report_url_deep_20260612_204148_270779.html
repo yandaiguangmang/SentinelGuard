@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #991b1b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #991b1b; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 19</span>
+      <span class="chip danger">风险 CRITICAL</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">CRITICAL</div>
+      <div class="hint">11 条高危 / 8 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">95/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度研判报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://baksmany.org/</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度研判报告</small>
+        </div>
+        
+      <p><span class="badge">CRITICAL</span></p>
+      <p>风险分数：<strong>95/100</strong></p>
+      <p>原始输入：<code>https://baksmany.org/</code></p>
+      <p>报告类型：<strong>模型深度研判报告</strong></p>
+      <div class="pill-row"><span class='pill high'>HIGH · 页面包含密码输入框</span><span class='pill high'>HIGH · 可疑域名结构</span><span class='pill medium'>MEDIUM · 可疑脚本源</span><span class='pill high'>HIGH · JavaScript 劫持表单提交</span><span class='pill high'>CRITICAL · 多输入框凭证收割</span><span class='pill high'>HIGH · 高价值目标仿冒诱导</span><span class='pill medium'>MEDIUM · 可能存在地理/IP分流与外网依赖</span><span class='pill high'>HIGH · 落地页出现多个密码输入框，凭据收集面显著</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_url_static_20260612_203633_598932.html' target='_blank'>静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_url_static_20260612_203633_598932.md' target='_blank'>静态 Markdown 报告</a></p>
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>规范化 URL</th><td>https://baksmany.org/</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>baksmany.org</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://baksmany.org/</li></ol>
+        <h4>页面摘要</h4>
+        <table class='table'><tr><td>status_code</td><td>200</td></tr><tr><td>content_type</td><td>text/html; charset=utf-8</td></tr><tr><td>final_url</td><td>https://baksmany.org/</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>title</td><td>Digital Currency Exchange, Buying and Selling Bitcoin</td></tr><tr><td>password_forms</td><td>4</td></tr><tr><td>hidden_inputs</td><td>1</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>/__lemmed_bm.js</td></tr><tr><td>form_actions</td><td>无</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr></table>
+      </div>
+      <div class="pill-row"><span class='pill muted'>HIGH · 页面包含密码输入框</span><span class='pill muted'>HIGH · 可疑域名结构</span><span class='pill muted'>MEDIUM · 可疑脚本源</span><span class='pill muted'>HIGH · JavaScript 劫持表单提交</span><span class='pill muted'>CRITICAL · 多输入框凭证收割</span><span class='pill muted'>HIGH · 高价值目标仿冒诱导</span><span class='pill muted'>MEDIUM · 可能存在地理/IP分流与外网依赖</span><span class='pill muted'>HIGH · 落地页出现多个密码输入框，凭据收集面显著</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>CRITICAL（2）</h4><div class='grid-list'>
+    <div class="finding critical">
+      <h4>多输入框凭证收割 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_CREDENTIAL_HARVESTING</div>
+      <p>页面包含四个密码输入框，远超正常登录所需。这种设计旨在一次性骗取用户尽可能多的敏感信息，如登录密码、交易密码、二次验证码等，是恶意程度极高的凭证收割行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>password_forms: 4</code></span>
+        <b>建议</b><span>切勿在该页面输入任何个人信息或密码。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>立即拦截并禁止访问 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_INTERCEPT_URL</div>
+      <p>目标URL `https://baksmany.org/` 页面包含4个密码输入框，且网站自称是数字货币交易平台 (&#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;)。该组合特征与钓鱼诈骗活动高度吻合，存在用户凭证泄露和财产损失的极端风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态分析显示页面包含4个密码输入框 (rule_id: PAGE_PASSWORD_FORM)，页面标题为&#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;。</code></span>
+        <b>建议</b><span>立即将该URL及关联域名添加到网络安全设备的黑名单中，通过防火墙、WAF或代理服务器进行彻底拦截，确保任何用户都无法访问该页面。同步更新安全策略以识别并阻止类似钓鱼网站。</span>
+      </div>
+    </div>
+    </div><h4>HIGH（9）</h4><div class='grid-list'>
+    <div class="finding high">
+      <h4>页面包含密码输入框 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：PAGE_PASSWORD_FORM</div>
+      <p>页面要求输入密码或类似凭据，若域名并非官方域名则存在钓鱼风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>密码框数量: 4</code></span>
+        <b>建议</b><span>仅在确认域名归属和证书可信后输入账号密码。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>可疑域名结构 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_STATIC_SUSPICIOUS_DOMAIN</div>
+      <p>域名 &#x27;baksmany.org&#x27; 未匹配任何知名品牌（如Binance或Coinbase），但标题声称提供加密货币服务，表明可能用于域名仿冒（typosquatting）钓鱼攻击。</p>
+      <div class="kv">
+        <b>证据</b><span><code>主机名: baksmany.org, 页面标题: &#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;</code></span>
+        <b>建议</b><span>避免访问此类未经验证域名；仅使用官方渠道进行加密货币交易。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>JavaScript 劫持表单提交 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_JS_FORM_HIJACKING</div>
+      <p>页面的 HTML 表单没有设置&#x27;action&#x27;属性，这意味着传统的表单提交方式被禁用。结合页面加载了自定义脚本，可以推断表单数据是通过 JavaScript 捕获并发送的，这是凭证钓鱼网站窃取数据的常见手法。</p>
+      <div class="kv">
+        <b>证据</b><span><code>form_actions: [], script_srcs: [&quot;/__lemmed_bm.js&quot;]</code></span>
+        <b>建议</b><span>审查脚本 &#x27;__lemmed_bm.js&#x27; 的具体行为，确认数据是否被发送到恶意端点。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>高价值目标仿冒诱导 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_HIGH_VALUE_IMPERSONATION</div>
+      <p>页面标题为“数字货币交易所”，主题涉及比特币买卖。这类金融服务是网络钓鱼的高价值目标，攻击者通过仿冒此类网站诱导用户输入凭据，以实现直接的经济盗窃。</p>
+      <div class="kv">
+        <b>证据</b><span><code>title: &quot;Digital Currency Exchange, Buying and Selling Bitcoin&quot;</code></span>
+        <b>建议</b><span>对涉及金融交易的网站，务必通过官方渠道核实其域名和证书的真实性。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>落地页出现多个密码输入框，凭据收集面显著 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_INTEL_CREDENTIAL_HARVESTING_SURFACE</div>
+      <p>首页即出现多处密码输入，且文案为通用“数字货币买卖”主题，若域名并非官方品牌或缺乏可信证书背书，极易构成钓鱼或账号盗用风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>password_forms=4；页面标题“Digital Currency Exchange, Buying and Selling Bitcoin”；form_actions=[]（离线未见明确提交通道）。</code></span>
+        <b>建议</b><span>未确认域名归属前禁止输入账号密码；从官方渠道（公告/社媒/应用商店）反查域名；核验证书与CT日志、WHOIS/注册商/创建时间；启用密码管理器的域名绑定以降低误填风险。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>交易所主题通用化，存在品牌仿冒潜势 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_INTEL_BRAND_IMPERSONATION_RISK</div>
+      <p>通用“买卖比特币”文案与非知名域名组合是交易所仿冒/钓鱼的高发模式，常与镜像站群、批量证书与相似模板联合出现。</p>
+      <div class="kv">
+        <b>证据</b><span><code>标题通用；域名“baksmany.org”非已知主流交易所；离线样本未见明确品牌背书或可信第三方链接。</code></span>
+        <b>建议</b><span>提取logo/favicon哈希与文本特征做相似度检索；结合证书指纹、ASN与被动DNS识别同群站；对疑似仿冒集群执行统一阻断并向品牌方通报。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>严格禁止用户输入敏感信息及下载文件 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_PREVENT_USER_INTERACTION</div>
+      <p>用户一旦访问此类钓鱼页面，极易被诱导输入登录凭据、私钥或其他敏感信息。此外，页面可能诱导下载恶意软件。为保障用户资产安全，必须采取措施防止任何形式的交互。</p>
+      <div class="kv">
+        <b>证据</b><span><code>页面包含多个密码输入框，旨在收集用户凭据。</code></span>
+        <b>建议</b><span>向所有潜在受影响用户发出安全警报，强调该网站为恶意网站，严禁在其上输入任何账号、密码、交易凭证等敏感信息，并禁止下载或运行页面提供的任何文件。加强终端安全防护，防止用户绕过拦截访问此类站点。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>可疑域名结构 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_STATIC_SUSPICIOUS_DOMAIN</div>
+      <p>域名 &#x27;baksmany.org&#x27; 未匹配任何知名品牌（如 Binance 或 Coinbase），但标题声称提供加密货币服务，表明可能用于域名仿冒（typosquatting）钓鱼攻击。</p>
+      <div class="kv">
+        <b>证据</b><span><code>主机名：baksmany.org, 页面标题：&#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;</code></span>
+        <b>建议</b><span>避免访问此类未经验证域名；仅使用官方渠道进行加密货币交易。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>落地页出现多个密码输入框，凭据收集面显著 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_INTEL_CREDENTIAL_HARVESTING_SURFACE</div>
+      <p>首页即出现多处密码输入，且文案为通用“数字货币买卖”主题，若域名并非官方品牌或缺乏可信证书背书，极易构成钓鱼或账号盗用风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>password_forms=4；页面标题</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    </div><h4>MEDIUM（8）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>可疑脚本源 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_SUSPICIOUS_SCRIPT</div>
+      <p>脚本源 &#x27;/__lemmed_bm.js&#x27; 名称以 &#x27;__&#x27; 开头，常见于混淆或临时脚本，可能包含恶意代码用于窃取凭据或执行未授权操作。</p>
+      <div class="kv">
+        <b>证据</b><span><code>script_srcs: [&#x27;/__lemmed_bm.js&#x27;]</code></span>
+        <b>建议</b><span>静态分析无法检查脚本内容；建议动态扫描或沙箱执行以确认恶意性，用户应避免加载此类脚本。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>可能存在地理/IP分流与外网依赖 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ENV_GEO_VPN</div>
+      <p>加密货币相关站点常对合规地区或特定IP段实施访问限制与CDN分流；在企业网/监管区或被动DNS/ISP层阻断时，可能需VPN或更换出口节点方可还原真实页面与交互。</p>
+      <div class="kv">
+        <b>证据</b><span><code>proxy_enabled=false；最终状态码200；redirect_chain仅自身；external_script_count=0但存在本地脚本“/__lemmed_bm.js”，说明离线视角可能未触发动态加载与分流。</code></span>
+        <b>建议</b><span>用多出口对照（本地、移动/家庭宽带、合规VPN节点：US/EU/SG/HK）+ 真浏览器并启用JS与Cookie；记录各节点的DNS答复、证书链、状态码与页面差异；若本地直连受限，可在保留直连基线的前提下使用VPN复现最终用户体验。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>疑似风控/指纹脚本可能影响内容呈现与数据外发 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_BOT_MGMT_JS_FINGERPRINTING</div>
+      <p>“/__lemmed_bm.js”命名风格近似bot management/风控脚本，实网中可能执行指纹采集与行为挑战，并动态绑定表单提交流或加载外链资源。</p>
+      <div class="kv">
+        <b>证据</b><span><code>script_srcs包含“/__lemmed_bm.js”；离线环境未执行JS，无法观察其网络请求、指纹采集与动态DOM改写。</code></span>
+        <b>建议</b><span>在隔离沙箱中以带扩展的真浏览器执行并抓包（HAR/PCAP），观察canvas/WebGL/音频指纹采集、跨域请求与Set-Cookie；提取可疑域名与指纹参数作为IOC，并评估隐私与合规风险。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>表单提交流向未解析，可能由JS动态注入 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_FORM_ACTION_UNOBSERVED</div>
+      <p>静态解析未发现表单action，常见于JS在运行期绑定XHR/Fetch提交或改写action指向跨域端点，离线无法判断凭据是否外送到可疑域。</p>
+      <div class="kv">
+        <b>证据</b><span><code>form_actions=[]；页面含多个密码框但未见静态action。</code></span>
+        <b>建议</b><span>启用动态渲染后再次采集DOM与网络面板，定位最终提交URL、请求方法与跨域情况；如指向非常见或新注册域，将其纳入阻断与监控清单。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>证书与证书透明度信息缺失，真实性无法离线核验 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_TLS_CT_GAP</div>
+      <p>离线快照仅显示为HTTPS访问，未包含证书链与CT记录，无法验证颁发机构、SAN匹配与是否存在异常更换或撤销。</p>
+      <div class="kv">
+        <b>证据</b><span><code>content_type为HTTPS页面但无证书细节；未提供CT/OCSP/HSTS信息。</code></span>
+        <b>建议</b><span>查询crt.sh与Google CT，核对颁发者、NotBefore/NotAfter、SAN与历史更迭；检查OCSP与HSTS策略；若出现异常CA/频繁更换，提升处置优先级。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>详细留痕并进行复核 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_LOG_AND_REVIEW</div>
+      <p>为支持后续的威胁情报分析、溯源取证和安全策略优化，本次发现的恶意URL及其研判结果需要被详细记录和存档。</p>
+      <div class="kv">
+        <b>证据</b><span><code>处置建议员意见明确指出‘保留链接与报告用于复核’。</code></span>
+        <b>建议</b><span>详细记录目标URL、发现时间、本次分析报告、采取的处置措施（如拦截策略ID、生效时间）及任何相关的访问日志。定期对黑名单进行审查和更新，并考虑将此情报分享给威胁情报平台。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>可能存在地理/IP 分流与外网依赖 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ENV_GEO_VPN</div>
+      <p>加密货币相关站点常对合规地区或特定 IP 段实施访问限制与 CDN 分流；在企业网/监管区或被动 DNS/ISP 层阻断时，可能需 VPN 或更换出口节点方可还原真实页面与交互。</p>
+      <div class="kv">
+        <b>证据</b><span><code>proxy_enabled=false；最终状态码 200；redirect_chain 仅自身；external_script_count=0 但存在本地脚本</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>疑似风控/指纹脚本可能影响内容呈现与数据外发 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_BOT_MGMT_JS_FINGERPRINTING</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>https://baksmany.org/</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">qwen3.5-plus</span></h4>
+          <p>经深度研判，目标 URL `https://baksmany.org/` 确认为恶意钓鱼网站。页面伪装成数字货币交易所，包含 4 个密码输入框且表单无明确提交动作（疑似 JS 劫持），配合可疑脚本 `/__lemmed_bm.js`，构成完整的凭证窃取链条。虽受限于离线环境无法验证证书与动态外联，但现有证据链已足够支撑恶意定性。建议立即阻断并警示用户。 综合静态特征与行为逻辑，判定为高危钓鱼网站。虽受限于离线环境无法验证动态外联，但 4 个密码框与 JS 劫持特征已构成完整证据链，建议立即阻断。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">deepseek-reasoner</span></h4>
+          <p>静态分析显示，域名 &#x27;baksmany.org&#x27; 结构可疑（未关联任何知名加密货币服务），URL 无参数但页面包含 4 个密码输入框、1 个隐藏输入和可疑脚本 &#x27;/__lemmed_bm.js&#x27;（名称异常），结合标题 &#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;，这些离线证据强烈暗示钓鱼意图，旨在诱骗用户输入凭证。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>该页面伪装成数字货币交易所，通过设置多个密码输入框诱导用户输入凭据。页面表单没有明确的提交目标（form action），表明其极有可能通过加载的本地脚本（/__lemmed_bm.js）来异步窃取和发送用户输入的账号密码。这是一个典型的凭证钓鱼攻击行为链，旨在盗取高价值的金融账户信息。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>基于离线快照，该站点呈现“数字货币交易所”主题且落地即出现多个密码输入框，具备凭据收集/钓鱼高风险特征。当前采集未启用代理，无法确认是否在特定地区/网络环境下需要外网或 VPN 才能访问。离线证据边界：仅基于静态 HTML 与有限元数据，未执行 JS、未捕获网络请求与表单提交、未知证书与域名信誉，无法确认脚本行为、真实提交流与跨域请求，页面时效与完整性亦不可知。因此现评属于凭据钓鱼面显著但仍需多节点、动态渲染与证书/信誉情报补充验证的高风险目标。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>该 URL (https://baksmany.org/) 伪装成数字货币交易平台，包含 4 个密码输入框，存在高度钓鱼诈骗风险。建议立即拦截该 URL，禁止用户访问并输入任何敏感信息，对访问日志及研判结果进行详细留痕。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">经深度研判，目标 URL `https://baksmany.org/` 确认为恶意钓鱼网站。页面伪装成数字货币交易所，包含 4 个密码输入框且表单无明确提交动作（疑似 JS 劫持），配合可疑脚本 `/__lemmed_bm.js`，构成完整的凭证窃取链条。虽受限于离线环境无法验证证书与动态外联，但现有证据链已足够支撑恶意定性。建议立即阻断并警示用户。 综合静态特征与行为逻辑，判定为高危钓鱼网站。虽受限于离线环境无法验证动态外联，但 4 个密码框与 JS 劫持特征已构成完整证据链，建议立即阻断。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">静态分析显示，域名 &#x27;baksmany.org&#x27; 结构可疑（未关联任何知名加密货币服务），URL 无参数但页面包含 4 个密码输入框、1 个隐藏输入和可疑脚本 &#x27;/__lemmed_bm.js&#x27;（名称异常），结合标题 &#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;，这些离线证据强烈暗示钓鱼意图，旨在诱骗用户输入凭证。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">该页面伪装成数字货币交易所，通过设置多个密码输入框诱导用户输入凭据。页面表单没有明确的提交目标（form action），表明其极有可能通过加载的本地脚本（/__lemmed_bm.js）来异步窃取和发送用户输入的账号密码。这是一个典型的凭证钓鱼攻击行为链，旨在盗取高价值的金融账户信息。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">基于离线快照，该站点呈现“数字货币交易所”主题且落地即出现多个密码输入框，具备凭据收集/钓鱼高风险特征。当前采集未启用代理，无法确认是否在特定地区/网络环境下需要外网或 VPN 才能访问。离线证据边界：仅基于静态 HTML 与有限元数据，未执行 JS、未捕获网络请求与表单提交、未知证书与域名信誉，无法确认脚本行为、真实提交流与跨域请求，页面时效与完整性亦不可知。因此现评属于凭据钓鱼面显著但仍需多节点、动态渲染与证书/信誉情报补充验证的高风险目标。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">该 URL (https://baksmany.org/) 伪装成数字货币交易平台，包含 4 个密码输入框，存在高度钓鱼诈骗风险。建议立即拦截该 URL，禁止用户访问并输入任何敏感信息，对访问日志及研判结果进行详细留痕。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">经深度研判，目标 URL `https://baksmany.org/` 确认为恶意钓鱼网站。页面伪装成数字货币交易所，包含 4 个密码输入框且表单无明确提交动作（疑似 JS 劫持），配合可疑脚本 `/__lemmed_bm.js`，构成完整的凭证窃取链条。虽受限于离线环境无法验证证书与动态外联，但现有证据链已足够支撑恶意定性。建议立即阻断并警示用户。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>qwen3.5-plus</td><td>经深度研判，目标 URL `https://baksmany.org/` 确认为恶意钓鱼网站。页面伪装成数字货币交易所，包含 4 个密码输入框且表单无明确提交动作（疑似 JS 劫持），配合可疑脚本 `/__lemmed_bm.js`，构成完整的凭证窃取链条。虽受限于离线环境无法验证证书与动态外联，但现有证据链已足够支撑恶意定性。建议立即阻断并警示用户。 综合静态特征与行为逻辑，判定为高危钓鱼网站。虽受限于离线环境无法验证动态外联，但 4 个密码框与 JS 劫持特征已构成完整证据链，建议立即阻断。</td></tr><tr><th>静态分析员</th><td>deepseek-reasoner</td><td>静态分析显示，域名 &#x27;baksmany.org&#x27; 结构可疑（未关联任何知名加密货币服务），URL 无参数但页面包含 4 个密码输入框、1 个隐藏输入和可疑脚本 &#x27;/__lemmed_bm.js&#x27;（名称异常），结合标题 &#x27;Digital Currency Exchange, Buying and Selling Bitcoin&#x27;，这些离线证据强烈暗示钓鱼意图，旨在诱骗用户输入凭证。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>该页面伪装成数字货币交易所，通过设置多个密码输入框诱导用户输入凭据。页面表单没有明确的提交目标（form action），表明其极有可能通过加载的本地脚本（/__lemmed_bm.js）来异步窃取和发送用户输入的账号密码。这是一个典型的凭证钓鱼攻击行为链，旨在盗取高价值的金融账户信息。</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>基于离线快照，该站点呈现“数字货币交易所”主题且落地即出现多个密码输入框，具备凭据收集/钓鱼高风险特征。当前采集未启用代理，无法确认是否在特定地区/网络环境下需要外网或 VPN 才能访问。离线证据边界：仅基于静态 HTML 与有限元数据，未执行 JS、未捕获网络请求与表单提交、未知证书与域名信誉，无法确认脚本行为、真实提交流与跨域请求，页面时效与完整性亦不可知。因此现评属于凭据钓鱼面显著但仍需多节点、动态渲染与证书/信誉情报补充验证的高风险目标。</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>该 URL (https://baksmany.org/) 伪装成数字货币交易平台，包含 4 个密码输入框，存在高度钓鱼诈骗风险。建议立即拦截该 URL，禁止用户访问并输入任何敏感信息，对访问日志及研判结果进行详细留痕。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面截图比对。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单、截图比对与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>
