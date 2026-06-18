@@ -21,6 +21,7 @@
     .alert { margin-bottom: 18px; padding: 12px 14px; border-radius: 12px; }
     .alert.error { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.22); color: #fecaca; }
     .alert.ok { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.22); color: #bbf7d0; }
+    .alert.info { background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.22); color: #bfdbfe; }
     .panel { margin-top: 22px; }
     .meta { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
     .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: rgba(148,163,184,.12); border: 1px solid rgba(148,163,184,.16); font-size: 12px; }
@@ -33,6 +34,35 @@
     .tab-btn.active { background: linear-gradient(135deg,#2563eb,#22c55e); border-color: transparent; }
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
+    .progress-panel { display: none; margin-top: 18px; }
+    .progress-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .progress-bar { width: 100%; height: 14px; background: rgba(148,163,184,.14); border-radius: 999px; overflow: hidden; border: 1px solid rgba(148,163,184,.2); }
+    .progress-bar > span { display: block; height: 100%; width: 0%; background: linear-gradient(135deg,#2563eb,#22c55e); transition: width .3s ease; }
+    .progress-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; color: #cbd5e1; font-size: 13px; }
+    .progress-log { margin-top: 12px; font-size: 14px; color: #bfdbfe; }
+    .result-panel { display: none; }
+    .result-panel.active { display: block; }
+    .summary-box { background: #0f172a; border: 1px solid rgba(148,163,184,.16); border-radius: 14px; padding: 14px; margin-top: 10px; }
+    .summary-box pre { margin: 0; background: transparent; padding: 0; }
+    .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 10px; }
+    .overview-card { background: rgba(15,23,42,.72); border: 1px solid rgba(148,163,184,.16); border-radius: 14px; padding: 14px; }
+    .overview-card h4 { margin: 0 0 10px; }
+    .overview-card ul { margin: 0; padding-left: 18px; color: #cbd5e1; }
+    .overview-card li { margin-bottom: 6px; word-break: break-word; }
+    .overview-card .subtle { margin-top: 8px; }
+    .scroll-box { max-height: 220px; overflow: auto; padding-right: 6px; }
+    .scroll-box.slim { max-height: 170px; }
+    .scroll-box pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+    .result-table-wrap { overflow-x: auto; }
+    .result-table-wrap table { min-width: 720px; }
+    #result-page-summary-body td, #result-page-summary-body th,
+    #result-findings-body td, #result-findings-body th,
+    #result-opinions-body td, #result-opinions-body th {
+      max-width: 320px;
+      word-break: break-word;
+      white-space: normal;
+    }
+    .summary-text { max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
     @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -40,13 +70,59 @@
   <div class="wrap">
     <div class="card">
       <h1>SentinelGuard 安全检测</h1>
-      <p>支持 URL 和 APK 两类对象。URL 可直接输入，APK 可以填写本地路径或上传 .apk 文件。</p>
+      <p>支持 URL 和 APK 两类对象。APK 默认只做静态分析；勾选“深度研判”后，会进入论坛式多角色深度分析。若你填写了 LLM 的 API Key / Base URL，它只会用于本次检测任务；代理/VPN 仅用于网页抓取，不会影响大模型调用。</p>
 
       {% if error %}
         <div class="alert error">{{ error }}</div>
       {% endif %}
 
+      <div id="task-progress" class="alert info progress-panel" aria-live="polite">
+        <div class="progress-head">
+          <strong id="task-progress-title">检测正在启动</strong>
+          <span id="task-progress-percent">0%</span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="task-progress-fill"></span>
+        </div>
+        <div class="progress-meta">
+          <span id="task-progress-status">等待开始</span>
+          <span id="task-progress-stage">queued</span>
+        </div>
+        <div id="task-progress-log" class="progress-log">提交后会在这里实时显示静态分析、深度研判和报告生成的进展。</div>
+      </div>
+
       <form method="post" action="/analyze" enctype="multipart/form-data">
+        <div class="row">
+          <div>
+            <label for="llm_api_key">深度研判 API Key</label>
+            <input id="llm_api_key" name="llm_api_key" type="text" placeholder="请输入本次任务使用的 API Key" value="{{ defaults.llm_api_key }}">
+          </div>
+          <div>
+            <label for="llm_base_url">深度研判 Base URL</label>
+            <input id="llm_base_url" name="llm_base_url" type="text" placeholder="https://api.example.com/v1" value="{{ defaults.llm_base_url }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="proxy_http">HTTP 代理 / VPN 节点</label>
+            <input id="proxy_http" name="proxy_http" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_http }}">
+          </div>
+          <div>
+            <label for="proxy_https">HTTPS 代理 / VPN 节点</label>
+            <input id="proxy_https" name="proxy_https" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_https }}">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="proxy_all">ALL_PROXY 备用节点</label>
+            <input id="proxy_all" name="proxy_all" type="text" placeholder="socks5://127.0.0.1:1080" value="{{ defaults.proxy_all }}">
+          </div>
+          <div>
+            <div class="hint" style="margin-top: 32px;">如果不填写代理信息，网页会直接使用原网络访问目标网址；若你只做离线静态分析，也可以留空。</div>
+          </div>
+        </div>
+
         <div class="tabs">
           <button class="tab-btn active" type="button" data-tab="url">URL 检测</button>
           <button class="tab-btn" type="button" data-tab="apk">APK 检测</button>
@@ -69,10 +145,11 @@
             <label>分析选项</label>
             <div class="checks" data-group="url-options">
               <label><input type="checkbox" name="fetch_page" {% if defaults.fetch_page %}checked{% endif %}> 抓取页面内容</label>
-              <label><input type="checkbox" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
+              <label><input type="checkbox" id="deep" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
             </div>
             <div class="checks" data-group="apk-options" style="display:none;">
-              <label><input type="checkbox" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
+              <label><input type="radio" name="apk_mode" value="static" checked> 静态分析</label>
+              <label><input type="radio" name="apk_mode" value="dynamic"> 动态沙箱</label>
             </div>
           </div>
         </div>
@@ -81,8 +158,75 @@
       </form>
     </div>
 
+    <div id="client-result-panel" class="card panel result-panel">
+      <h2>检测结果</h2>
+      <div class="meta">
+        <div class="pill" id="result-risk-level">风险等级：-</div>
+        <div class="pill" id="result-score">风险分数：-</div>
+        <div class="pill" id="result-mode">分析模式：-</div>
+        <div class="pill" id="result-count">证据条数：-</div>
+      </div>
+
+      <h3>检测总览</h3>
+      <div id="result-overview" class="overview-grid">
+        <div class="overview-card">
+          <h4>网址结构静态分析</h4>
+          <div class="subtle">等待分析结果。</div>
+        </div>
+        <div class="overview-card">
+          <h4>结论摘要</h4>
+          <div class="subtle">等待分析结果。</div>
+        </div>
+      </div>
+
+      <h3>目标信息</h3>
+      <div class="result-table-wrap">
+        <table>
+          <tr><th>原始输入</th><td id="result-original-input">-</td></tr>
+          <tr><th>对象类型</th><td id="result-target-type">-</td></tr>
+          <tr><th>状态</th><td id="result-target-status">-</td></tr>
+          <tr><th>规范化 URL</th><td id="result-url">-</td></tr>
+          <tr><th>APK 文件</th><td id="result-apk-file">-</td></tr>
+          <tr><th>APK 路径</th><td id="result-apk-path">-</td></tr>
+          <tr><th>包名</th><td id="result-package-name">-</td></tr>
+          <tr><th>SHA256</th><td id="result-sha256">-</td></tr>
+        </table>
+      </div>
+
+      <h3>证据摘要</h3>
+      <div id="result-findings-empty" class="hint">未发现明显风险项。</div>
+      <table id="result-findings-table" style="display:none;">
+        <thead>
+          <tr><th>严重度</th><th>标题</th><th>证据</th><th>建议</th></tr>
+        </thead>
+        <tbody id="result-findings-body"></tbody>
+      </table>
+
+      <h3>页面线索</h3>
+      <div class="result-table-wrap scroll-box slim">
+        <table id="result-page-summary-table">
+          <tbody id="result-page-summary-body"></tbody>
+        </table>
+      </div>
+
+      <h3>研判结论</h3>
+      <div class="result-table-wrap scroll-box slim">
+        <table>
+          <tbody id="result-opinions-body"></tbody>
+        </table>
+      </div>
+
+      <h3>主持人最终总结</h3>
+      <div class="summary-box scroll-box" id="result-summary-box">
+        <pre id="result-summary">-</pre>
+      </div>
+
+      <h3>报告文件</h3>
+      <p id="result-report-links">检测完成后可在此查看 HTML / Markdown 报告入口。</p>
+    </div>
+
     {% if report %}
-      <div class="card panel">
+      <div class="card panel result-panel active" id="server-result-panel">
         <h2>检测结果</h2>
         <div class="meta">
           <div class="pill">风险等级：{{ report.risk_level|upper }}</div>
@@ -128,6 +272,30 @@
           <p>未发现明显风险项。</p>
         {% endif %}
 
+        <h3>页面线索</h3>
+        {% if report.page_summary %}
+          <table>
+            <tbody>
+              {% for key, value in report.page_summary.items() %}
+                <tr>
+                  <th>{{ key }}</th>
+                  <td>
+                    {% if value is mapping %}
+                      <pre>{{ value | tojson(indent=2) }}</pre>
+                    {% elif value is sequence and value is not string %}
+                      <pre>{{ value | tojson(indent=2) }}</pre>
+                    {% else %}
+                      {{ value }}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>未获取到页面线索。</p>
+        {% endif %}
+
         <h3>研判结论</h3>
         <table>
           {% for role, opinion in report.expert_opinions.items() %}
@@ -159,17 +327,283 @@
     const panes = document.querySelectorAll('.tab-pane');
     const urlOptions = document.querySelector('[data-group="url-options"]');
     const apkOptions = document.querySelector('[data-group="apk-options"]');
+    const deepCheckbox = document.getElementById('deep');
+    const deepApkCheckbox = document.getElementById('deep-apk');
     const targetInput = document.getElementById('target');
     const apkInput = document.getElementById('apk_file');
+    const form = document.querySelector('form');
+    const progressPanel = document.getElementById('task-progress');
+    const progressTitle = document.getElementById('task-progress-title');
+    const progressPercent = document.getElementById('task-progress-percent');
+    const progressFill = document.getElementById('task-progress-fill');
+    const progressStatus = document.getElementById('task-progress-status');
+    const progressStage = document.getElementById('task-progress-stage');
+    const progressLog = document.getElementById('task-progress-log');
+    const clientResultPanel = document.getElementById('client-result-panel');
+    const resultRiskLevel = document.getElementById('result-risk-level');
+    const resultScore = document.getElementById('result-score');
+    const resultMode = document.getElementById('result-mode');
+    const resultCount = document.getElementById('result-count');
+    const resultOriginalInput = document.getElementById('result-original-input');
+    const resultTargetType = document.getElementById('result-target-type');
+    const resultTargetStatus = document.getElementById('result-target-status');
+    const resultUrl = document.getElementById('result-url');
+    const resultApkFile = document.getElementById('result-apk-file');
+    const resultApkPath = document.getElementById('result-apk-path');
+    const resultPackageName = document.getElementById('result-package-name');
+    const resultSha256 = document.getElementById('result-sha256');
+    const resultFindingsEmpty = document.getElementById('result-findings-empty');
+    const resultFindingsTable = document.getElementById('result-findings-table');
+    const resultFindingsBody = document.getElementById('result-findings-body');
+    const resultPageSummaryBody = document.getElementById('result-page-summary-body');
+    const resultOpinionsBody = document.getElementById('result-opinions-body');
+    const resultSummary = document.getElementById('result-summary');
+    const resultReportLinks = document.getElementById('result-report-links');
+    const resultOverview = document.getElementById('result-overview');
+
+    let activeTaskId = null;
+    let pollTimer = null;
 
     function switchTab(name) {
       tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
       panes.forEach(pane => pane.classList.toggle('active', pane.dataset.pane === name));
       if (urlOptions) urlOptions.style.display = name === 'url' ? 'flex' : 'none';
       if (apkOptions) apkOptions.style.display = name === 'apk' ? 'flex' : 'none';
+      syncDeepDependents();
+    }
+
+    function syncDeepDependents() {
+      const activeDeep = (document.querySelector('input[name="deep"]:checked') !== null);
+    }
+
+    function getStageLabel(stage, targetType) {
+      const apkPrefix = targetType === 'apk' ? 'APK' : '网址';
+      const map = {
+        queued: '已排队，等待开始',
+        received: '任务已接收，准备分析',
+        static: `${apkPrefix}静态分析中`,
+        dynamic_install: '正在安装 APK 到模拟器',
+        dynamic_launch: '正在启动应用并采集运行时日志',
+        dynamic_done: 'APK 动态沙箱已完成，正在生成报告',
+        deep_static: '正在进行静态分析',
+        deep_behavior: '正在进行行为分析',
+        deep_intel: '正在进行情报分析',
+        deep_advice: '正在进行处置建议分析',
+        deep_host: '正在进行主持人总结',
+        deep_done: '深度研判已完成，正在生成报告',
+        static_only: '静态分析已完成，正在生成报告',
+        deep_prepare: `正在准备${apkPrefix}深度研判`,
+        failed: '检测失败',
+      };
+      return map[stage] || stage || '处理中';
+    }
+
+    function updateProgressView(data) {
+      const progress = Number(data.progress ?? 0);
+      const stage = data.stage || 'queued';
+      const message = data.message || '处理中';
+      const status = data.status || 'running';
+
+      progressPanel.style.display = 'block';
+      progressTitle.textContent = data.target_type === 'apk' ? 'APK 检测进度' : '网址检测进度';
+      progressPercent.textContent = `${progress}%`;
+      progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+      const stageLabel = getStageLabel(stage, data.target_type);
+      progressStatus.textContent = `${status} · ${stageLabel}`;
+      progressStage.textContent = `阶段：${stageLabel}`;
+      progressLog.textContent = message && message !== stageLabel ? `${stageLabel}：${message}` : stageLabel;
+      progressPanel.querySelector('.progress-bar').setAttribute('aria-valuenow', String(progress));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function buildUrlStaticOverview(url, findings, pageSummary) {
+      if (!url || !url.normalized_url) {
+        return `
+          <div class="overview-card">
+            <h4>网址结构静态分析</h4>
+            <div class="subtle">当前对象不是网址，或未能解析出 URL 结构。</div>
+          </div>
+          <div class="overview-card">
+            <h4>结论摘要</h4>
+            <div class="subtle">请切换到 APK 视图查看对应摘要。</div>
+          </div>
+        `;
+      }
+
+      const staticSignals = [];
+      if (url.scheme && url.scheme !== 'https') staticSignals.push(`未使用 HTTPS（${escapeHtml(url.scheme)}）`);
+      if (url.hostname) staticSignals.push(`主机：${escapeHtml(url.hostname)}`);
+      if (url.is_ip_address) staticSignals.push('使用 IP 直连');
+      if (url.query_params && Object.keys(url.query_params).length) staticSignals.push(`参数数：${Object.keys(url.query_params).length}`);
+      if (url.path && url.path !== '/') staticSignals.push(`路径：${escapeHtml(url.path)}`);
+
+      const findingTexts = (findings || [])
+        .filter(item => item && item.rule_id && String(item.rule_id).startsWith('URL_'))
+        .slice(0, 5)
+        .map(item => `<li><strong>${escapeHtml(item.title)}</strong>：${escapeHtml(item.evidence)}</li>`)
+        .join('');
+
+      const pageTexts = [];
+      if (pageSummary && pageSummary.status_code) pageTexts.push(`页面状态码：${escapeHtml(pageSummary.status_code)}`);
+      if (pageSummary && pageSummary.final_url) pageTexts.push(`记录到的终点：<code>${escapeHtml(pageSummary.final_url)}</code>`);
+      if (pageSummary && pageSummary.redirect_location) pageTexts.push(`跳转指向：<code>${escapeHtml(pageSummary.redirect_location)}</code>`);
+
+      const conclusion = [];
+      conclusion.push(`风险等级：<strong>${escapeHtml((window.__lastRiskLevel || '-').toUpperCase())}</strong>`);
+      conclusion.push(`风险分数：<strong>${escapeHtml(window.__lastRiskScore ?? '-')}</strong>`);
+      conclusion.push(`证据条数：<strong>${escapeHtml(window.__lastFindingCount ?? '-')}</strong>`);
+
+      return `
+        <div class="overview-card">
+          <h4>网址结构静态分析</h4>
+          <div class="scroll-box slim">
+            <ul>${staticSignals.map(item => `<li>${item}</li>`).join('') || '<li>未发现明显结构异常。</li>'}</ul>
+          </div>
+          <div class="subtle">本部分基于 URL 协议、主机、路径、参数与结构特征进行静态判断。</div>
+        </div>
+        <div class="overview-card">
+          <h4>可疑静态证据</h4>
+          <div class="scroll-box slim">
+            <ul>${findingTexts || '<li>未命中明显 URL 规则。</li>'}</ul>
+          </div>
+          <div class="subtle">页面抓取与深度研判仅使用已采集证据，不会主动跟随跳转访问后续落点。</div>
+        </div>
+        <div class="overview-card">
+          <h4>结论摘要</h4>
+          <div class="scroll-box slim">
+            <ul>${conclusion.map(item => `<li>${item}</li>`).join('')}</ul>
+          </div>
+          <div class="subtle scroll-box slim">${pageTexts.join('<br>') || '静态分析已完成，等待进一步研判。'}</div>
+        </div>
+      `;
+    }
+
+    function renderClientResult(report) {
+      if (!clientResultPanel || !report) return;
+
+      const targetIr = report.target_ir || {};
+      const apk = targetIr.apk || {};
+      const url = targetIr.url || {};
+      const findings = report.findings || [];
+      const opinions = report.expert_opinions || {};
+      const pageSummary = report.page_summary || {};
+
+      window.__lastRiskLevel = report.risk_level || '-';
+      window.__lastRiskScore = report.score ?? '-';
+      window.__lastFindingCount = findings.length;
+
+      clientResultPanel.classList.add('active');
+      resultRiskLevel.textContent = `风险等级：${String(report.risk_level || '-').toUpperCase()}`;
+      resultScore.textContent = `风险分数：${report.score ?? '-'}/100`;
+      resultMode.textContent = `分析模式：${report.analysis_mode || '-'}`;
+      resultCount.textContent = `证据条数：${findings.length}`;
+      resultOriginalInput.textContent = targetIr.original_input || '-';
+      resultTargetType.textContent = targetIr.target_type || '-';
+      resultTargetStatus.textContent = targetIr.status || '-';
+      resultUrl.textContent = url.normalized_url || '-';
+      resultApkFile.textContent = apk.file_name || '-';
+      resultApkPath.textContent = apk.normalized_path || '-';
+      resultPackageName.textContent = apk.package_name || '-';
+      resultSha256.textContent = apk.sha256 || '-';
+      resultSummary.textContent = report.deep_summary || '-';
+      if (resultOverview) {
+        resultOverview.innerHTML = buildUrlStaticOverview(url, findings, pageSummary);
+      }
+
+      resultPageSummaryBody.innerHTML = '';
+      Object.entries(pageSummary).forEach(([key, value]) => {
+        const tr = document.createElement('tr');
+        const rendered = (value && typeof value === 'object') ? `<pre>${JSON.stringify(value, null, 2)}</pre>` : String(value ?? '-');
+        tr.innerHTML = `<th>${key}</th><td>${rendered}</td>`;
+        resultPageSummaryBody.appendChild(tr);
+      });
+      if (!Object.keys(pageSummary).length) {
+        resultPageSummaryBody.innerHTML = '<tr><td colspan="2" class="hint">未获取到页面线索。</td></tr>';
+      }
+
+      resultFindingsBody.innerHTML = '';
+      if (findings.length > 0) {
+        resultFindingsEmpty.style.display = 'none';
+        resultFindingsTable.style.display = 'table';
+        findings.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${item.severity || ''}</td><td>${item.title || ''}</td><td>${item.evidence || ''}</td><td>${item.recommendation || ''}</td>`;
+          resultFindingsBody.appendChild(tr);
+        });
+      } else {
+        resultFindingsEmpty.style.display = 'block';
+        resultFindingsTable.style.display = 'none';
+      }
+
+      resultOpinionsBody.innerHTML = '';
+      Object.entries(opinions).forEach(([role, opinion]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<th>${role}</th><td>${opinion}</td>`;
+        resultOpinionsBody.appendChild(tr);
+      });
+
+      const reportLinks = [];
+      if (report.html_report_path) {
+        const htmlName = report.html_report_path.split('/').pop();
+        reportLinks.push(`<a href="/reports/${encodeURIComponent(htmlName)}" target="_blank">打开 HTML 报告</a>`);
+        reportLinks.push(`<a href="/reports/${encodeURIComponent(htmlName)}/download">下载 HTML 报告</a>`);
+      }
+      if (report.markdown_report_path) {
+        const mdName = report.markdown_report_path.split('/').pop();
+        reportLinks.push(`<a href="/reports/${encodeURIComponent(mdName)}" target="_blank">打开 Markdown 报告</a>`);
+        reportLinks.push(`<a href="/reports/${encodeURIComponent(mdName)}/download">下载 Markdown 报告</a>`);
+      }
+      resultReportLinks.innerHTML = reportLinks.length ? reportLinks.join(' · ') : '暂无报告文件。';
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    async function pollTask(taskId) {
+      try {
+        const response = await fetch(`/tasks/${taskId}`, { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) {
+          throw new Error(`任务状态查询失败：${response.status}`);
+        }
+        const data = await response.json();
+        updateProgressView(data);
+
+        if (data.status === 'done' && data.result) {
+          stopPolling();
+          progressLog.textContent = '检测完成，正在展示结果……';
+          renderClientResult(data.result);
+          return;
+        }
+
+        if (data.status === 'failed') {
+          stopPolling();
+          progressLog.textContent = data.error || '检测失败';
+          progressPanel.classList.add('error');
+          return;
+        }
+      } catch (error) {
+        stopPolling();
+        progressLog.textContent = error.message || '轮询任务状态失败';
+        progressPanel.classList.add('error');
+      }
     }
 
     tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+    if (deepCheckbox) deepCheckbox.addEventListener('change', syncDeepDependents);
+    if (deepApkCheckbox) deepApkCheckbox.addEventListener('change', syncDeepDependents);
 
     apkInput.addEventListener('change', () => {
       if (apkInput.files.length > 0) {
@@ -180,6 +614,46 @@
     if (targetInput.value.trim().toLowerCase().endsWith('.apk')) {
       switchTab('apk');
     }
+
+    syncDeepDependents();
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      stopPolling();
+      progressPanel.classList.remove('error');
+      progressPanel.style.display = 'block';
+      progressTitle.textContent = '正在提交检测任务';
+      progressPercent.textContent = '0%';
+      progressFill.style.width = '0%';
+      progressStatus.textContent = '提交中';
+      progressStage.textContent = 'queued';
+      progressLog.textContent = '正在把样本提交到后台分析任务队列…';
+      progressPanel.classList.remove('deep-mode');
+
+      const formData = new FormData(form);
+      const response = await fetch('/tasks/analyze', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `提交失败：${response.status}`);
+      }
+
+      const data = await response.json();
+      activeTaskId = data.task_id;
+      progressTitle.textContent = '检测任务已启动';
+      updateProgressView({ ...data, message: '任务已启动，开始轮询进度', stage: 'queued' });
+
+      pollTimer = setInterval(() => {
+        if (activeTaskId) {
+          pollTask(activeTaskId);
+        }
+      }, 1200);
+      await pollTask(activeTaskId);
+    });
   </script>
 </body>
 </html>

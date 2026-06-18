@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #dc2626;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #dc2626; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 16</span>
+      <span class="chip danger">风险 HIGH</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">HIGH</div>
+      <div class="hint">1 条高危 / 11 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">70/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度研判报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://onlinebannbhd.iceiy.com/</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度研判报告</small>
+        </div>
+        
+      <p><span class="badge">HIGH</span></p>
+      <p>风险分数：<strong>70/100</strong></p>
+      <p>原始输入：<code>https://onlinebannbhd.iceiy.com/</code></p>
+      <p>报告类型：<strong>模型深度研判报告</strong></p>
+      <div class="pill-row"><span class='pill high'>HIGH · JavaScript混淆与反分析机制</span><span class='pill medium'>MEDIUM · 客户端JavaScript强制跳转</span><span class='pill low'>LOW · 页面标题缺失</span><span class='pill medium'>MEDIUM · 可疑的域名结构</span><span class='pill medium'>MEDIUM · 页面使用JavaScript挑战和自动跳转</span><span class='pill low'>LOW · 通过脚本加载和执行实现内容隐藏</span><span class='pill medium'>MEDIUM · 检测到基于 slowAES 的 JS 闸门设置 __test Cookie 并重定向</span><span class='pill medium'>MEDIUM · 子域名疑似品牌误导与托管域不匹配</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_url_static_20260617_223310_147686.html' target='_blank'>静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_url_static_20260617_223310_147686.md' target='_blank'>静态 Markdown 报告</a></p>
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          <p class='subtle'>抓取模式：proxy / 代理：是</p>
+        </div>
+      </div>
+    
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>规范化 URL</th><td>https://onlinebannbhd.iceiy.com/</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>onlinebannbhd.iceiy.com</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://onlinebannbhd.iceiy.com/</li></ol>
+        <h4>页面线索</h4>
+        <table class='table'><tr><td>status_code</td><td>200</td></tr><tr><td>content_type</td><td>text/html</td></tr><tr><td>final_url</td><td>https://onlinebannbhd.iceiy.com/</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>proxy</td></tr><tr><td>proxy_used</td><td>True</td></tr><tr><td>proxy_config</td><td>{&#x27;http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;https&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_https&#x27;: &#x27;http://10.250.167.176:7890&#x27;}</td></tr><tr><td>title</td><td></td></tr><tr><td>visible_text_excerpt</td><td>function toNumbers(d){var e=[];d.replace(/(..)/g,function(d){e.push(parseInt(d,16))});return e}function toHex(){for(var d=[],d=1==arguments.length&amp;&amp;arguments[0].constructor==Array?arguments[0]:arguments,e=&quot;&quot;,f=0;f&lt;d.length;f++)e+=(16&gt;d[f]?&quot;0&quot;:&quot;&quot;)+d[f].toString(16);return e.toLowerCase()}var a=toNumbers(&quot;f655ba9d09a112d4968c63579db590b4&quot;),b=toNumbers(&quot;98344c2eee86c3994890592585b49f80&quot;),c=toNumbers(&quot;cb7b90b46fc340080246bb6a4caec096&quot;);document.cookie=&quot;__test=&quot;+toHex(slowAES.decrypt(c,2,a,b))+&quot;; max-age=21600; expires=Thu, 31-Dec-37 23:55:55 GMT; path=/&quot;; location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;; This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support</td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>0</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>/aes.js</td></tr><tr><td>form_actions</td><td>无</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&lt;html&gt;&lt;body&gt;&lt;script type=&quot;text/javascript&quot; src=&quot;/aes.js&quot; &gt;&lt;/script&gt;&lt;script&gt;function toNumbers(d){var e=[];d.replace(/(..)/g,function(d){e.push(parseInt(d,16))});return e}function toHex(){for(var d=[],d=1==arguments.length&amp;&amp;arguments[0].constructor==Array?arguments[0]:arguments,e=&quot;&quot;,f=0;f&lt;d.length;f++)e+=(16&gt;d[f]?&quot;0&quot;:&quot;&quot;)+d[f].toString(16);return e.toLowerCase()}var a=toNumbers(&quot;f655ba9d09a112d4968c63579db590b4&quot;),b=toNumbers(&quot;98344c2eee86c3994890592585b49f80&quot;),c=toNumbers(&quot;cb7b90b46fc340080246bb6a4caec096&quot;);document.cookie=&quot;__test=&quot;+toHex(slowAES.decrypt(c,2,a,b))+&quot;; max-age=21600; expires=Thu, 31-Dec-37 23:55:55 GMT; path=/&quot;; location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;;&lt;/script&gt;&lt;noscript&gt;This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support&lt;/noscript&gt;&lt;/body&gt;&lt;/html&gt;&#x27;, &#x27;text_excerpt&#x27;: &#x27;function toNumbers(d){var e=[];d.replace(/(..)/g,function(d){e.push(parseInt(d,16))});return e}function toHex(){for(var d=[],d=1==arguments.length&amp;&amp;arguments[0].constructor==Array?arguments[0]:arguments,e=&quot;&quot;,f=0;f&lt;d.length;f++)e+=(16&gt;d[f]?&quot;0&quot;:&quot;&quot;)+d[f].toString(16);return e.toLowerCase()}var a=toNumbers(&quot;f655ba9d09a112d4968c63579db590b4&quot;),b=toNumbers(&quot;98344c2eee86c3994890592585b49f80&quot;),c=toNumbers(&quot;cb7b90b46fc340080246bb6a4caec096&quot;);document.cookie=&quot;__test=&quot;+toHex(slowAES.decrypt(c,2,a,b))+&quot;; max-age=21600; expires=Thu, 31-Dec-37 23:55:55 GMT; path=/&quot;; location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;; This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support&#x27;}</td></tr></table>
+      </div>
+      <div class="pill-row"><span class='pill muted'>HIGH · JavaScript混淆与反分析机制</span><span class='pill muted'>MEDIUM · 客户端JavaScript强制跳转</span><span class='pill muted'>LOW · 页面标题缺失</span><span class='pill muted'>MEDIUM · 可疑的域名结构</span><span class='pill muted'>MEDIUM · 页面使用JavaScript挑战和自动跳转</span><span class='pill muted'>LOW · 通过脚本加载和执行实现内容隐藏</span><span class='pill muted'>MEDIUM · 检测到基于 slowAES 的 JS 闸门设置 __test Cookie 并重定向</span><span class='pill muted'>MEDIUM · 子域名疑似品牌误导与托管域不匹配</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>HIGH（1）</h4><div class='grid-list'>
+    <div class="finding high">
+      <h4>JavaScript混淆与反分析机制 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_STATIC_001</div>
+      <p>页面加载后立即执行JavaScript代码，其中包含`slowAES.decrypt`函数和十六进制编码的字符串，用于解密并设置名为`__test`的Cookie。这种在客户端进行解密操作以设置Cookie的行为，是常见的混淆技术，旨在隐藏真实内容或验证客户端环境，以规避静态分析或反爬虫。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTML中包含`&lt;script&gt;`标签，执行`slowAES.decrypt(c,2,a,b)`并设置`document.cookie`。</code></span>
+        <b>建议</b><span>建议进行动态行为分析，观察解密后的内容和后续跳转页面的行为，以揭示其真实意图。</span>
+      </div>
+    </div>
+    </div><h4>MEDIUM（11）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>客户端JavaScript强制跳转 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_002</div>
+      <p>在执行完解密和Cookie设置后，页面立即通过`location.href`将自身重定向到`https://onlinebannbhd.iceiy.com/?i=1`。这种即时且带有参数的自重定向，可能用于传递解密结果、触发后续逻辑或作为多阶段攻击的入口。</p>
+      <div class="kv">
+        <b>证据</b><span><code>JavaScript代码中包含`location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;;`。</code></span>
+        <b>建议</b><span>关注跳转后的页面内容和行为，特别是`?i=1`参数可能带来的影响。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>可疑的域名结构 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_004</div>
+      <p>域名`onlinebannbhd.iceiy.com`中的`onlinebannbhd`部分看起来像是随机生成或不具语义的子域名。结合页面存在的混淆和跳转行为，这种域名结构可能被用于快速部署和废弃的恶意活动。</p>
+      <div class="kv">
+        <b>证据</b><span><code>URL `https://onlinebannbhd.iceiy.com/`。</code></span>
+        <b>建议</b><span>对主域名`iceiy.com`进行历史查询和威胁情报关联，以评估其信誉度。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>页面使用JavaScript挑战和自动跳转 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_JS_CHALLENGE_REDIRECT</div>
+      <p>初始页面通过执行JavaScript代码来验证客户端环境。它进行了一次加密运算，将结果存入Cookie，然后立即使用`location.href`将浏览器重定向到带有查询参数的新地址。这是一种反自动化分析技术。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTML源码中包含以下JavaScript代码片段：`document.cookie=&quot;__test=&quot;+toHex(slowAES.decrypt(c,2,a,b))+&quot;; ...; location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;;`</code></span>
+        <b>建议</b><span>建议对JavaScript跳转后的目标页面`https://onlinebannbhd.iceiy.com/?i=1`进行深入分析，以确定其真实内容和意图。此类技术常用于隐藏钓鱼、挂马等恶意页面。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>检测到基于 slowAES 的 JS 闸门设置 __test Cookie 并重定向 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_JS_ANTIBOT_AES_COOKIE</div>
+      <p>页面通过引入 /aes.js 并执行 slowAES.decrypt 生成 __test Cookie，随后跳转到带有 ?i=1 的 URL。这是常见的反爬/反滥用闸门形态，也被滥用于对抗沙箱与安全扫描，实现内容分级与躲避审查。</p>
+      <div class="kv">
+        <b>证据</b><span><code>document.cookie=&quot;__test=&quot;+toHex(slowAES.decrypt(c,2,a,b))+&quot;; ...&quot;; location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;; script src=&quot;/aes.js&quot;</code></span>
+        <b>建议</b><span>使用完整浏览器（非无头）、允许 JS/Cookie，保留会话后继续访问跳转页；优先使用住宅/移动网络且靠近目标受众地区的出口节点，抓取闸门之后的最终内容（DOM/网络请求/截图），再行定性。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>子域名疑似品牌误导与托管域不匹配 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_POTENTIAL_BRAND_MISLEAD_SUBDOMAIN</div>
+      <p>子域名“onlinebannbhd.iceiy.com”给人以金融/银行（bank/bhd/berhad）相关联想，但挂载在与品牌无明显关系的主域 iceiy.com 之下，且“bannbhd”疑似形近“bankbhd”，存在品牌混淆或投机命名风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>hostname=onlinebannbhd.iceiy.com，页面标题为空且仅呈现 JS 闸门，无法验证真实品牌归属。</code></span>
+        <b>建议</b><span>核验证书颁发对象与 SAN、WHOIS 与被动 DNS 历史、关联解析记录与托管商；结合外部威胁情报与钓鱼线索（投放渠道、诱饵文案）复核；如出现品牌滥用迹象，按钓鱼处置流程提升拦截策略。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>采集出口与环境差异可能导致页面分级呈现 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ENVIRONMENT_DIFFERENCE_EGRESS</div>
+      <p>当前抓取使用代理模式，易被识别为数据中心/自动化来源而触发闸门；实际用户在住宅或目标地区网络下可能直接看到不同内容。该类差异会造成离线与浏览器证据均停留在闸门页，无法对真实页面定性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>fetch_mode=proxy, proxy_used=true；页面仅返回 JS 闸门与空标题，无业务内容。</code></span>
+        <b>建议</b><span>在合规前提下使用目标地区（如疑似马来西亚）的住宅/移动出口复抓；设置常见 UA、禁用无头标记、允许 JS/Cookie/本地存储；记录出口 ASN、地理位置与时间窗口，确保可复现性。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>客户端JavaScript挑战与内部重定向 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_JS_CHALLENGE</div>
+      <p>页面加载后立即执行JavaScript代码，包括调用`slowAES.decrypt`进行解密，设置名为`__test`的Cookie，并随后通过`location.href`将页面重定向至同一域名下的`https://onlinebannbhd.iceiy.com/?i=1`。这种客户端挑战机制常用于验证浏览器环境或进行机器人检测，但也可能被恶意网站利用以规避安全检测或延迟恶意载荷的加载。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTML摘要和可见文本快照中包含`slowAES.decrypt(c,2,a,b))`和`location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;;`代码段，且页面引用了`/aes.js`脚本。</code></span>
+        <b>建议</b><span>建议对该页面进行沙箱复核，以观察在JavaScript执行并重定向后，最终呈现的页面内容和行为。如果重定向后出现可疑内容（如钓鱼表单、恶意下载、进一步的混淆或跳转），则应立即拦截并隔离。在未明确其最终目的前，用户应谨慎访问，避免提交任何敏感信息。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTML/可见文本中直接包含 `document.cookie=&quot;__test=&quot;+toHex(slowAES.decrypt(c,2,a,b))...; location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;;`</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>`title` 为空；`visible_text_excerpt` 主要是 JS 代码与 “This site requires Javascript to work...” 提示。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>`fetch_mode=proxy`、`proxy_used=true`，且页面未完成 JS/Cookie 后续验证。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态报告 `findings` 为空，浏览器证据中 `password_forms=0`、`download_links=[]`、`external_script_count=0`。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    </div><h4>LOW（4）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>页面标题缺失 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_STATIC_003</div>
+      <p>页面的`&lt;title&gt;`标签为空。对于大多数合法网站而言，页面标题是必不可少的，缺失标题可能表明页面内容不完整、临时性或旨在规避搜索引擎索引。</p>
+      <div class="kv">
+        <b>证据</b><span><code>页面摘要中`title`字段为空。</code></span>
+        <b>建议</b><span>结合其他可疑特征进行综合判断，单独此项风险较低。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>通过脚本加载和执行实现内容隐藏 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_SCRIPT_EVASION</div>
+      <p>页面依赖于外部加载的`aes.js`脚本和内联脚本的成功执行才能进行后续跳转，初始HTML中没有可见的实质性内容。这种方式可以绕过无法执行JavaScript的简单扫描器。</p>
+      <div class="kv">
+        <b>证据</b><span><code>页面HTML结构主要由`&lt;script&gt;`标签组成，`&lt;noscript&gt;`标签提示用户需要启用JavaScript。</code></span>
+        <b>建议</b><span>在分析此类链接时，必须使用能够完整渲染页面和执行JavaScript的动态沙箱环境。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>闸门后附加查询参数的自跳转模式 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_REDIRECT_PARAM_GATE</div>
+      <p>通过设置 Cookie 后跳转到同域名加上 ?i=1 的 URL，用于标记已通过校验，避免重复挑战。这类自跳转本身并非恶意，但与反自动化策略结合时，常用于对抗无头抓取与简单扫描。</p>
+      <div class="kv">
+        <b>证据</b><span><code>location.href=&quot;https://onlinebannbhd.iceiy.com/?i=1&quot;</code></span>
+        <b>建议</b><span>采集时保留并回放前序步骤（首包响应→设置 Cookie→重定向→最终页），确保抓到最终页面实体内容后再进行内容/IOC 识别。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面标题为空 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_EMPTY_TITLE</div>
+      <p>该页面的HTML `&lt;title&gt;` 标签为空。虽然这本身不构成安全威胁，但通常一个完整的、合法的网页会包含有意义的标题。空标题可能表明页面内容不完整、是临时页面，或由自动化工具生成，这在某些情况下可能与低质量或可疑内容相关联。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态报告和浏览器证据中`page_summary.title`和`page_signals.title`字段均为空。</code></span>
+        <b>建议</b><span>此发现单独来看风险较低，但结合其他非标准行为（如JS挑战），建议提高警惕。在评估页面整体可信度时，可将其作为一个次要考量因素。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>基于当前静态抓取、浏览器证据包与专家意见，目标页面更像是一个 JS 闸门/反自动化验证页，而非已直接暴露恶意载荷的最终业务页。证据显示页面仅返回空标题 HTML，主体几乎只有 `/aes.js` 与内联脚本：通过 `slowAES.decrypt` 计算并写入 `__test` Cookie，随后立即重定向到同域 `/?i=1`。这类模式常见于反爬、反机器人或分级内容呈现，也可能被用于规避静态扫描和隐藏后续页面内容。当前离线证据未看到钓鱼表单、下载链接、外链跳转或明确恶意脚本注入，因此不能定性为高危恶意站点；但由于真实内容被 JS/Cookie 门槛遮蔽，且抓取环境使用代理模式，仍存在“对自动化与不同出口环境分流呈现”的可能，真实落地页面尚未被确认。结论：当前仅能在离线证据范围内判定为中等风险，建议在合规前提下使用完整浏览器、保留 Cookie 会话并切换更接近目标受众的出口环境复核重定向后的最终页面。 {&#x27;original&#x27;: &#x27;未发现明显高危特征，仍建议结合链接来源和访问上下文复核。&#x27;, &#x27;summary&#x27;: &#x27;倾向低风险，但强调需结合来源与上下文复核。&#x27;}</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>{&#x27;original&#x27;: &#x27;URL 结构未命中当前规则库中的明显异常项。&#x27;, &#x27;summary&#x27;: &#x27;URL 本身未触发明显规则命中，但页面脚本行为另有可疑点。&#x27;}</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>{&#x27;original&#x27;: &#x27;未观察到可疑跳转或页面行为证据。&#x27;, &#x27;summary&#x27;: &#x27;在当前证据范围内未见外部可疑跳转；但页面存在 JS 挑战式内部重定向。&#x27;}</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>{&#x27;original&#x27;: &#x27;当前离线版本未接入外部威胁情报，结论基于本地规则。&#x27;, &#x27;summary&#x27;: &#x27;结论仅基于离线证据与本地规则，缺少外部情报佐证。&#x27;}</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>{&#x27;original&#x27;: &#x27;可正常访问，但不要在陌生页面提交敏感信息。&#x27;, &#x27;summary&#x27;: &#x27;可访问性不等于可信性，建议不要在未确认页面身份前输入敏感信息。&#x27;}</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">基于当前静态抓取、浏览器证据包与专家意见，目标页面更像是一个 JS 闸门/反自动化验证页，而非已直接暴露恶意载荷的最终业务页。证据显示页面仅返回空标题 HTML，主体几乎只有 `/aes.js` 与内联脚本：通过 `slowAES.decrypt` 计算并写入 `__test` Cookie，随后立即重定向到同域 `/?i=1`。这类模式常见于反爬、反机器人或分级内容呈现，也可能被用于规避静态扫描和隐藏后续页面内容。当前离线证据未看到钓鱼表单、下载链接、外链跳转或明确恶意脚本注入，因此不能定性为高危恶意站点；但由于真实内容被 JS/Cookie 门槛遮蔽，且抓取环境使用代理模式，仍存在“对自动化与不同出口环境分流呈现”的可能，真实落地页面尚未被确认。结论：当前仅能在离线证据范围内判定为中等风险，建议在合规前提下使用完整浏览器、保留 Cookie 会话并切换更接近目标受众的出口环境复核重定向后的最终页面。 {&#x27;original&#x27;: &#x27;未发现明显高危特征，仍建议结合链接来源和访问上下文复核。&#x27;, &#x27;summary&#x27;: &#x27;倾向低风险，但强调需结合来源与上下文复核。&#x27;}</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">{&#x27;original&#x27;: &#x27;URL 结构未命中当前规则库中的明显异常项。&#x27;, &#x27;summary&#x27;: &#x27;URL 本身未触发明显规则命中，但页面脚本行为另有可疑点。&#x27;}</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">{&#x27;original&#x27;: &#x27;未观察到可疑跳转或页面行为证据。&#x27;, &#x27;summary&#x27;: &#x27;在当前证据范围内未见外部可疑跳转；但页面存在 JS 挑战式内部重定向。&#x27;}</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">{&#x27;original&#x27;: &#x27;当前离线版本未接入外部威胁情报，结论基于本地规则。&#x27;, &#x27;summary&#x27;: &#x27;结论仅基于离线证据与本地规则，缺少外部情报佐证。&#x27;}</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">{&#x27;original&#x27;: &#x27;可正常访问，但不要在陌生页面提交敏感信息。&#x27;, &#x27;summary&#x27;: &#x27;可访问性不等于可信性，建议不要在未确认页面身份前输入敏感信息。&#x27;}</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">基于当前静态抓取、浏览器证据包与专家意见，目标页面更像是一个 JS 闸门/反自动化验证页，而非已直接暴露恶意载荷的最终业务页。证据显示页面仅返回空标题 HTML，主体几乎只有 `/aes.js` 与内联脚本：通过 `slowAES.decrypt` 计算并写入 `__test` Cookie，随后立即重定向到同域 `/?i=1`。这类模式常见于反爬、反机器人或分级内容呈现，也可能被用于规避静态扫描和隐藏后续页面内容。当前离线证据未看到钓鱼表单、下载链接、外链跳转或明确恶意脚本注入，因此不能定性为高危恶意站点；但由于真实内容被 JS/Cookie 门槛遮蔽，且抓取环境使用代理模式，仍存在“对自动化与不同出口环境分流呈现”的可能，真实落地页面尚未被确认。结论：当前仅能在离线证据范围内判定为中等风险，建议在合规前提下使用完整浏览器、保留 Cookie 会话并切换更接近目标受众的出口环境复核重定向后的最终页面。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5.4-mini</td><td>基于当前静态抓取、浏览器证据包与专家意见，目标页面更像是一个 JS 闸门/反自动化验证页，而非已直接暴露恶意载荷的最终业务页。证据显示页面仅返回空标题 HTML，主体几乎只有 `/aes.js` 与内联脚本：通过 `slowAES.decrypt` 计算并写入 `__test` Cookie，随后立即重定向到同域 `/?i=1`。这类模式常见于反爬、反机器人或分级内容呈现，也可能被用于规避静态扫描和隐藏后续页面内容。当前离线证据未看到钓鱼表单、下载链接、外链跳转或明确恶意脚本注入，因此不能定性为高危恶意站点；但由于真实内容被 JS/Cookie 门槛遮蔽，且抓取环境使用代理模式，仍存在“对自动化与不同出口环境分流呈现”的可能，真实落地页面尚未被确认。结论：当前仅能在离线证据范围内判定为中等风险，建议在合规前提下使用完整浏览器、保留 Cookie 会话并切换更接近目标受众的出口环境复核重定向后的最终页面。 {&#x27;original&#x27;: &#x27;未发现明显高危特征，仍建议结合链接来源和访问上下文复核。&#x27;, &#x27;summary&#x27;: &#x27;倾向低风险，但强调需结合来源与上下文复核。&#x27;}</td></tr><tr><th>静态分析员</th><td>gemini-2.5-flash</td><td>{&#x27;original&#x27;: &#x27;URL 结构未命中当前规则库中的明显异常项。&#x27;, &#x27;summary&#x27;: &#x27;URL 本身未触发明显规则命中，但页面脚本行为另有可疑点。&#x27;}</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>{&#x27;original&#x27;: &#x27;未观察到可疑跳转或页面行为证据。&#x27;, &#x27;summary&#x27;: &#x27;在当前证据范围内未见外部可疑跳转；但页面存在 JS 挑战式内部重定向。&#x27;}</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>{&#x27;original&#x27;: &#x27;当前离线版本未接入外部威胁情报，结论基于本地规则。&#x27;, &#x27;summary&#x27;: &#x27;结论仅基于离线证据与本地规则，缺少外部情报佐证。&#x27;}</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>{&#x27;original&#x27;: &#x27;可正常访问，但不要在陌生页面提交敏感信息。&#x27;, &#x27;summary&#x27;: &#x27;可访问性不等于可信性，建议不要在未确认页面身份前输入敏感信息。&#x27;}</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>
