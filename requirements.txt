@@ -1,16 +1,10 @@
-# SentinelGuard 网页恶意检测最小依赖集
-
-# 核心配置与数据模型
 pydantic==2.5.2
 pydantic-settings==2.2.1
 python-dotenv>=1.0.0
+androguard>=4.1.2
 
-# 网络抓取与模型调用
 requests==2.31.0
 openai>=1.3.0
 
-# 日志
 loguru>=0.7.0
-
-# 测试（可选，但建议保留）
 pytest>=7.4.0

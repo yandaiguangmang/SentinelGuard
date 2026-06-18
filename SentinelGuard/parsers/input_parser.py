@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 from pathlib import Path
 from typing import Optional
 from urllib.parse import parse_qs, urlparse, urlunparse
@@ -22,13 +23,18 @@ def parse_target(raw_input: str, target_type: Optional[str] = None) -> TargetIR:
         return TargetIR("apk", value, "invalid", message="请输入有效的 APK 文件路径。")
 
     if requested_type in {"url", "website", "auto"}:
+        if requested_type == "auto" and _is_bare_apk_path(value):
+            apk_ir = _parse_apk(value)
+            if apk_ir:
+                return TargetIR("apk", value, "ready", apk=apk_ir)
         parsed = _parse_url(value)
         if parsed:
             return TargetIR("url", value, "ready", url=parsed)
 
-    apk_ir = _parse_apk(value)
-    if apk_ir:
-        return TargetIR("apk", value, "ready", apk=apk_ir)
+    if requested_type == "auto":
+        apk_ir = _parse_apk(value)
+        if apk_ir:
+            return TargetIR("apk", value, "ready", apk=apk_ir)
 
     if requested_type in {"app", "small_program"}:
         return TargetIR(requested_type, value, "not_implemented", message="当前版本仅支持网址检测，APK 检测将在静态分析器中补全。")
@@ -40,7 +46,7 @@ def parse_target(raw_input: str, target_type: Optional[str] = None) -> TargetIR:
 
 
 def _parse_url(value: str) -> Optional[URLIR]:
-    candidate = value if "://" in value else f"https://{value}"
+    candidate = value if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value) else f"https://{value}"
     parsed = urlparse(candidate)
 
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.hostname:
@@ -81,9 +87,15 @@ def _parse_apk(value: str) -> Optional[APKIR]:
     )
 
 
+def _is_bare_apk_path(value: str) -> bool:
+    return "://" not in value and value.lower().endswith(".apk")
+
+
 def _is_ip_address(hostname: str) -> bool:
     try:
         ipaddress.ip_address(hostname.strip("[]"))
         return True
     except ValueError:
         return False
+
+

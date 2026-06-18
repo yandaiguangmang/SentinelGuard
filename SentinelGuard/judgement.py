@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from openai import OpenAI
 
 from config import settings
 
 from SentinelGuard.analyzers.apk_analyzer import analyze_apk
+from SentinelGuard.analyzers.apk_deep_analyzer import deep_analyze_apk
+from SentinelGuard.analyzers.apk_dynamic_analyzer import dynamic_analyze_apk
 from SentinelGuard.analyzers.url_analyzer import analyze_url
 from SentinelGuard.analyzers.url_deep_analyzer import deep_analyze_url
 from SentinelGuard.parsers.input_parser import parse_target
 from SentinelGuard.report import save_detection_report
-from SentinelGuard.state import DetectionFinding, DetectionReport, TargetIR
+from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
 
 
 SEVERITY_WEIGHTS = {
@@ -30,7 +32,7 @@ SEVERITY_BASE_SCORES = {
 }
 
 PLACEHOLDERS = {
-    "web": "当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面截图比对。",
+    "web": "当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。",
     "apk": "当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。",
 }
 
@@ -64,19 +66,19 @@ ROLE_MODEL_PRESETS = {
 }
 
 
-def run_detection(raw_target: str, target_type: str = "auto", fetch_page: bool = True) -> DetectionReport:
-    return run_static_detection(raw_target, target_type=target_type, fetch_page=fetch_page)
+def run_detection(raw_target: str, target_type: str = "auto", fetch_page: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None) -> DetectionReport:
+    return run_static_detection(raw_target, target_type=target_type, fetch_page=fetch_page, runtime_config=runtime_config)
 
 
-def run_static_detection(raw_target: str, target_type: str = "auto", fetch_page: bool = True, persist_report: bool = True) -> DetectionReport:
+def run_static_detection(raw_target: str, target_type: str = "auto", fetch_page: bool = True, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None) -> DetectionReport:
     target_ir = parse_target(raw_target, target_type)
-    report = build_static_report(target_ir, fetch_page=fetch_page)
+    report = build_static_report(target_ir, fetch_page=fetch_page, runtime_config=runtime_config)
     if persist_report:
         save_detection_report(report)
     return report
 
 
-def build_static_report(target_ir: TargetIR, fetch_page: bool = True) -> DetectionReport:
+def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None) -> DetectionReport:
     if target_ir.status == "not_implemented":
         return DetectionReport(
             target_ir=target_ir,
@@ -120,7 +122,7 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True) -> Detecti
             analysis_mode="static",
         )
 
-    analysis = analyze_url(target_ir, fetch_page=fetch_page)
+    analysis = analyze_url(target_ir, fetch_page=fetch_page, runtime_config=runtime_config)
     findings: List[DetectionFinding] = _deduplicate_findings(analysis["findings"])
     score = _calculate_score(findings)
     risk_level = _risk_level(score, findings)
@@ -138,8 +140,11 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True) -> Detecti
     )
 
 
-def run_deep_url_detection_from_static(static_report: DetectionReport, persist_report: bool = True) -> DetectionReport:
-    deep_result = deep_analyze_url(static_report)
+def run_deep_url_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
+    try:
+        deep_result = deep_analyze_url(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+    except TypeError:
+        deep_result = deep_analyze_url(static_report)
     merged_findings = _deduplicate_findings(static_report.findings + deep_result["additional_findings"])
 
     expert_models = deep_result.get("expert_models") or _build_expert_model_map()
@@ -158,6 +163,40 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         apk_summary=static_report.apk_summary,
         placeholders=static_report.placeholders,
         analysis_mode="deep",
+        deep_analysis_used=True,
+        parent_html_report_path=static_report.html_report_path,
+        parent_markdown_report_path=static_report.markdown_report_path,
+    )
+    if persist_report:
+        save_detection_report(report)
+    return report
+
+
+def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
+    try:
+        dynamic_result = dynamic_analyze_apk(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+    except TypeError:
+        dynamic_result = dynamic_analyze_apk(static_report)
+    dynamic_findings = dynamic_result.get("findings", [])
+    merged_findings = _deduplicate_findings(static_report.findings + dynamic_findings)
+
+    score = int(dynamic_result.get("score", _calculate_score(merged_findings)))
+    risk_level = str(dynamic_result.get("risk_level") or _risk_level(score, merged_findings))
+    report = DetectionReport(
+        target_ir=static_report.target_ir,
+        risk_level=risk_level,
+        score=max(0, min(100, score)),
+        findings=merged_findings,
+        expert_opinions=dynamic_result.get("expert_opinions", static_report.expert_opinions),
+        expert_models=dynamic_result.get("expert_models", _build_expert_model_map()),
+        deep_summary=dynamic_result.get("deep_summary", ""),
+        redirect_chain=static_report.redirect_chain,
+        page_summary=static_report.page_summary,
+        apk_summary=static_report.apk_summary,
+        apk_dynamic_summary=dynamic_result.get("apk_dynamic_summary", {}),
+        apk_dynamic_artifacts=dynamic_result.get("apk_dynamic_artifacts", {}),
+        placeholders=static_report.placeholders,
+        analysis_mode="dynamic",
         deep_analysis_used=True,
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,

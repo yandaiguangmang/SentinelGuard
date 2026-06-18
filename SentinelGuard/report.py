@@ -47,6 +47,8 @@ def render_html_report(report: DetectionReport) -> str:
     placeholders_panel = _render_placeholders_panel(report)
     analysis_mode_label = _analysis_mode_label(report)
     parent_report_block = _render_parent_report_block(report)
+    browser_evidence_block = _render_browser_evidence_block(report)
+    apk_dynamic_block = _render_apk_dynamic_block(report)
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -232,6 +234,8 @@ header {{
         </div>
         {result_panel}
         {parent_report_block}
+        {browser_evidence_block}
+        {apk_dynamic_block}
       </div>
     </section>
 
@@ -269,7 +273,7 @@ header {{
   <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
     <div class="panel-inner">
       <div class="section-title">
-        <h3>{'模型深度研判' if report.analysis_mode == 'deep' else '协同研判'}</h3>
+        <h3>{'模型深度研判' if report.analysis_mode == 'deep' else 'APK 动态协同研判' if report.analysis_mode == 'dynamic' else '协同研判'}</h3>
         <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
       </div>
       {discussion_panel}
@@ -300,6 +304,7 @@ def render_markdown_report(report: DetectionReport) -> str:
         "# SentinelGuard 哨塔检测报告",
         "",
         f"> {analysis_mode_label} · 风险等级：**{report.risk_level.upper()}** · 风险分数：**{report.score}/100**",
+        "模型深度研判" if report.analysis_mode == "deep" else "",
         "",
         "## 一、检测结论",
         f"- 原始输入：`{ir.original_input}`",
@@ -333,6 +338,14 @@ def render_markdown_report(report: DetectionReport) -> str:
 
     lines.extend(["", "## 四、页面线索"])
     lines.extend(_markdown_dict(report.page_summary))
+
+    lines.extend(["", "## 四点一、APK 动态沙箱摘要"])
+    if report.analysis_mode == "dynamic":
+        lines.extend(_markdown_dict(report.apk_dynamic_summary))
+        if report.apk_dynamic_artifacts:
+            lines.extend([f"- {key}：`{value}`" for key, value in report.apk_dynamic_artifacts.items()])
+    else:
+        lines.extend(_markdown_browser_evidence(report))
 
     lines.extend(["", "## 五、风险证据"])
     if report.findings:
@@ -412,7 +425,11 @@ def _format_value(value) -> str:
 
 
 def _analysis_mode_label(report: DetectionReport) -> str:
-    return "模型深度研判报告" if report.analysis_mode == "deep" else "静态检测报告"
+    if report.analysis_mode == "deep":
+        return "模型深度检查报告"
+    if report.analysis_mode == "dynamic":
+        return "APK 动态沙箱报告"
+    return "静态检测报告"
 
 
 def _build_report_stats(report: DetectionReport) -> dict[str, int]:
@@ -521,7 +538,7 @@ def _render_chain_panel(report: DetectionReport) -> str:
       <div class="scroll-box">
         <h4>跳转链</h4>
         <ol>{redirect_chain}</ol>
-        <h4>页面摘要</h4>
+        <h4>页面线索</h4>
         {page_summary}
       </div>
       <div class="pill-row">{tag_html}</div>
@@ -581,7 +598,7 @@ def _render_discussion_panel(report: DetectionReport) -> str:
 
 
 def _render_model_panel(report: DetectionReport) -> str:
-    if report.analysis_mode != "deep" or not report.expert_models:
+    if report.analysis_mode not in {"deep", "dynamic"} or not report.expert_models:
         return ""
 
     rows = []
@@ -615,20 +632,75 @@ def _render_placeholders_panel(report: DetectionReport) -> str:
         f"<li><strong>{html.escape(key)}</strong>：{html.escape(value)}</li>"
         for key, value in report.placeholders.items()
     )
-    return f"<ul>{items}</ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单、截图比对与威胁情报联动。</p>"
+    return f"<ul>{items}</ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>"
 
 
 def _render_parent_report_block(report: DetectionReport) -> str:
-    if report.analysis_mode != "deep":
+    if report.analysis_mode not in {"deep", "dynamic"}:
         return ""
     links = []
     if report.parent_html_report_path:
-        links.append(f"<a href='{html.escape(report.parent_html_report_path)}' target='_blank'>静态 HTML 报告</a>")
+        links.append(f"<a href='{html.escape(report.parent_html_report_path)}' target='_blank'>关联静态 HTML 报告</a>")
     if report.parent_markdown_report_path:
-        links.append(f"<a href='{html.escape(report.parent_markdown_report_path)}' target='_blank'>静态 Markdown 报告</a>")
+        links.append(f"<a href='{html.escape(report.parent_markdown_report_path)}' target='_blank'>关联静态 Markdown 报告</a>")
     if not links:
         return "<p class='subtle'>未记录关联静态报告。</p>"
     return f"<p class='subtle'>关联静态报告：{' · '.join(links)}</p>"
+
+
+def _render_browser_evidence_block(report: DetectionReport) -> str:
+    evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
+    if not evidence:
+        return ""
+
+    proxy_info = ""
+    if evidence.get("fetch_mode"):
+        proxy_info = f"<p class='subtle'>抓取模式：{html.escape(str(evidence.get('fetch_mode')))} / 代理：{'是' if evidence.get('proxy_used') else '否'}</p>"
+
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          {proxy_info}
+        </div>
+      </div>
+    """
+
+
+def _render_apk_dynamic_block(report: DetectionReport) -> str:
+    if report.analysis_mode != "dynamic" and not report.apk_dynamic_summary and not report.apk_dynamic_artifacts:
+        return ""
+
+    summary_rows = []
+    if report.apk_dynamic_summary:
+        for key, value in report.apk_dynamic_summary.items():
+            summary_rows.append(f"<tr><th>{html.escape(str(key))}</th><td>{html.escape(_format_value(value))}</td></tr>")
+    if report.apk_dynamic_artifacts:
+        for key, value in report.apk_dynamic_artifacts.items():
+            summary_rows.append(f"<tr><th>{html.escape(str(key))}</th><td>{html.escape(_format_value(value))}</td></tr>")
+    rows = "".join(summary_rows) or "<tr><td>暂无动态摘要。</td></tr>"
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>APK 动态沙箱摘要</h4>
+          <div class='scroll-box slim'>
+            <table class='table'>{rows}</table>
+          </div>
+        </div>
+      </div>
+    """
+
+
+def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
+    lines: list[str] = []
+    evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
+    if evidence.get("fetch_mode"):
+        lines.append(f"- 抓取模式：`{evidence.get('fetch_mode')}`")
+    if evidence.get("proxy_used") is not None:
+        lines.append(f"- 代理是否参与：`{bool(evidence.get('proxy_used'))}`")
+    return lines
 
 
 def _group_findings_by_severity(findings: Sequence[DetectionFinding]) -> dict[str, list[DetectionFinding]]:

@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #991b1b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #991b1b; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 22</span>
+      <span class="chip danger">风险 CRITICAL</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">CRITICAL</div>
+      <div class="hint">3 条高危 / 11 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">95/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度研判报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">apk</div>
+      <div class="hint">C:\Users\lenovo\AppData\Local\Temp\tmp5m238psw.apk</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度研判报告</small>
+        </div>
+        
+      <p><span class="badge">CRITICAL</span></p>
+      <p>风险分数：<strong>95/100</strong></p>
+      <p>原始输入：<code>C:\Users\lenovo\AppData\Local\Temp\tmp5m238psw.apk</code></p>
+      <p>报告类型：<strong>模型深度研判报告</strong></p>
+      <div class="pill-row"><span class='pill low'>LOW · 关键文件证据已提取</span><span class='pill medium'>MEDIUM · 未解析到包名</span><span class='pill high'>CRITICAL · Manifest关键信息缺失</span><span class='pill high'>HIGH · 发现反分析和代码保护库</span><span class='pill medium'>MEDIUM · 签名信息指向特定应用但缺乏验证</span><span class='pill low'>LOW · 集成第三方广告SDK</span><span class='pill low'>LOW · DEX文件数量庞大</span><span class='pill medium'>MEDIUM · 应用加壳或混淆阻碍静态分析</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_apk_static_20260617_224421_850821.html' target='_blank'>静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_apk_static_20260617_224421_850821.md' target='_blank'>静态 Markdown 报告</a></p>
+        
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>APK 文件</th><td>tmp5m238psw.apk</td></tr><tr><th>规范化路径</th><td>C:/Users/lenovo/AppData/Local/Temp/tmp5m238psw.apk</td></tr><tr><th>包名</th><td>-</td></tr><tr><th>版本名</th><td>-</td></tr><tr><th>版本号</th><td>-</td></tr><tr><th>SHA256</th><td>38fa48cd9cd0ff6567950333eb667b834f9616ec1fd0582bbc0a3bd9d4fcbfac</td></tr><tr><th>大小</th><td>153797255 字节</td></tr><tr><th>权限数量</th><td>0</td></tr><tr><th>组件数量</th><td>0</td></tr><tr><th>证书主体</th><td>-</td></tr><tr><th>证书签发者</th><td>-</td></tr><tr><th>证书指纹</th><td>52840df123ecf46f3e3d29e98f8fdb1e5ab590a8420ff1645c4822378956dec5</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>未获取跳转链。</li></ol>
+        <h4>页面线索</h4>
+        <p class='subtle'>未获取页面内容线索。</p>
+      </div>
+      <div class="pill-row"><span class='pill muted'>LOW · 关键文件证据已提取</span><span class='pill muted'>MEDIUM · 未解析到包名</span><span class='pill muted'>CRITICAL · Manifest关键信息缺失</span><span class='pill muted'>HIGH · 发现反分析和代码保护库</span><span class='pill muted'>MEDIUM · 签名信息指向特定应用但缺乏验证</span><span class='pill muted'>LOW · 集成第三方广告SDK</span><span class='pill muted'>LOW · DEX文件数量庞大</span><span class='pill muted'>MEDIUM · 应用加壳或混淆阻碍静态分析</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>CRITICAL（1）</h4><div class='grid-list'>
+    <div class="finding critical">
+      <h4>Manifest关键信息缺失 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_MISSING_MANIFEST_DETAILS</div>
+      <p>APK的AndroidManifest.xml文件未能解析出包名、权限、活动、服务和内容提供者等核心信息。这对于一个功能性APK来说是极其异常的，可能表明Manifest文件被严重混淆、损坏或APK被加壳，以规避静态分析。</p>
+      <div class="kv">
+        <b>证据</b><span><code>APK包名为空，权限列表为空，活动、服务、内容提供者列表均为空。</code></span>
+        <b>建议</b><span>对AndroidManifest.xml进行反混淆或脱壳处理，并进行动态行为分析以揭示其真实功能和意图。</span>
+      </div>
+    </div>
+    </div><h4>HIGH（2）</h4><div class='grid-list'>
+    <div class="finding high">
+      <h4>发现反分析和代码保护库 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_ANTI_ANALYSIS_LIBRARIES</div>
+      <p>APK中包含多个与代码保护、混淆或虚拟化相关的本地库，如`libDexHelper.so`, `libDexVMP.so`, `libbangcle_crypto_tool.so`, `libEncryptorP.so`, `libencry-lib.so`, `libencrypt.so`。这些库常用于防止逆向工程和隐藏恶意行为，是恶意软件的常见特征。</p>
+      <div class="kv">
+        <b>证据</b><span><code>本地库文件列表包含：`libDexHelper.so`, `libDexVMP.so`, `libbangcle_crypto_tool.so`, `libEncryptorP.so`, `libencry-lib.so`, `libencrypt.so`。</code></span>
+        <b>建议</b><span>对这些本地库进行深入分析，识别其具体保护机制，并尝试脱壳或绕过保护以获取真实代码逻辑。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>发现反分析和代码保护库 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_ANTI_ANALYSIS_LIBRARIES</div>
+      <p>APK 中包含多个与代码保护、混淆或虚拟化相关的本地库，常见于加固方案，也会显著增加逆向难度。</p>
+      <div class="kv">
+        <b>证据</b><span><code>libDexHelper.so、libdexvmp.so、libbangcle_crypto_tool.so、libEncryptorP.so、libencry-lib.so、libencrypt.so。</code></span>
+        <b>建议</b><span>对这些本地库进行深入分析，识别其保护机制并尝试脱壳。</span>
+      </div>
+    </div>
+    </div><h4>MEDIUM（11）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>未解析到包名 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_MISSING_PACKAGE</div>
+      <p>APK 中未能提取出明确的包名，样本身份不够清晰。</p>
+      <div class="kv">
+        <b>证据</b><span><code>tmp5m238psw.apk</code></span>
+        <b>建议</b><span>补充样本来源与签名信息后再复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>签名信息指向特定应用但缺乏验证 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_SIGNATURE_INDICATION</div>
+      <p>APK的签名文件（META-INF/COM_ZHIH.SF, META-INF/COM_ZHIH.RSA）中包含&#x27;COM_ZHIH&#x27;，可能指向知乎（Zhihu）应用。然而，由于Manifest关键信息缺失，无法确认该APK是否为官方知乎应用、被篡改的知乎应用或伪装成知乎的恶意应用。</p>
+      <div class="kv">
+        <b>证据</b><span><code>签名文件名称：`META-INF/COM_ZHIH.SF`, `META-INF/COM_ZHIH.RSA`。</code></span>
+        <b>建议</b><span>结合APK的获取来源、官方渠道信息以及动态分析结果，进一步验证签名的真实性和应用的合法性。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>应用加壳或混淆阻碍静态分析 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_OBFUSCATION_HINDERS_ANALYSIS</div>
+      <p>样本可能经过了加壳或高级混淆处理，导致静态分析工具无法解析其AndroidManifest.xml。这使得无法获取其注册的权限、服务、广播接收器等关键组件信息，从而无法有效预判其核心行为。原生库中包含的libdexvmp.so、libbangcle_crypto_tool.so等文件是已知的加固或VMP保护方案的特征。</p>
+      <div class="kv">
+        <b>证据</b><span><code>无法解析APK的包名、权限和组件列表。原生库中存在 &#x27;libdexvmp.so&#x27;, &#x27;libbangcle_crypto_tool.so&#x27;。</code></span>
+        <b>建议</b><span>建议使用脱壳工具或在支持运行时分析的动态沙箱环境中执行，以获取其解密后的真实代码和行为。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>APK包名缺失，身份不明 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_MISSING_PACKAGE_IDENTITY</div>
+      <p>静态分析未能从APK中解析出明确的包名。包名是APK的重要标识，缺失或无法解析会导致应用身份不明，难以进行有效的信任评估和溯源，增加了潜在的安全风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>APK文件 &#x27;tmp5m238psw.apk&#x27; 未能解析到包名。</code></span>
+        <b>建议</b><span>建议立即补充样本来源信息，并结合签名证书、分发市场来源及历史信誉进行深入核验。在明确应用身份和确认其合法性之前，不建议进行任何形式的部署或使用。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>需进行动态沙箱行为复核 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_DYNAMIC_ANALYSIS_REQUIRED</div>
+      <p>当前分析仅限于静态层面，未能获取APK在实际运行环境中的行为数据。恶意软件通常采用动态加载、运行时加密等技术规避静态检测，因此动态沙箱分析是全面评估其潜在恶意性的关键步骤。</p>
+      <div class="kv">
+        <b>证据</b><span><code>报告明确指出当前版本仅提供静态APK检测，未执行动态沙箱。</code></span>
+        <b>建议</b><span>将此APK样本提交至动态沙箱环境进行全面行为分析。重点观察其网络通信行为（如C2服务器连接、数据外传）、文件系统操作、权限滥用、进程注入等，以揭示潜在的恶意活动。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>综合处置建议 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_GENERAL_DISPOSAL_RECOMMENDATIONS</div>
+      <p>鉴于当前APK包名缺失、缺乏动态行为分析且被评定为中等风险，需要采取谨慎的处置措施以防止潜在的安全威胁。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态分析结果显示中等风险，且存在包名缺失，动态分析未执行。</code></span>
+        <b>建议</b><span>1. **隔离安装**: 强烈建议在完全隔离的测试环境（如虚拟机或专用沙箱）中进行安装和测试，严禁在生产环境或任何敏感设备上直接安装此APK。
+2. **沙箱复核**: 必须立即进行动态沙箱行为复核，以获取其运行时行为特征和潜在恶意活动证据。
+3. **阻断分发**: 在完成全面动态分析并确认其无害之前，应立即阻断此APK的任何形式的分发、传播或部署。
+4. **保留样本留痕**: 妥善保留此APK样本及其所有静态和动态分析报告，作为安全事件响应和威胁情报共享的重要依据。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>未解析到包名 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_MISSING_PACKAGE</div>
+      <p>APK 中未能提取出明确的包名，样本身份不够清晰。</p>
+      <div class="kv">
+        <b>证据</b><span><code>package_name 为空，version_name/version_code 为空，activities/services/receivers/providers 也未提取到。</code></span>
+        <b>建议</b><span>补充样本来源与签名信息后再复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>签名信息指向特定应用但缺乏验证 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_SIGNATURE_INDICATION</div>
+      <p>签名文件名包含 COM_ZHIH，可能指向知乎相关构建，但仅凭文件名无法证明官方真实性，也不能排除伪装或篡改。</p>
+      <div class="kv">
+        <b>证据</b><span><code>META-INF/COM_ZHIH.SF；META-INF/COM_ZHIH.RSA；certificate_sha256: 52840df123ecf46f3e3d29e98f8fdb1e5ab590a8420ff1645c4822378956dec5。</code></span>
+        <b>建议</b><span>结合获取来源、官方证书链和历史信誉进一步核验。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>应用加壳或混淆阻碍静态分析 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_OBFUSCATION_HINDERS_ANALYSIS</div>
+      <p>静态解析受限，说明样本可能经过加壳/高级混淆，阻碍了权限、组件和意图过滤器的提取。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Manifest 关键字段缺失；libdexvmp.so、libbangcle_crypto_tool.so 等保护特征库存在。</code></span>
+        <b>建议</b><span>在支持运行时分析的动态沙箱环境中执行。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>APK包名缺失，身份不明 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_MISSING_PACKAGE_IDENTITY</div>
+      <p>包名缺失导致应用身份无法有效确认，增加溯源与信任评估难度。</p>
+      <div class="kv">
+        <b>证据</b><span><code>APK 文件未能解析到包名。</code></span>
+        <b>建议</b><span>结合签名证书、分发市场来源及历史信誉进行核验。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>需进行动态沙箱行为复核 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_DYNAMIC_ANALYSIS_REQUIRED</div>
+      <p>当前分析仅限静态层面，无法确认运行时网络通信、文件操作和权限滥用等行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>未执行动态沙箱。</code></span>
+        <b>建议</b><span>提交至动态沙箱观察 C2、数据外传、文件系统操作、进程注入等行为。</span>
+      </div>
+    </div>
+    </div><h4>LOW（8）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>关键文件证据已提取 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：APK_KEY_FILES_REVIEWED</div>
+      <p>已优先检查 APK 内部关键文件、签名文件、资源配置与代码承载文件，用于后续静态研判与深度分析。</p>
+      <div class="kv">
+        <b>证据</b><span><code>manifest: AndroidManifest.xml; resource: assets/Night_Tabbar_Feed.json; resource: assets/Night_Tabbar_More.json; resource: assets/Night_Tabbar_Notifications.json; resource: assets/Night_Tabbar_Shop.json; resource: assets/Night_Tabbar_Video.json; resource: assets/Night_Tabbar_explore2_Feed.json; resource: assets/Night_Tabbar_explore2_Friend.json; resource: assets/Night_Tabbar_explore2_More.json; resource: assets/Night_Tabbar_explore2_Notifications.json; resource: assets/Night_Tabbar_explore2_Shop.json; resource: assets/Ogv_UIConfig.json</code></span>
+        <b>建议</b><span>结合 manifest、资源、签名与代码文件继续确认风险链条。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>集成第三方广告SDK <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_THIRD_PARTY_ADS_SDK</div>
+      <p>APK中检测到第三方广告SDK文件，如`bdxadsdk.jar` (百度广告SDK) 和 `gdt_plugin/gdtadv2.jar` (广点通广告SDK)。这在许多合法应用中很常见，但也可能被用于恶意广告或广告欺诈。</p>
+      <div class="kv">
+        <b>证据</b><span><code>资源文件列表包含：`assets/bdxadsdk.jar`, `assets/gdt_plugin/gdtadv2.jar`。</code></span>
+        <b>建议</b><span>在动态分析中关注广告行为，检查是否存在过度广告、恶意弹窗或未经用户同意的广告展示。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>DEX文件数量庞大 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_LARGE_DEX_COUNT</div>
+      <p>APK包含18个DEX文件（classes.dex到classes18.dex），表明其代码量庞大或采用了多DEX分包技术。这在大型复杂应用中常见，但也可能被恶意软件用于隐藏大量代码或实现复杂功能。</p>
+      <div class="kv">
+        <b>证据</b><span><code>DEX文件列表包含18个文件，总大小超过100MB。</code></span>
+        <b>建议</b><span>在后续分析中，需要对所有DEX文件进行全面反编译和代码审计，以确保没有隐藏的恶意逻辑。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>集成多个广告SDK <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_MULTIPLE_AD_SDKS</div>
+      <p>应用在assets目录和原生库中集成了多个第三方广告平台SDK，例如百度广告(bdxadsdk.jar)、腾讯广点通(gdtadv2.jar)和阿里Tanx(libalitanx-lib.so)。虽然这是免费应用的常见盈利模式，但多个广告SDK可能会在后台竞争资源，执行网络请求，并收集设备与用户信息用于广告精准投放，存在一定的隐私合规风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>assets/bdxadsdk.jar, assets/gdt_plugin/gdtadv2.jar, lib/arm64-v8a/libalitanx-lib.so</code></span>
+        <b>建议</b><span>关注应用在隐私政策中是否明确告知了第三方SDK的数据收集行为，并关注其网络流量和后台活动情况。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>关键文件证据已提取 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：APK_KEY_FILES_REVIEWED</div>
+      <p>已优先检查 APK 内部关键文件、签名文件、资源配置与代码承载文件，用于后续静态研判与深度分析。</p>
+      <div class="kv">
+        <b>证据</b><span><code>AndroidManifest.xml；META-INF/COM_ZHIH.SF；META-INF/COM_ZHIH.RSA；META-INF/MANIFEST.MF；大量 dex 与 assets 配置资源。</code></span>
+        <b>建议</b><span>结合 manifest、资源、签名与代码文件继续确认风险链条。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>集成第三方广告SDK <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_THIRD_PARTY_ADS_SDK</div>
+      <p>检测到百度广告与广点通广告 SDK，属于常见商业化组件，但也意味着更复杂的外联与数据交互面。</p>
+      <div class="kv">
+        <b>证据</b><span><code>assets/bdxadsdk.jar；assets/gdt_plugin/gdtadv2.jar。</code></span>
+        <b>建议</b><span>动态分析时关注广告请求、弹窗和隐私合规。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>DEX文件数量庞大 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_LARGE_DEX_COUNT</div>
+      <p>样本包含大量 dex 文件，说明代码体量很大或采用多 dex 分包；这更符合大型应用，但也提高了隐藏逻辑的可能性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>classes.dex 至 classes18.dex，共 18 个 dex。</code></span>
+        <b>建议</b><span>全面反编译所有 dex 并做代码审计。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>集成多个广告SDK <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_MULTIPLE_AD_SDKS</div>
+      <p>多家广告平台 SDK 共存，符合大体量免费应用的变现模型，但也增加隐私和网络外联复杂度。</p>
+      <div class="kv">
+        <b>证据</b><span><code>bdxadsdk.jar、gdtadv2.jar、libalitanx-lib.so。</code></span>
+        <b>建议</b><span>关注隐私政策、网络流量和后台活动。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>基于当前离线静态证据，这个 APK 更像是一个经过强加固/混淆的大型正规商业应用，而不是已能被静态证据直接坐实的恶意样本；但其身份解析不完整，Manifest 中未提取到包名、权限、组件信息，且存在大量与加壳、虚拟化、加密相关的本地库（如 libDexHelper.so、libdexvmp.so、libbangcle_crypto_tool.so、libEncryptorP.so、libencry-lib.so），说明静态可见面被明显压缩，真实行为仍不透明。签名文件名 COM_ZHIH.SF / COM_ZHIH.RSA 以及资源中大量知乎风格的业务配置、GaiaX 模板、视频/问答/发布工具栏配置、广告 SDK（bdxadsdk.jar、gdtadv2.jar）与监控/分析库，整体更接近知乎类产品的工程构成，但由于包名、组件和权限链条缺失，无法仅凭静态证据确认其为官方正版，也不能排除被篡改或伪装的可能。因此最终裁决为中等风险：当前未见明确恶意载荷证据，但样本具备强反分析特征且身份不明，必须在隔离环境下做动态复核后再定性。以上结论仅基于离线静态证据。 综合 2 条证据，当前风险等级需要结合 APK 来源继续判断。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>静态分析认为样本高度可疑：Manifest 关键信息（包名、权限、活动、服务、提供者）缺失，且存在 libDexHelper.so、libDexVMP.so、libbangcle_crypto_tool.so、libEncryptorP.so 等反分析/加固库；尽管签名中出现 COM_ZHIH，仍无法确认其合法性，建议深入动态分析。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>行为分析认为样本更像正规商业应用（知乎）并使用高强度加固/混淆，配套广告 SDK 与性能监控 SDK 符合大型免费应用特征；未发现明确恶意行为特征，但静态受限，风险偏低的判断依赖可信来源假设。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>建议结合市场来源、签名证书与历史信誉进一步核验。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>建议在隔离环境中进行动态复核，并在此之前阻断分发；当前静态结果仅能支持中等风险结论。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">基于当前离线静态证据，这个 APK 更像是一个经过强加固/混淆的大型正规商业应用，而不是已能被静态证据直接坐实的恶意样本；但其身份解析不完整，Manifest 中未提取到包名、权限、组件信息，且存在大量与加壳、虚拟化、加密相关的本地库（如 libDexHelper.so、libdexvmp.so、libbangcle_crypto_tool.so、libEncryptorP.so、libencry-lib.so），说明静态可见面被明显压缩，真实行为仍不透明。签名文件名 COM_ZHIH.SF / COM_ZHIH.RSA 以及资源中大量知乎风格的业务配置、GaiaX 模板、视频/问答/发布工具栏配置、广告 SDK（bdxadsdk.jar、gdtadv2.jar）与监控/分析库，整体更接近知乎类产品的工程构成，但由于包名、组件和权限链条缺失，无法仅凭静态证据确认其为官方正版，也不能排除被篡改或伪装的可能。因此最终裁决为中等风险：当前未见明确恶意载荷证据，但样本具备强反分析特征且身份不明，必须在隔离环境下做动态复核后再定性。以上结论仅基于离线静态证据。 综合 2 条证据，当前风险等级需要结合 APK 来源继续判断。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">静态分析认为样本高度可疑：Manifest 关键信息（包名、权限、活动、服务、提供者）缺失，且存在 libDexHelper.so、libDexVMP.so、libbangcle_crypto_tool.so、libEncryptorP.so 等反分析/加固库；尽管签名中出现 COM_ZHIH，仍无法确认其合法性，建议深入动态分析。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">行为分析认为样本更像正规商业应用（知乎）并使用高强度加固/混淆，配套广告 SDK 与性能监控 SDK 符合大型免费应用特征；未发现明确恶意行为特征，但静态受限，风险偏低的判断依赖可信来源假设。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">建议结合市场来源、签名证书与历史信誉进一步核验。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">建议在隔离环境中进行动态复核，并在此之前阻断分发；当前静态结果仅能支持中等风险结论。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">基于当前离线静态证据，这个 APK 更像是一个经过强加固/混淆的大型正规商业应用，而不是已能被静态证据直接坐实的恶意样本；但其身份解析不完整，Manifest 中未提取到包名、权限、组件信息，且存在大量与加壳、虚拟化、加密相关的本地库（如 libDexHelper.so、libdexvmp.so、libbangcle_crypto_tool.so、libEncryptorP.so、libencry-lib.so），说明静态可见面被明显压缩，真实行为仍不透明。签名文件名 COM_ZHIH.SF / COM_ZHIH.RSA 以及资源中大量知乎风格的业务配置、GaiaX 模板、视频/问答/发布工具栏配置、广告 SDK（bdxadsdk.jar、gdtadv2.jar）与监控/分析库，整体更接近知乎类产品的工程构成，但由于包名、组件和权限链条缺失，无法仅凭静态证据确认其为官方正版，也不能排除被篡改或伪装的可能。因此最终裁决为中等风险：当前未见明确恶意载荷证据，但样本具备强反分析特征且身份不明，必须在隔离环境下做动态复核后再定性。以上结论仅基于离线静态证据。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5.4-mini</td><td>基于当前离线静态证据，这个 APK 更像是一个经过强加固/混淆的大型正规商业应用，而不是已能被静态证据直接坐实的恶意样本；但其身份解析不完整，Manifest 中未提取到包名、权限、组件信息，且存在大量与加壳、虚拟化、加密相关的本地库（如 libDexHelper.so、libdexvmp.so、libbangcle_crypto_tool.so、libEncryptorP.so、libencry-lib.so），说明静态可见面被明显压缩，真实行为仍不透明。签名文件名 COM_ZHIH.SF / COM_ZHIH.RSA 以及资源中大量知乎风格的业务配置、GaiaX 模板、视频/问答/发布工具栏配置、广告 SDK（bdxadsdk.jar、gdtadv2.jar）与监控/分析库，整体更接近知乎类产品的工程构成，但由于包名、组件和权限链条缺失，无法仅凭静态证据确认其为官方正版，也不能排除被篡改或伪装的可能。因此最终裁决为中等风险：当前未见明确恶意载荷证据，但样本具备强反分析特征且身份不明，必须在隔离环境下做动态复核后再定性。以上结论仅基于离线静态证据。 综合 2 条证据，当前风险等级需要结合 APK 来源继续判断。</td></tr><tr><th>静态分析员</th><td>gemini-2.5-flash</td><td>静态分析认为样本高度可疑：Manifest 关键信息（包名、权限、活动、服务、提供者）缺失，且存在 libDexHelper.so、libDexVMP.so、libbangcle_crypto_tool.so、libEncryptorP.so 等反分析/加固库；尽管签名中出现 COM_ZHIH，仍无法确认其合法性，建议深入动态分析。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>行为分析认为样本更像正规商业应用（知乎）并使用高强度加固/混淆，配套广告 SDK 与性能监控 SDK 符合大型免费应用特征；未发现明确恶意行为特征，但静态受限，风险偏低的判断依赖可信来源假设。</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>建议结合市场来源、签名证书与历史信誉进一步核验。</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>建议在隔离环境中进行动态复核，并在此之前阻断分发；当前静态结果仅能支持中等风险结论。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>
