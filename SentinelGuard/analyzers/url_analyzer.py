@@ -1,18 +1,24 @@
 from __future__ import annotations
 
-import os
+import html as html_lib
 import html.parser
 import re
+import warnings
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 try:
     import requests
 except ImportError:  # pragma: no cover - dependency may be absent in minimal environments
     requests = None
 
+try:
+    from urllib3.exceptions import InsecureRequestWarning
+except ImportError:  # pragma: no cover - urllib3 is normally installed with requests
+    InsecureRequestWarning = None
+
 from config import settings
-from SentinelGuard.state import DetectionFinding, TargetIR
+from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, TargetIR
 
 
 SENSITIVE_KEYWORDS = (
@@ -36,28 +42,93 @@ DOWNLOAD_EXTENSIONS = (".apk", ".exe", ".msi", ".scr", ".bat", ".cmd", ".js", ".
 MAX_BODY_BYTES = 200_000
 
 
-def _build_request_proxies() -> Dict[str, str]:
+def _build_request_proxies(runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, str]:
+    if runtime_config is not None:
+        return runtime_config.proxy_dict()
+
     proxies: Dict[str, str] = {}
-    http_proxy = settings.DETECTION_HTTP_PROXY or settings.DETECTION_ALL_PROXY
-    https_proxy = settings.DETECTION_HTTPS_PROXY or settings.DETECTION_ALL_PROXY
+    http_proxy = AnalysisRuntimeConfig._normalize_proxy_url(settings.DETECTION_HTTP_PROXY or settings.DETECTION_ALL_PROXY or "")
+    https_proxy = AnalysisRuntimeConfig._normalize_proxy_url(settings.DETECTION_HTTPS_PROXY or settings.DETECTION_ALL_PROXY or "")
 
     if http_proxy:
         proxies["http"] = http_proxy
     if https_proxy:
         proxies["https"] = https_proxy
 
-    # 让 OpenAI/httpx 客户端也能自动继承代理环境变量，便于外网 / VPN 节点访问
-    if http_proxy and not os.environ.get("HTTP_PROXY"):
-        os.environ["HTTP_PROXY"] = http_proxy
-        os.environ.setdefault("http_proxy", http_proxy)
-    if https_proxy and not os.environ.get("HTTPS_PROXY"):
-        os.environ["HTTPS_PROXY"] = https_proxy
-        os.environ.setdefault("https_proxy", https_proxy)
-    if settings.DETECTION_ALL_PROXY and not os.environ.get("ALL_PROXY"):
-        os.environ["ALL_PROXY"] = settings.DETECTION_ALL_PROXY
-        os.environ.setdefault("all_proxy", settings.DETECTION_ALL_PROXY)
-
     return proxies
+
+
+def _build_fetch_profiles(runtime_config: AnalysisRuntimeConfig | None = None) -> List[Dict[str, Any]]:
+    """构造页面抓取尝试顺序。"""
+
+    proxies = _build_request_proxies(runtime_config)
+    profiles: List[Dict[str, Any]] = []
+
+    if proxies:
+        profiles.append({"name": "proxy", "proxies": proxies, "verify": True, "trust_env": True})
+
+    profiles.append({"name": "direct", "proxies": {}, "verify": True, "trust_env": False})
+    return profiles
+
+
+def _build_session(use_env_proxy: bool = True) -> requests.Session:
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": settings.DETECTION_USER_AGENT or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-User": "?1",
+        "Sec-Fetch-Dest": "document",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+    })
+    session.trust_env = use_env_proxy
+    return session
+
+
+def _read_response_body(response: Any) -> bytes:
+    content = getattr(response, "content", None)
+    if isinstance(content, (bytes, bytearray)):
+        return bytes(content[:MAX_BODY_BYTES])
+
+    raw = getattr(response, "raw", None)
+    if raw is not None and hasattr(raw, "read"):
+        return raw.read(MAX_BODY_BYTES, decode_content=True)
+
+    text = getattr(response, "text", "") or ""
+    encoding = getattr(response, "encoding", None) or "utf-8"
+    return text.encode(encoding, errors="replace")[:MAX_BODY_BYTES]
+
+
+def _attempt_fetch_page(session: Any, url: str, *, proxies: Dict[str, str], verify: bool) -> Dict[str, Any]:
+    response = session.get(
+        url,
+        allow_redirects=False,
+        timeout=settings.DETECTION_TIMEOUT_SECONDS,
+        stream=True,
+        verify=verify,
+        proxies=proxies or None,
+    )
+
+    redirect_chain = [url]
+    location = response.headers.get("location", "")
+    if 300 <= int(getattr(response, "status_code", 0) or 0) < 400 and location:
+        redirect_chain.append(urljoin(url, location))
+    elif response.url and response.url != url:
+        redirect_chain.append(response.url)
+    content_type = response.headers.get("content-type", "")
+    body = _read_response_body(response)
+
+    return {
+        "response": response,
+        "redirect_chain": redirect_chain,
+        "content_type": content_type,
+        "body": body,
+    }
 
 
 class _PageSignalParser(html.parser.HTMLParser):
@@ -65,6 +136,7 @@ class _PageSignalParser(html.parser.HTMLParser):
         super().__init__()
         self.title = ""
         self._in_title = False
+        self.visible_text_parts: List[str] = []
         self.password_forms = 0
         self.hidden_inputs = 0
         self.meta_refresh = []
@@ -98,12 +170,18 @@ class _PageSignalParser(html.parser.HTMLParser):
             self._in_title = False
 
     def handle_data(self, data: str) -> None:
+        text = (data or "").strip()
+        if text:
+            self.visible_text_parts.append(text)
         if self._in_title:
-            self.title += data.strip()
+            self.title += text
 
     def summary(self) -> Dict[str, Any]:
+        visible_text = " ".join(self.visible_text_parts)
+        visible_text = re.sub(r"\s+", " ", visible_text).strip()
         return {
             "title": self.title[:120],
+            "visible_text_excerpt": visible_text[:800],
             "password_forms": self.password_forms,
             "hidden_inputs": self.hidden_inputs,
             "meta_refresh": self.meta_refresh[:5],
@@ -114,19 +192,18 @@ class _PageSignalParser(html.parser.HTMLParser):
         }
 
 
-def analyze_url(target_ir: TargetIR, fetch_page: bool = True) -> Dict[str, Any]:
+def analyze_url(target_ir: TargetIR, fetch_page: bool = True, runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, Any]:
     if target_ir.target_type != "url" or not target_ir.url:
         return {"findings": [], "redirect_chain": [], "page_summary": {}}
 
     findings: List[DetectionFinding] = []
-    url_ir = target_ir.url
-    findings.extend(_analyze_url_structure(url_ir))
+    findings.extend(_analyze_url_structure(target_ir.url))
 
-    redirect_chain: List[str] = [url_ir.normalized_url]
+    redirect_chain: List[str] = [target_ir.url.normalized_url]
     page_summary: Dict[str, Any] = {}
 
     if fetch_page:
-        network_result = _fetch_page(url_ir.normalized_url)
+        network_result = _fetch_page(target_ir.url.normalized_url, runtime_config=runtime_config)
         redirect_chain = network_result["redirect_chain"] or redirect_chain
         page_summary = network_result["page_summary"]
         findings.extend(network_result["findings"])
@@ -252,12 +329,11 @@ def _analyze_url_structure(url_ir) -> List[DetectionFinding]:
     return findings
 
 
-def _fetch_page(url: str) -> Dict[str, Any]:
+def _fetch_page(url: str, runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, Any]:
     findings: List[DetectionFinding] = []
     page_summary: Dict[str, Any] = {}
     redirect_chain = [url]
-    proxies = _build_request_proxies()
-
+    fetch_profiles = _build_fetch_profiles(runtime_config)
 
     if requests is None:
         findings.append(_finding(
@@ -270,80 +346,153 @@ def _fetch_page(url: str) -> Dict[str, Any]:
         ))
         return {"findings": findings, "redirect_chain": redirect_chain, "page_summary": page_summary}
 
-    # ---------- 伪装成真实浏览器 ----------
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": settings.DETECTION_USER_AGENT or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-User": "?1",
-        "Sec-Fetch-Dest": "document",
-        "Upgrade-Insecure-Requests": "1",
-        "Cache-Control": "max-age=0",
-    })
-    session.trust_env = True  # 继承系统代理
-    # 设置代理
-    if proxies:
-        session.proxies.update(proxies)
-    # -----------------------------------
+    last_error: Optional[Exception] = None
+    proxy_failed = False
 
-    try:
-        response = session.get(
-            url,
-            allow_redirects=True,
-            timeout=settings.DETECTION_TIMEOUT_SECONDS,
-            stream=True,
-        )
-        redirect_chain = [item.url for item in response.history] + [response.url]
-        content_type = response.headers.get("content-type", "")
-        body = response.raw.read(MAX_BODY_BYTES, decode_content=True)
+    for profile in fetch_profiles:
+        session = _build_session(use_env_proxy=bool(profile.get("trust_env", profile["name"] == "proxy")))
+        if profile["proxies"]:
+            session.proxies.update(profile["proxies"])
 
-        page_summary = {
-            "status_code": response.status_code,
-            "content_type": content_type,
-            "final_url": response.url,
-            "body_limited_to_bytes": MAX_BODY_BYTES,
-        }
+        try:
+            attempt = _attempt_fetch_page(
+                session,
+                url,
+                proxies=profile["proxies"],
+                verify=profile["verify"],
+            )
+            response = attempt["response"]
+            redirect_chain = attempt["redirect_chain"]
+            content_type = attempt["content_type"]
+            body = attempt["body"]
+            page_summary = {
+                "status_code": response.status_code,
+                "content_type": content_type,
+                "final_url": redirect_chain[-1],
+                "body_limited_to_bytes": MAX_BODY_BYTES,
+                "fetch_mode": profile["name"],
+                "proxy_used": bool(profile["proxies"]),
+                "proxy_config": dict(profile["proxies"]),
+            }
 
-        if response.status_code >= 400:
+            if 300 <= response.status_code < 400 and response.headers.get("location"):
+                page_summary["redirect_location"] = response.headers.get("location", "")
+                page_summary["redirect_final_url"] = redirect_chain[-1]
+
+            if proxy_failed and profile["name"] == "direct":
+                findings.append(_finding(
+                    "PAGE_PROXY_FALLBACK_DIRECT",
+                    "代理访问失败后已回退直连",
+                    "low",
+                    "目标站点优先尝试通过 VPN / 代理访问，代理失败后已自动切换为原网络直连。",
+                    "当前抓取使用直连通道完成页面分析。",
+                    "若目标站点在直连下仍不可用，请检查 VPN 节点、代理地址或目标站点封锁策略。",
+                ))
+
+            if response.status_code >= 400:
+                findings.append(_finding(
+                    "PAGE_ERROR_STATUS",
+                    "页面返回异常状态码",
+                    "low",
+                    "目标页面返回错误状态码，可能为失效链接、拦截页或临时页面。",
+                    str(response.status_code),
+                    "结合来源渠道复核该链接是否仍有效。",
+                ))
+
+            if "html" in content_type.lower():
+                text = body.decode(getattr(response, "encoding", None) or "utf-8", errors="replace")
+                parser = _PageSignalParser()
+                parser.feed(text)
+                page_summary.update(parser.summary())
+                html_excerpt = re.sub(r"\s+", " ", html_lib.unescape(text))[:1200]
+                page_summary["html_summary"] = {
+                    "raw_excerpt": html_excerpt,
+                    "text_excerpt": page_summary.get("visible_text_excerpt", ""),
+                }
+
+            if any(response.url.lower().endswith(ext) for ext in DOWNLOAD_EXTENSIONS):
+                findings.append(_finding(
+                    "PAGE_DIRECT_DOWNLOAD",
+                    "链接直接指向可执行或压缩下载",
+                    "high",
+                    "目标 URL 最终指向可执行文件、脚本或压缩包下载。",
+                    response.url,
+                    "不要直接运行下载文件，应先进行沙箱或杀毒检测。",
+                ))
+            break
+        except requests.exceptions.SSLError as exc:
+            last_error = exc
+            if InsecureRequestWarning is not None:
+                warnings.filterwarnings("ignore", category=InsecureRequestWarning)
+
             findings.append(_finding(
-                "PAGE_ERROR_STATUS",
-                "页面返回异常状态码",
-                "low",
-                "目标页面返回错误状态码，可能为失效链接、拦截页或临时页面。",
-                str(response.status_code),
-                "结合来源渠道复核该链接是否仍有效。",
+                "PAGE_SSL_ERROR",
+                "页面证书校验失败",
+                "medium",
+                "目标站点在证书校验阶段返回 TLS/SSL 异常，已尝试忽略证书重试以继续提取页面证据。",
+                str(exc),
+                "目标站点可能存在证书配置异常或链路中间设备干预，建议结合页面内容与跳转链综合研判。",
             ))
 
-        if "html" in content_type.lower():
-            text = body.decode(response.encoding or "utf-8", errors="replace")
-            parser = _PageSignalParser()
-            parser.feed(text)
-            page_summary.update(parser.summary())
-        elif any(response.url.lower().endswith(ext) for ext in DOWNLOAD_EXTENSIONS):
-            findings.append(_finding(
-                "PAGE_DIRECT_DOWNLOAD",
-                "链接直接指向可执行或压缩下载",
-                "high",
-                "目标 URL 最终指向可执行文件、脚本或压缩包下载。",
-                response.url,
-                "不要直接运行下载文件，应先进行沙箱或杀毒检测。",
-            ))
-    except requests.RequestException as exc:
+            try:
+                attempt = _attempt_fetch_page(
+                    session,
+                    url,
+                    proxies=profile["proxies"],
+                    verify=False,
+                )
+                response = attempt["response"]
+                redirect_chain = attempt["redirect_chain"]
+                content_type = attempt["content_type"]
+                body = attempt["body"]
+                page_summary = {
+                    "status_code": response.status_code,
+                    "content_type": content_type,
+                    "final_url": redirect_chain[-1],
+                    "body_limited_to_bytes": MAX_BODY_BYTES,
+                    "fetch_mode": profile["name"],
+                    "proxy_used": bool(profile["proxies"]),
+                    "proxy_config": dict(profile["proxies"]),
+                    "tls_verify": False,
+                }
+                if 300 <= response.status_code < 400 and response.headers.get("location"):
+                    page_summary["redirect_location"] = response.headers.get("location", "")
+                    page_summary["redirect_final_url"] = redirect_chain[-1]
+                if "html" in content_type.lower():
+                    text = body.decode(getattr(response, "encoding", None) or "utf-8", errors="replace")
+                    parser = _PageSignalParser()
+                    parser.feed(text)
+                    page_summary.update(parser.summary())
+                    html_excerpt = re.sub(r"\s+", " ", html_lib.unescape(text))[:1200]
+                    page_summary["html_summary"] = {
+                        "raw_excerpt": html_excerpt,
+                        "text_excerpt": page_summary.get("visible_text_excerpt", ""),
+                    }
+                break
+            except requests.RequestException as retry_exc:
+                last_error = retry_exc
+                if profile["name"] == "proxy":
+                    proxy_failed = True
+                continue
+        except requests.RequestException as exc:
+            last_error = exc
+            if profile["name"] == "proxy":
+                proxy_failed = True
+            continue
+
+    if not page_summary:
         findings.append(_finding(
             "PAGE_FETCH_FAILED",
             "页面访问失败",
             "low",
             "检测器无法访问目标页面，可能是网络错误、证书问题或目标主动阻断。",
-            str(exc),
+            str(last_error) if last_error else url,
             "在隔离网络环境中复测，并结合域名结构风险判断。",
         ))
+        return {"findings": findings, "redirect_chain": redirect_chain, "page_summary": page_summary}
 
     return {"findings": findings, "redirect_chain": redirect_chain, "page_summary": page_summary}
+
 
 def _analyze_redirect_chain(redirect_chain: List[str]) -> List[DetectionFinding]:
     findings: List[DetectionFinding] = []

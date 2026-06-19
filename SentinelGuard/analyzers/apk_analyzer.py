@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 from zipfile import BadZipFile, ZipFile
@@ -51,6 +52,27 @@ SUSPICIOUS_COMPONENT_KEYWORDS = (
     "JobService",
 )
 
+KEY_FILE_EXTENSIONS = (
+    ".xml",
+    ".json",
+    ".txt",
+    ".ini",
+    ".cfg",
+    ".conf",
+    ".properties",
+    ".js",
+    ".html",
+    ".htm",
+    ".smali",
+)
+
+MANIFEST_CANDIDATES = (
+    "AndroidManifest.xml",
+    "manifest/AndroidManifest.xml",
+)
+
+SIGNATURE_PREFIX = "META-INF/"
+
 
 def analyze_apk(target_ir) -> Dict[str, Any]:
     if target_ir.target_type != "apk" or not target_ir.apk:
@@ -75,6 +97,8 @@ def _enrich_apk_ir(apk_ir: APKIR) -> APKIR:
     try:
         with ZipFile(path) as archive:
             names = archive.namelist()
+            apk_ir.key_files = _collect_key_files(names)
+            apk_ir.evidence_summary = _build_evidence_summary(names, archive)
             manifest = _read_manifest_text(archive)
             apk_ir.permissions = _extract_permissions(manifest)
             apk_ir.package_name = _extract_first(manifest, r'package="([^"]+)"')
@@ -95,6 +119,16 @@ def _enrich_apk_ir(apk_ir: APKIR) -> APKIR:
 def _analyze_apk_ir(apk_ir: APKIR) -> List[DetectionFinding]:
     findings: List[DetectionFinding] = []
 
+    if apk_ir.key_files:
+        findings.append(_finding(
+            "APK_KEY_FILES_REVIEWED",
+            "关键文件证据已提取",
+            "low",
+            "已优先检查 APK 内部关键文件、签名文件、资源配置与代码承载文件，用于后续静态研判与深度分析。",
+            _join_preview(apk_ir.key_files, limit=12),
+            "结合 manifest、资源、签名与代码文件继续确认风险链条。",
+        ))
+
     if not apk_ir.package_name:
         findings.append(_finding(
             "APK_MISSING_PACKAGE",
@@ -105,7 +139,7 @@ def _analyze_apk_ir(apk_ir: APKIR) -> List[DetectionFinding]:
             "补充样本来源与签名信息后再复核。",
         ))
 
-    if apk_ir.size_bytes >= 80 * 1024 * 1024:
+    if apk_ir.size_bytes >= 500 * 1024 * 1024:
         findings.append(_finding(
             "APK_LARGE_SIZE",
             "安装包体积异常偏大",
@@ -184,6 +218,8 @@ def _build_apk_summary(apk_ir: APKIR, findings: List[DetectionFinding]) -> Dict[
         "permission_count": len(apk_ir.permissions),
         "component_count": sum(len(bucket) for bucket in (apk_ir.activities, apk_ir.services, apk_ir.receivers, apk_ir.providers)),
         "finding_count": len(findings),
+        "key_file_count": len(apk_ir.key_files),
+        "evidence_summary": apk_ir.evidence_summary,
     }
 
 
@@ -232,7 +268,7 @@ def _extract_strings(names: List[str], archive: ZipFile) -> List[str]:
 def _extract_certificate_info(names: List[str], archive: ZipFile) -> tuple[str, str, str]:
     for name in names:
         upper = name.upper()
-        if upper.startswith("META-INF/") and upper.endswith((".RSA", ".DSA", ".EC")):
+        if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC")):
             try:
                 with archive.open(name) as fp:
                     data = fp.read()
@@ -254,6 +290,106 @@ def _sha256_file(path: Path) -> str:
 def _join_preview(values: Iterable[str], limit: int = 8) -> str:
     items = list(values)
     return "; ".join(items[:limit])
+
+
+def _collect_key_files(names: List[str]) -> List[str]:
+    selected: List[str] = []
+    counters = Counter()
+
+    def add_item(label: str, value: str) -> None:
+        entry = f"{label}: {value}"
+        if entry not in selected:
+            selected.append(entry)
+
+    for name in names:
+        upper = name.upper()
+        lower = name.lower()
+
+        if name in MANIFEST_CANDIDATES:
+            add_item("manifest", name)
+            counters["manifest"] += 1
+            continue
+
+        if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
+            add_item("signature", name)
+            counters["signature"] += 1
+            continue
+
+        if lower.endswith(".dex"):
+            add_item("dex", name)
+            counters["dex"] += 1
+            continue
+
+        if lower.startswith(("assets/", "res/", "lib/", "smali/")) and lower.endswith(KEY_FILE_EXTENSIONS):
+            add_item("resource", name)
+            counters["resource"] += 1
+
+    return selected[:60]
+
+
+def _build_evidence_summary(names: List[str], archive: ZipFile) -> Dict[str, Any]:
+    summary: Dict[str, Any] = {
+        "manifest_files": [],
+        "signature_files": [],
+        "dex_files": [],
+        "resource_files": [],
+        "native_libraries": [],
+        "config_files": [],
+        "text_previews": [],
+    }
+
+    for name in names:
+        lower = name.lower()
+        upper = name.upper()
+
+        if name in MANIFEST_CANDIDATES:
+            summary["manifest_files"].append(_describe_archive_entry(name, archive))
+            continue
+        if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
+            summary["signature_files"].append(_describe_archive_entry(name, archive))
+            continue
+        if lower.endswith(".dex"):
+            summary["dex_files"].append(_describe_archive_entry(name, archive))
+            continue
+        if lower.endswith((".so", ".jar", ".aar")):
+            summary["native_libraries"].append(_describe_archive_entry(name, archive))
+            continue
+        if lower.startswith(("assets/", "res/", "smali/")) and lower.endswith(KEY_FILE_EXTENSIONS):
+            entry = _describe_archive_entry(name, archive)
+            summary["resource_files"].append(entry)
+            if lower.endswith((".xml", ".json", ".txt", ".ini", ".cfg", ".conf", ".properties", ".js", ".html", ".htm")):
+                preview = _read_text_preview(archive, name)
+                if preview:
+                    summary["text_previews"].append({"name": name, "preview": preview})
+            continue
+        if lower.endswith((".xml", ".json", ".txt", ".ini", ".cfg", ".conf", ".properties", ".js", ".html", ".htm")) and (lower.startswith("assets/") or lower.startswith("res/")):
+            summary["config_files"].append(_describe_archive_entry(name, archive))
+
+    for key in list(summary.keys()):
+        value = summary[key]
+        if isinstance(value, list):
+            summary[key] = value[:40]
+
+    summary["total_files"] = len(names)
+    summary["key_file_count"] = sum(len(summary[k]) for k in ("manifest_files", "signature_files", "dex_files", "resource_files", "native_libraries", "config_files"))
+    return summary
+
+
+def _describe_archive_entry(name: str, archive: ZipFile) -> Dict[str, Any]:
+    try:
+        info = archive.getinfo(name)
+        return {"name": name, "size": info.file_size, "compressed_size": info.compress_size}
+    except KeyError:
+        return {"name": name, "size": 0, "compressed_size": 0}
+
+
+def _read_text_preview(archive: ZipFile, name: str, limit: int = 512) -> str:
+    try:
+        with archive.open(name) as fp:
+            data = fp.read(limit)
+        return data.decode("utf-8", errors="ignore").strip()
+    except Exception:
+        return ""
 
 
 def _finding(rule_id: str, title: str, severity: str, description: str, evidence: str, recommendation: str) -> DetectionFinding:

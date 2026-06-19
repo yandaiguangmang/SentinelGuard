@@ -47,6 +47,7 @@ def render_html_report(report: DetectionReport) -> str:
     placeholders_panel = _render_placeholders_panel(report)
     analysis_mode_label = _analysis_mode_label(report)
     parent_report_block = _render_parent_report_block(report)
+    browser_evidence_block = _render_browser_evidence_block(report)
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -232,6 +233,7 @@ header {{
         </div>
         {result_panel}
         {parent_report_block}
+        {browser_evidence_block}
       </div>
     </section>
 
@@ -333,6 +335,9 @@ def render_markdown_report(report: DetectionReport) -> str:
 
     lines.extend(["", "## 四、页面线索"])
     lines.extend(_markdown_dict(report.page_summary))
+
+    lines.extend(["", "## 四点一、浏览器证据 / 截图"])
+    lines.extend(_markdown_browser_evidence(report))
 
     lines.extend(["", "## 五、风险证据"])
     if report.findings:
@@ -521,7 +526,7 @@ def _render_chain_panel(report: DetectionReport) -> str:
       <div class="scroll-box">
         <h4>跳转链</h4>
         <ol>{redirect_chain}</ol>
-        <h4>页面摘要</h4>
+        <h4>页面线索</h4>
         {page_summary}
       </div>
       <div class="pill-row">{tag_html}</div>
@@ -615,7 +620,7 @@ def _render_placeholders_panel(report: DetectionReport) -> str:
         f"<li><strong>{html.escape(key)}</strong>：{html.escape(value)}</li>"
         for key, value in report.placeholders.items()
     )
-    return f"<ul>{items}</ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单、截图比对与威胁情报联动。</p>"
+    return f"<ul>{items}</ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>"
 
 
 def _render_parent_report_block(report: DetectionReport) -> str:
@@ -629,6 +634,36 @@ def _render_parent_report_block(report: DetectionReport) -> str:
     if not links:
         return "<p class='subtle'>未记录关联静态报告。</p>"
     return f"<p class='subtle'>关联静态报告：{' · '.join(links)}</p>"
+
+
+def _render_browser_evidence_block(report: DetectionReport) -> str:
+    evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
+    if not evidence:
+        return ""
+
+    proxy_info = ""
+    if evidence.get("fetch_mode"):
+        proxy_info = f"<p class='subtle'>抓取模式：{html.escape(str(evidence.get('fetch_mode')))} / 代理：{'是' if evidence.get('proxy_used') else '否'}</p>"
+
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          {proxy_info}
+        </div>
+      </div>
+    """
+
+
+def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
+    lines: list[str] = []
+    evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
+    if evidence.get("fetch_mode"):
+        lines.append(f"- 抓取模式：`{evidence.get('fetch_mode')}`")
+    if evidence.get("proxy_used") is not None:
+        lines.append(f"- 代理是否参与：`{bool(evidence.get('proxy_used'))}`")
+    return lines
 
 
 def _group_findings_by_severity(findings: Sequence[DetectionFinding]) -> dict[str, list[DetectionFinding]]:

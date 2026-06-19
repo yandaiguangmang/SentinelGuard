@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import inspect
-import base64
 import json
-import re
-from pathlib import Path
 from typing import Any, Dict, List
 
 import httpx
@@ -34,68 +31,68 @@ ROLE_DEFAULT_MODELS = {
 }
 
 ROLE_SYSTEM_PROMPTS = {
-    "主持人": """你是网络恶意网页深度研判的主持人。
-你的职责是综合四位专家意见，给出最终裁决式总结，并把各方结论整理成可直接写入报告的结构化 JSON。
+    "主持人": """你是 APK 恶意软件深度研判的主持人。
+你的职责是综合四位专家意见，对 APK 的静态证据链进行最终裁决式总结，并输出结构化 JSON。
 
 要求：
-1. 你必须基于静态检测结果、浏览器证据包（browser_evidence）与各专家意见进行总结，不要脱离证据链。
-2. 若外部情报不足，必须明确说明当前仅基于离线证据。
-3. 你的 summary 要体现最终结论，不能只是简单复述。
+1. 必须基于 APK 的关键文件证据、Manifest、权限、组件、签名、字符串和资源线索进行总结，不要脱离证据链。
+2. 若证据不足，必须明确说明当前仅基于离线静态证据。
+3. summary 要体现最终结论，不能只是简单复述。
 4. expert_opinions 必须保留五个角色的原始意见或整理后的摘要。
 5. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_models、expert_opinions、additional_findings。
 """,
-    "静态分析员": """你是网络恶意网页深度研判中的静态分析员。
-关注域名结构、URL 参数、可疑关键词、编码混淆、跳转参数、主机特征，以及浏览器证据包中的页面摘要、HTML 摘要、可见文本快照与表单/下载/脚本线索。
+    "静态分析员": """你是 APK 恶意软件深度研判中的静态分析员。
+关注 Manifest、权限、组件、签名、资源配置、DEX/Smali/脚本文件、可疑字符串和关键文件证据。
 
 请输出严格 JSON：
 {
   "opinion": "静态证据分析结论",
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
-    {"rule_id":"DEEP_STATIC_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+    {"rule_id":"DEEP_APK_STATIC_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
-    "行为分析员": """你是网络恶意网页深度研判中的行为分析员。
-关注跳转链、自动跳转、表单提交、脚本加载、下载落点、浏览器证据包中的页面线索、HTML 摘要与行为诱导。
+    "行为分析员": """你是 APK 恶意软件深度研判中的行为分析员。
+关注自启动、后台驻留、敏感权限组合、服务/Receiver/Provider 设计、下载/安装/更新链路和持久化行为线索。
 
 请输出严格 JSON：
 {
   "opinion": "行为链分析结论",
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
-    {"rule_id":"DEEP_BEHAVIOR_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+    {"rule_id":"DEEP_APK_BEHAVIOR_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
-    "情报分析员": """你是网络恶意网页深度研判中的情报分析员。
-你的职责是说明该目标若需要外网/VPN 节点才能访问，应如何理解这种环境差异；同时说明当前离线证据与浏览器证据包的边界。
+    "情报分析员": """你是 APK 恶意软件深度研判中的情报分析员。
+你的职责是结合 APK 文件名、包名、签名和本地证据说明当前离线分析的边界，并提醒如何结合来源与分发渠道判断。
 
 请输出严格 JSON：
 {
   "opinion": "情报分析与局限说明",
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
-    {"rule_id":"DEEP_INTEL_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+    {"rule_id":"DEEP_APK_INTEL_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
-    "处置建议员": """你是网络恶意网页深度研判中的处置建议员。
-你的任务是把前面所有证据落成可执行建议，包括是否拦截、是否隔离、是否沙箱复核、是否留痕；请结合浏览器证据包中的页面行为、HTML 摘要、可见文本快照给出建议。
+    "处置建议员": """你是 APK 恶意软件深度研判中的处置建议员。
+你的任务是把前面所有证据落成可执行建议，包括是否隔离安装、是否沙箱复核、是否阻断分发、是否保留样本留痕。
 
 请输出严格 JSON：
 {
   "opinion": "处置建议",
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
-    {"rule_id":"DEEP_ADVICE_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+    {"rule_id":"DEEP_APK_ADVICE_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
 }
 
 
-class URLDeepAnalyzer:
+class APKDeepAnalyzer:
     def __init__(self, runtime_config: AnalysisRuntimeConfig | None = None) -> None:
         self.runtime_config = runtime_config or AnalysisRuntimeConfig()
         self.role_models = self._resolve_role_models()
@@ -107,8 +104,7 @@ class URLDeepAnalyzer:
 
         role_outputs: Dict[str, Dict[str, Any]] = {}
         if progress_callback:
-            progress_callback("deep_prepare", "正在准备网址深度研判", 72)
-
+            progress_callback("deep_prepare", "正在准备 APK 深度研判", 72)
         for role in DEEP_ROLE_ORDER[1:]:
             if progress_callback:
                 progress_callback(f"deep_{self._role_stage(role)}", f"正在进行{role}分析", self._role_progress(role))
@@ -123,17 +119,13 @@ class URLDeepAnalyzer:
 
         if progress_callback:
             progress_callback("deep_host", "正在进行主持人总结", 90)
-
         host_payload = self._build_host_payload(static_report, role_outputs)
         host_result = self._call_role_model("主持人", host_payload)
         if not host_result.get("success"):
-            if progress_callback:
-                progress_callback("deep_done", "网址深度研判已完成", 96)
             return self._build_degraded_result(static_report, role_outputs, host_result.get("error"))
-
         try:
             if progress_callback:
-                progress_callback("deep_done", "网址深度研判已完成", 96)
+                progress_callback("deep_done", "APK 深度研判已完成", 96)
             return self._normalize_result(host_result, static_report, role_outputs)
         except Exception as exc:
             return self._build_degraded_result(static_report, role_outputs, exc)
@@ -199,29 +191,32 @@ class URLDeepAnalyzer:
         )
 
     def _build_payload(self, static_report: DetectionReport) -> Dict[str, Any]:
-        browser_evidence = _build_browser_evidence(static_report)
+        apk = static_report.target_ir.apk.to_dict() if static_report.target_ir.apk else {}
         return {
             "target": static_report.target_ir.to_dict(),
             "static_report": {
                 "risk_level": static_report.risk_level,
                 "score": static_report.score,
                 "findings": [finding.to_dict() for finding in static_report.findings],
-                "redirect_chain": static_report.redirect_chain,
-                "page_summary": static_report.page_summary,
+                "apk_summary": static_report.apk_summary,
                 "expert_opinions": static_report.expert_opinions,
             },
-            "browser_evidence": browser_evidence,
+            "apk_ir": apk,
+            "key_files": apk.get("key_files", []),
+            "evidence_summary": apk.get("evidence_summary", {}),
             "expert_models": self.role_models,
-            "proxy_enabled": False,
+            "proxy_enabled": bool(self.runtime_config.proxy_dict()),
         }
 
     @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            messages = self._build_messages(role, payload)
             response = self._get_client(role).chat.completions.create(
                 model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
-                messages=messages,
+                messages=[
+                    {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
+                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
+                ],
                 temperature=0.3,
                 top_p=0.9,
                 response_format={"type": "json_object"},
@@ -233,26 +228,16 @@ class URLDeepAnalyzer:
         except Exception as exc:
             return {"success": False, "error": f"模型调用异常: {exc}"}
 
-    def _build_messages(self, role: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-        text_content = json.dumps(payload, ensure_ascii=False, indent=2)
-        return [
-            {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
-            {"role": "user", "content": text_content},
-        ]
-
     def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        browser_evidence = _build_browser_evidence(static_report)
         return {
             "target": static_report.target_ir.to_dict(),
             "static_report": {
                 "risk_level": static_report.risk_level,
                 "score": static_report.score,
                 "findings": [finding.to_dict() for finding in static_report.findings],
-                "redirect_chain": static_report.redirect_chain,
-                "page_summary": static_report.page_summary,
+                "apk_summary": static_report.apk_summary,
                 "expert_opinions": static_report.expert_opinions,
             },
-            "browser_evidence": browser_evidence,
             "expert_models": self.role_models,
             "role_outputs": self._serialize_role_outputs(role_outputs),
             "proxy_enabled": False,
@@ -321,8 +306,8 @@ class URLDeepAnalyzer:
             raise ValueError(f"{role} 模型调用失败: {result.get('error') or '未知错误'}")
 
         try:
-            data = _load_json_payload(result["content"])
-        except ValueError as exc:
+            data = json.loads(result["content"])
+        except json.JSONDecodeError as exc:
             raise ValueError(f"{role} 模型返回的 JSON 无法解析: {exc}") from exc
 
         opinion = str(data.get("opinion") or data.get("summary") or "").strip()
@@ -349,8 +334,8 @@ class URLDeepAnalyzer:
             raise ValueError(result.get("error") or "模型深度检查失败")
 
         try:
-            data = _load_json_payload(result["content"])
-        except ValueError as exc:
+            data = json.loads(result["content"])
+        except json.JSONDecodeError as exc:
             raise ValueError(f"模型返回的 JSON 无法解析: {exc}") from exc
 
         expert_opinions = _coerce_mapping(data.get("expert_opinions"))
@@ -382,7 +367,7 @@ class URLDeepAnalyzer:
         evidence_score = _score_from_findings(static_report.findings + additional_findings)
         score = _blend_score(evidence_score, host_score, host_risk_level)
         risk_level = _risk_level_from_score(score)
-        summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
+        summary = str(data.get("summary") or f"模型基于 APK 静态证据进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
 
         return {
@@ -494,77 +479,6 @@ def _coerce_mapping(value: Any) -> Dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _load_json_payload(content: Any) -> Dict[str, Any]:
-    """尽量从模型输出中恢复 JSON 对象。
-
-    兼容以下常见情况：
-    - 纯 JSON
-    - Markdown 代码块包裹的 JSON
-    - 前后混入少量说明文本
-    """
-
-    if isinstance(content, dict):
-        return content
-
-    text = str(content or "").strip()
-    if not text:
-        raise ValueError("模型未返回内容")
-
-    try:
-        parsed = json.loads(text)
-        if isinstance(parsed, dict):
-            return parsed
-        if isinstance(parsed, list):
-            candidate = _select_json_object_from_list(parsed)
-            if candidate is not None:
-                return candidate
-        raise ValueError("模型返回的 JSON 顶层不是对象")
-    except json.JSONDecodeError:
-        pass
-
-    fenced_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL | re.IGNORECASE)
-    if fenced_match:
-        candidate = fenced_match.group(1).strip()
-        parsed = json.loads(candidate)
-        if isinstance(parsed, dict):
-            return parsed
-        if isinstance(parsed, list):
-            selected = _select_json_object_from_list(parsed)
-            if selected is not None:
-                return selected
-        raise ValueError("代码块中的 JSON 顶层不是对象")
-
-    first_object = _extract_json_object(text)
-    if first_object:
-        parsed = json.loads(first_object)
-        if isinstance(parsed, dict):
-            return parsed
-        if isinstance(parsed, list):
-            selected = _select_json_object_from_list(parsed)
-            if selected is not None:
-                return selected
-        raise ValueError("提取到的 JSON 顶层不是对象")
-
-    raise ValueError("未找到可解析的 JSON 对象")
-
-
-def _extract_json_object(text: str) -> str:
-    start = text.find("{")
-    end = text.rfind("}")
-    if start < 0 or end < 0 or end <= start:
-        return ""
-    return text[start:end + 1]
-
-
-def _select_json_object_from_list(value: List[Any]) -> Dict[str, Any] | None:
-    """从模型误返回的 JSON 数组中尽量恢复出单个对象。"""
-
-    for item in value:
-        if isinstance(item, dict):
-            return item
-    return None
-
-
 def _coerce_findings(value: Any) -> List[DetectionFinding]:
     findings: List[DetectionFinding] = []
     if not isinstance(value, list):
@@ -632,8 +546,8 @@ def _coerce_additional_findings(
     return findings
 
 
-def deep_analyze_url(static_report: DetectionReport, runtime_config: AnalysisRuntimeConfig | None = None, progress_callback=None) -> Dict[str, Any]:
-    analyzer = URLDeepAnalyzer(runtime_config=runtime_config)
+def deep_analyze_apk(static_report: DetectionReport, runtime_config: AnalysisRuntimeConfig | None = None, progress_callback=None) -> Dict[str, Any]:
+    analyzer = APKDeepAnalyzer(runtime_config=runtime_config)
     return analyzer.analyze(static_report, progress_callback=progress_callback)
 
 
@@ -647,78 +561,6 @@ def _first_non_empty(*values: Any) -> str:
     return ""
 
 
-def _build_browser_evidence(static_report: DetectionReport) -> Dict[str, Any]:
-    page_summary = static_report.page_summary or {}
-    redirect_chain = static_report.redirect_chain or []
-
-    evidence = {
-        "has_page_fetch": bool(page_summary),
-        "final_url": page_summary.get("final_url") or (redirect_chain[-1] if redirect_chain else ""),
-        "fetch_mode": page_summary.get("fetch_mode", "unknown"),
-        "proxy_used": bool(page_summary.get("proxy_used", False)),
-        "status_code": page_summary.get("status_code"),
-        "content_type": page_summary.get("content_type", ""),
-        "redirect_chain": redirect_chain,
-        "page_signals": {
-            "title": page_summary.get("title", ""),
-            "visible_text_excerpt": page_summary.get("visible_text_excerpt", ""),
-            "html_summary": page_summary.get("html_summary", {}),
-            "password_forms": page_summary.get("password_forms", 0),
-            "hidden_inputs": page_summary.get("hidden_inputs", 0),
-            "meta_refresh": page_summary.get("meta_refresh", []),
-            "download_links": page_summary.get("download_links", []),
-            "external_script_count": page_summary.get("external_script_count", 0),
-            "form_actions": page_summary.get("form_actions", []),
-            "script_srcs": page_summary.get("script_srcs", []),
-        },
-        "browser_observation": _summarize_page_observation(page_summary, redirect_chain),
-    }
-    return evidence
-
-
-def _summarize_page_observation(page_summary: Dict[str, Any], redirect_chain: List[str]) -> str:
-    fragments: List[str] = []
-
-    if not page_summary:
-        if redirect_chain:
-            fragments.append(f"已获取跳转链，但未抓到页面正文：{' -> '.join(redirect_chain[:6])}")
-        else:
-            fragments.append("未执行页面抓取，深度研判仅能依赖静态 URL 证据")
-
-    title = str(page_summary.get("title") or "").strip()
-    if title:
-        fragments.append(f"标题={title}")
-    visible_text = str(page_summary.get("visible_text_excerpt") or "").strip()
-    if visible_text:
-        fragments.append(f"可见文本={visible_text[:120]}")
-    html_summary = page_summary.get("html_summary") or {}
-    if isinstance(html_summary, dict):
-        title_count = html_summary.get("title_count")
-        if title_count is not None:
-            fragments.append(f"标题标签={title_count}")
-        form_count = html_summary.get("form_count")
-        if form_count is not None:
-            fragments.append(f"表单={form_count}")
-        script_count = html_summary.get("script_count")
-        if script_count is not None:
-            fragments.append(f"脚本={script_count}")
-    if page_summary.get("password_forms", 0):
-        fragments.append(f"密码框={page_summary['password_forms']}")
-    if page_summary.get("hidden_inputs", 0):
-        fragments.append(f"隐藏字段={page_summary['hidden_inputs']}")
-    if page_summary.get("meta_refresh"):
-        fragments.append("存在自动跳转")
-    if page_summary.get("download_links"):
-        fragments.append("存在下载链接")
-    if page_summary.get("external_script_count", 0):
-        fragments.append(f"外链脚本={page_summary['external_script_count']}")
-    if not fragments:
-        fragments.append("页面未提取到明显行为线索")
-    if redirect_chain:
-        fragments.append(f"最终跳转={redirect_chain[-1]}")
-    return "；".join(fragments)
-
-
 def _build_proxy_map(runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, str]:
     if runtime_config is not None:
         return runtime_config.proxy_dict()
@@ -726,8 +568,6 @@ def _build_proxy_map(runtime_config: AnalysisRuntimeConfig | None = None) -> Dic
 
 
 def _build_httpx_client(proxy_map: Dict[str, str]) -> httpx.Client:
-    """构造兼容不同 httpx 版本的客户端。"""
-
     client_kwargs: Dict[str, Any] = {
         "trust_env": False,
         "timeout": httpx.Timeout(60.0, connect=20.0),
