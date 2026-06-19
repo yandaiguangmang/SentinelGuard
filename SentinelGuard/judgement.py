@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
-from typing import Dict, List, Optional
 from typing import Dict, List, Optional
 
 from openai import OpenAI
@@ -15,23 +13,8 @@ from SentinelGuard.analyzers.url_analyzer import analyze_url
 from SentinelGuard.analyzers.url_deep_analyzer import deep_analyze_url
 from SentinelGuard.parsers.input_parser import parse_target
 from SentinelGuard.report import save_detection_report
+from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
-from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
-
-
-SEVERITY_WEIGHTS = {
-    "low": 1,
-    "medium": 3,
-    "high": 6,
-    "critical": 8,
-}
-
-SEVERITY_BASE_SCORES = {
-    "low": 5,
-    "medium": 25,
-    "high": 50,
-    "critical": 75,
-}
 
 PLACEHOLDERS = {
     "web": "当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。",
@@ -112,11 +95,13 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
     if target_ir.target_type == "apk":
         analysis = analyze_apk(target_ir)
         findings: List[DetectionFinding] = _deduplicate_findings(analysis["findings"])
-        score = _calculate_score(findings)
+        evidence_score = score_from_findings(findings)
         return DetectionReport(
             target_ir=target_ir,
-            risk_level=_risk_level(score, findings),
-            score=score,
+            risk_level=risk_level_from_score(evidence_score),
+            score=evidence_score,
+            evidence_score=evidence_score,
+            deep_score=None,
             findings=findings,
             expert_opinions=_build_apk_expert_opinions(findings, target_ir),
             apk_summary=analysis.get("apk_summary", {}),
@@ -126,13 +111,15 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
 
     analysis = analyze_url(target_ir, fetch_page=fetch_page, runtime_config=runtime_config)
     findings: List[DetectionFinding] = _deduplicate_findings(analysis["findings"])
-    score = _calculate_score(findings)
-    risk_level = _risk_level(score, findings)
+    evidence_score = score_from_findings(findings)
+    risk_level = risk_level_from_score(evidence_score)
 
     return DetectionReport(
         target_ir=target_ir,
         risk_level=risk_level,
-        score=score,
+        score=evidence_score,
+        evidence_score=evidence_score,
+        deep_score=None,
         findings=findings,
         expert_opinions=_build_expert_opinions(risk_level, findings),
         redirect_chain=analysis["redirect_chain"],
@@ -150,12 +137,16 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
     merged_findings = _deduplicate_findings(static_report.findings + deep_result["additional_findings"])
 
     expert_models = deep_result.get("expert_models") or _build_expert_model_map()
-    score = _calculate_score(merged_findings)
+    evidence_score = score_from_findings(merged_findings)
+    deep_score = normalize_score(deep_result.get("deep_score"), deep_result.get("score", evidence_score))
+    score = combine_scores(evidence_score, deep_score)
 
     report = DetectionReport(
         target_ir=static_report.target_ir,
-        risk_level=_risk_level(score, merged_findings),
+        risk_level=risk_level_from_score(score),
         score=score,
+        evidence_score=evidence_score,
+        deep_score=deep_score,
         findings=merged_findings,
         expert_opinions=deep_result["expert_opinions"],
         expert_models=expert_models,
@@ -182,12 +173,16 @@ def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persis
     dynamic_findings = dynamic_result.get("findings", [])
     merged_findings = _deduplicate_findings(static_report.findings + dynamic_findings)
 
-    score = int(dynamic_result.get("score", _calculate_score(merged_findings)))
-    risk_level = str(dynamic_result.get("risk_level") or _risk_level(score, merged_findings))
+    evidence_score = score_from_findings(merged_findings)
+    deep_score = normalize_score(dynamic_result.get("deep_score"), evidence_score) if dynamic_result.get("deep_score") is not None else None
+    score = combine_scores(evidence_score, deep_score)
+    risk_level = risk_level_from_score(score)
     report = DetectionReport(
         target_ir=static_report.target_ir,
         risk_level=risk_level,
-        score=max(0, min(100, score)),
+        score=score,
+        evidence_score=evidence_score,
+        deep_score=deep_score,
         findings=merged_findings,
         expert_opinions=dynamic_result.get("expert_opinions", static_report.expert_opinions),
         expert_models=dynamic_result.get("expert_models", _build_expert_model_map()),
@@ -199,6 +194,42 @@ def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persis
         apk_dynamic_artifacts=dynamic_result.get("apk_dynamic_artifacts", {}),
         placeholders=static_report.placeholders,
         analysis_mode="dynamic",
+        deep_analysis_used=True,
+        parent_html_report_path=static_report.html_report_path,
+        parent_markdown_report_path=static_report.markdown_report_path,
+    )
+    if persist_report:
+        save_detection_report(report)
+    return report
+
+
+def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
+    try:
+        deep_result = deep_analyze_apk(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+    except TypeError:
+        deep_result = deep_analyze_apk(static_report)
+
+    merged_findings = _deduplicate_findings(static_report.findings + deep_result.get("additional_findings", []))
+    evidence_score = score_from_findings(merged_findings)
+    deep_score = normalize_score(deep_result.get("deep_score"), deep_result.get("score", evidence_score))
+    score = combine_scores(evidence_score, deep_score)
+    risk_level = risk_level_from_score(score)
+
+    report = DetectionReport(
+        target_ir=static_report.target_ir,
+        risk_level=risk_level,
+        score=score,
+        evidence_score=evidence_score,
+        deep_score=deep_score,
+        findings=merged_findings,
+        expert_opinions=deep_result.get("expert_opinions", static_report.expert_opinions),
+        expert_models=deep_result.get("expert_models", _build_expert_model_map()),
+        deep_summary=deep_result.get("deep_summary", ""),
+        redirect_chain=static_report.redirect_chain,
+        page_summary=static_report.page_summary,
+        apk_summary=static_report.apk_summary,
+        placeholders=static_report.placeholders,
+        analysis_mode="deep",
         deep_analysis_used=True,
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
@@ -232,29 +263,8 @@ def _build_apk_expert_opinions(findings: List[DetectionFinding], target_ir: Targ
         "静态分析员": _sentence("APK 静态证据关注", high_titles + medium_titles),
         "行为分析员": "当前版本仅提供静态 APK 检测，未执行动态沙箱。",
         "情报分析员": "建议结合市场来源、签名证书与历史信誉进一步核验。",
-        "处置建议员": _build_response_advice(_risk_level(_calculate_score(findings), findings)),
+        "处置建议员": _build_response_advice(risk_level_from_score(score_from_findings(findings))),
     }
-
-
-def _calculate_score(findings: List[DetectionFinding]) -> int:
-    if not findings:
-        return 0
-
-    severity_counts = Counter(finding.severity for finding in findings)
-    base_score = max(SEVERITY_BASE_SCORES.get(finding.severity, 0) for finding in findings)
-    bonus_score = sum(severity_counts.get(severity, 0) * weight for severity, weight in SEVERITY_WEIGHTS.items())
-    return min(100, base_score + min(20, bonus_score))
-
-
-def _risk_level(score: int, findings: List[DetectionFinding]) -> str:
-    severities = {finding.severity for finding in findings}
-    if "critical" in severities or score >= 80:
-        return "critical"
-    if "high" in severities or score >= 50:
-        return "high"
-    if "medium" in severities or score >= 25:
-        return "medium"
-    return "low"
 
 
 def _build_expert_opinions(risk_level: str, findings: List[DetectionFinding]) -> Dict[str, str]:

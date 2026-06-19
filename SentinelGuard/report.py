@@ -343,6 +343,9 @@ def render_markdown_report(report: DetectionReport) -> str:
         lines.extend(_markdown_dict(report.apk_dynamic_summary))
         if report.apk_dynamic_artifacts:
             lines.extend([f"- {key}：`{value}`" for key, value in report.apk_dynamic_artifacts.items()])
+        if report.apk_dynamic_exploration:
+            lines.extend(["", "### 动态探索详情"])
+            lines.extend(_markdown_dynamic_exploration(report.apk_dynamic_exploration))
     else:
         lines.extend(_markdown_browser_evidence(report))
 
@@ -668,7 +671,12 @@ def _render_browser_evidence_block(report: DetectionReport) -> str:
 
 
 def _render_apk_dynamic_block(report: DetectionReport) -> str:
-    if report.analysis_mode != "dynamic" and not report.apk_dynamic_summary and not report.apk_dynamic_artifacts:
+    if (
+        report.analysis_mode != "dynamic"
+        and not report.apk_dynamic_summary
+        and not report.apk_dynamic_artifacts
+        and not report.apk_dynamic_exploration
+    ):
         return ""
 
     summary_rows = []
@@ -678,18 +686,44 @@ def _render_apk_dynamic_block(report: DetectionReport) -> str:
     if report.apk_dynamic_artifacts:
         for key, value in report.apk_dynamic_artifacts.items():
             summary_rows.append(f"<tr><th>{html.escape(str(key))}</th><td>{html.escape(_format_value(value))}</td></tr>")
+    if report.apk_dynamic_exploration:
+        summary_rows.append("<tr><th>动态探索</th><td>已记录 UI 轨迹、截图和后台快照</td></tr>")
     rows = "".join(summary_rows) or "<tr><td>暂无动态摘要。</td></tr>"
     return f"""
       <div style='height:14px'></div>
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>APK 动态沙箱摘要</h4>
+          {_render_dynamic_exploration_panel(report.apk_dynamic_exploration)}
           <div class='scroll-box slim'>
             <table class='table'>{rows}</table>
           </div>
         </div>
       </div>
     """
+
+
+def _render_dynamic_exploration_panel(exploration: dict) -> str:
+    if not exploration:
+        return ""
+
+    overview = exploration.get("exploration_overview") or {}
+    trace = exploration.get("trace") or []
+    first_snapshot = trace[0].get("snapshot", {}) if trace else {}
+    lines = [
+        f"<p class='subtle'>动态探索步数：{html.escape(str(exploration.get('total_steps', 0)))}</p>",
+        f"<p class='subtle'>已访问控件：{html.escape(str(exploration.get('visited_control_count', 0)))}</p>",
+        f"<p class='subtle'>后台快照：{html.escape(str(overview.get('background_snapshot_count', exploration.get('background_snapshot_count', 0))))}</p>",
+        f"<p class='subtle'>终止原因：{html.escape(str(exploration.get('terminated_reason') or 'unknown'))}</p>",
+        f"<p class='subtle'>是否返回主界面：{html.escape(str(exploration.get('home_returned', False)))}</p>",
+    ]
+    if first_snapshot.get("screenshot_path"):
+        lines.append(f"<p class='subtle'>首帧截图：<code>{html.escape(str(first_snapshot['screenshot_path']))}</code></p>")
+    if first_snapshot.get("controls_path"):
+        lines.append(f"<p class='subtle'>首帧控件轨迹：<code>{html.escape(str(first_snapshot['controls_path']))}</code></p>")
+    if first_snapshot.get("xml_path"):
+        lines.append(f"<p class='subtle'>首帧 XML：<code>{html.escape(str(first_snapshot['xml_path']))}</code></p>")
+    return "".join(lines)
 
 
 def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
@@ -699,6 +733,30 @@ def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
         lines.append(f"- 抓取模式：`{evidence.get('fetch_mode')}`")
     if evidence.get("proxy_used") is not None:
         lines.append(f"- 代理是否参与：`{bool(evidence.get('proxy_used'))}`")
+    return lines
+
+
+def _markdown_dynamic_exploration(exploration: dict) -> list[str]:
+    if not exploration:
+        return ["- 未获取动态探索详情。"]
+
+    lines = [
+        f"- 动态探索步数：`{exploration.get('total_steps', 0)}`",
+        f"- 已访问控件：`{exploration.get('visited_control_count', 0)}`",
+        f"- 终止原因：`{exploration.get('terminated_reason') or 'unknown'}`",
+        f"- 是否返回主界面：`{exploration.get('home_returned', False)}`",
+    ]
+    trace = exploration.get("trace") or []
+    if trace:
+        snapshot = trace[0].get("snapshot", {})
+        if snapshot.get("screenshot_path"):
+            lines.append(f"- 首帧截图：`{snapshot['screenshot_path']}`")
+        if snapshot.get("controls_path"):
+            lines.append(f"- 首帧控件轨迹：`{snapshot['controls_path']}`")
+        if snapshot.get("xml_path"):
+            lines.append(f"- 首帧 XML：`{snapshot['xml_path']}`")
+        if snapshot.get("screenshot_saved") is not None:
+            lines.append(f"- 首帧截图是否保存成功：`{bool(snapshot.get('screenshot_saved'))}`")
     return lines
 
 

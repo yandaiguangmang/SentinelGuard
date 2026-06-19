@@ -11,6 +11,7 @@ import httpx
 from openai import OpenAI
 
 from config import settings
+from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
@@ -377,21 +378,18 @@ class URLDeepAnalyzer:
             default_recommendation="结合静态报告进一步复核。",
         ))
 
-        host_score = _normalize_score(data.get("score"), static_report.score)
-        host_risk_level = _normalize_risk_level(data.get("risk_level"), static_report.risk_level, host_score)
-        evidence_score = _score_from_findings(static_report.findings + additional_findings)
-        score = _blend_score(evidence_score, host_score, host_risk_level)
-<<<<<<< HEAD
-        risk_level = _risk_level_from_score(score)
-=======
-        risk_level = host_risk_level if host_risk_level in {"low", "medium", "high", "critical"} else _risk_level_from_score(score)
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
+        host_score = normalize_score(data.get("score"), static_report.score)
+        evidence_score = score_from_findings(static_report.findings + additional_findings)
+        score = combine_scores(evidence_score, host_score)
+        risk_level = risk_level_from_score(score)
         summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
 
         return {
             "risk_level": risk_level,
             "score": score,
+            "deep_score": host_score,
+            "evidence_score": evidence_score,
             "expert_opinions": normalized_opinions,
             "expert_models": normalized_models,
             "deep_summary": summary,
@@ -422,76 +420,6 @@ def _normalize_severity(value: Any) -> str:
     if severity not in {"low", "medium", "high", "critical"}:
         return "medium"
     return severity
-
-
-def _normalize_score(value: Any, fallback: int) -> int:
-    try:
-        score = int(value)
-    except (TypeError, ValueError):
-        score = int(fallback)
-    return max(0, min(100, score))
-
-
-def _normalize_risk_level(value: Any, fallback: str, score: int) -> str:
-    risk_level = str(value or "").lower()
-    if risk_level in {"low", "medium", "high", "critical"}:
-        return risk_level
-    if score >= 80:
-        return "critical"
-    if score >= 50:
-        return "high"
-    if score >= 25:
-        return "medium"
-    return fallback if fallback in {"low", "medium", "high", "critical"} else "low"
-
-
-def _risk_level_from_score(score: int) -> str:
-    if score >= 80:
-        return "critical"
-    if score >= 50:
-        return "high"
-    if score >= 25:
-        return "medium"
-    return "low"
-
-
-def _score_from_findings(findings: List[DetectionFinding]) -> int:
-    if not findings:
-        return 0
-
-    severity_weights = {
-        "low": 1,
-        "medium": 3,
-        "high": 6,
-        "critical": 8,
-    }
-    severity_base_scores = {
-        "low": 5,
-        "medium": 25,
-        "high": 50,
-        "critical": 75,
-    }
-
-    severity_counts: Dict[str, int] = {}
-    for finding in findings:
-        severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
-
-    base_score = max(severity_base_scores.get(finding.severity, 0) for finding in findings)
-    bonus_score = sum(severity_counts.get(severity, 0) * weight for severity, weight in severity_weights.items())
-    return min(100, base_score + min(20, bonus_score))
-
-
-def _blend_score(evidence_score: int, model_score: int, model_risk_level: str) -> int:
-    risk_profile = {
-        "low": {"evidence_weight": 0.35, "model_weight": 0.65, "model_ceiling": 35},
-        "medium": {"evidence_weight": 0.50, "model_weight": 0.50, "model_ceiling": 60},
-        "high": {"evidence_weight": 0.65, "model_weight": 0.35, "model_ceiling": 85},
-        "critical": {"evidence_weight": 0.80, "model_weight": 0.20, "model_ceiling": 100},
-    }.get(model_risk_level, {"evidence_weight": 0.50, "model_weight": 0.50, "model_ceiling": 60})
-
-    capped_model_score = min(model_score, risk_profile["model_ceiling"])
-    blended = round(evidence_score * risk_profile["evidence_weight"] + capped_model_score * risk_profile["model_weight"])
-    return max(0, min(100, blended))
 
 
 def _coerce_mapping(value: Any) -> Dict[str, Any]:
@@ -706,12 +634,9 @@ def _summarize_page_observation(page_summary: Dict[str, Any], redirect_chain: Li
         script_count = html_summary.get("script_count")
         if script_count is not None:
             fragments.append(f"脚本={script_count}")
-<<<<<<< HEAD
-=======
         raw_excerpt = str(html_summary.get("raw_excerpt") or "").strip()
         if raw_excerpt:
             fragments.append(f"HTML摘要={raw_excerpt[:120]}")
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
     if page_summary.get("password_forms", 0):
         fragments.append(f"密码框={page_summary['password_forms']}")
     if page_summary.get("hidden_inputs", 0):

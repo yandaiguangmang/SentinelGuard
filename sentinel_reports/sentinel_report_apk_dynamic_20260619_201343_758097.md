@@ -1,0 +1,108 @@
+# SentinelGuard 哨塔检测报告
+
+> APK 动态沙箱报告 · 风险等级：**LOW** · 风险分数：**21/100**
+> 证据分数：**21/100** · 深度研判分数：**- /100**
+
+
+## 一、检测结论
+- 原始输入：`C:\Users\lenovo\AppData\Local\Temp\tmp3tffpwck.apk`
+- 对象类型：`apk`
+- 状态：`ready`
+- 证据条数：4 条
+- 高危证据：0 条
+- 关联静态报告：
+  - HTML：sentinel_reports/sentinel_report_apk_static_20260619_195436_062894.html
+  - Markdown：sentinel_reports/sentinel_report_apk_static_20260619_195436_062894.md
+
+## 二、统一 IR 摘要
+该对象类型尚未实现。
+
+## 三、跳转链
+- 未获取跳转链。
+
+## 四、页面线索
+- 未获取页面内容线索。
+
+## 四点一、APK 动态沙箱摘要
+- device_id：emulator-5554
+- package_name：com.malmstein.yahnac
+- static_file_name：tmp3tffpwck.apk
+- resolve_activity：priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+com.malmstein.yahnac/.stories.NewsActivity
+- pidof：
+- granted_dangerous_permissions：ANDROID.PERMISSION.INTERNET, ANDROID.PERMISSION.ACCESS_NETWORK_STATE, ANDROID.PERMISSION.ACCESS_WIFI_STATE, ANDROID.PERMISSION.WAKE_LOCK
+- post_install_files：无
+- persistent_services：{}
+- install_success：True
+- launch_success：True
+- event_count：4
+- logcat_excerpt_count：0
+- network_hit_count：14
+- crypto_hit_count：0
+- background_snapshot_count：9
+- runtime_window_seconds：12
+- exploration_overview：{'total_steps': 9, 'visited_control_count': 0, 'terminated_reason': '', 'home_returned': True}
+- dynamic_json_path：`C:/Users/lenovo/AppData/Local/Temp/sentinelguard_dynamic/sentinel_apk_dynamic_com.malmstein.yahnac_20260619_195634_832966.json`
+- dynamic_json_name：`sentinel_apk_dynamic_com.malmstein.yahnac_20260619_195634_832966.json`
+
+## 五、风险证据
+### 1. 关键文件证据已提取
+- 规则：`APK_KEY_FILES_REVIEWED`
+- 严重级别：`low`
+- 说明：已优先检查 APK 内部关键文件、签名文件、资源配置与代码承载文件，用于后续静态研判与深度分析。
+- 证据：`manifest: AndroidManifest.xml; resource: res/anim-v21/design_bottom_sheet_slide_in.xml; resource: res/anim-v21/design_bottom_sheet_slide_out.xml; resource: res/anim/abc_fade_in.xml; resource: res/anim/abc_fade_out.xml; resource: res/anim/abc_grow_fade_in_from_bottom.xml; resource: res/anim/abc_popup_enter.xml; resource: res/anim/abc_popup_exit.xml; resource: res/anim/abc_shrink_fade_out_from_bottom.xml; resource: res/anim/abc_slide_in_bottom.xml; resource: res/anim/abc_slide_in_top.xml; resource: res/anim/abc_slide_out_bottom.xml`
+- 建议：结合 manifest、资源、签名与代码文件继续确认风险链条。
+
+### 2. 未解析到包名
+- 规则：`APK_MISSING_PACKAGE`
+- 严重级别：`medium`
+- 说明：APK 中未能提取出明确的包名，样本身份不够清晰。
+- 证据：`tmp3tffpwck.apk`
+- 建议：补充样本来源与签名信息后再复核。
+
+### 3. 存在可疑字符串线索
+- 规则：`APK_SUSPICIOUS_STRINGS`
+- 严重级别：`medium`
+- 说明：样本中出现命令执行、远程地址或系统调用相关字符串。
+- 证据：`http://schemas.android.com/apk/res/android; http://schemas.android.com/apk/res-auto; android.support.design.widget.AppBarLayout; android.support.v7.widget.Toolbar; --android.support.design.widget.TextInputLayout; android.support.v7.widget.AppCompatEditText; 55android.support.design.widget.Snackbar; android.support.v7.widget.ButtonBarLayout`
+- 建议：结合反编译结果确认这些字符串是否参与实际行为。
+
+### 4. 未发现明显运行时异常
+- 规则：`APK_DYNAMIC_BASELINE`
+- 严重级别：`low`
+- 说明：模拟器沙箱窗口内未观察到明显崩溃、ANR、可疑联网、文件落地或持久化服务线索。
+- 证据：`com.malmstein.yahnac`
+- 建议：建议结合更长窗口或加入抓包/权限交互复测。
+
+
+## 六、论坛式协同研判
+### 主持人（模型：`gpt-5.4-mini`）
+深度研判服务部分失败，已降级为静态结论。综合 3 条证据，当前风险等级需要结合 APK 来源继续判断。
+
+### 静态分析员（模型：`gemini-2.5-flash`）
+APK 静态证据关注：未解析到包名、存在可疑字符串线索。
+
+### 行为分析员（模型：`gemini-2.5-pro`）
+当前版本仅提供静态 APK 检测，未执行动态沙箱。
+
+### 情报分析员（模型：`gpt-5`）
+建议结合市场来源、签名证书与历史信誉进一步核验。
+
+### 处置建议员（模型：`gemini-2.5-flash`）
+可低风险访问，但仍需确认链接来源可信。
+
+
+### 主持人最终总结
+深度研判未能完整执行，已返回静态结果并保留已收集的专家意见。原因：模型调用异常: Request timed out.
+
+
+### 专家模型映射
+- 主持人：`gpt-5.4-mini`
+- 静态分析员：`gemini-2.5-flash`
+- 行为分析员：`gemini-2.5-pro`
+- 情报分析员：`gpt-5`
+- 处置建议员：`gemini-2.5-flash`
+
+## 七、扩展信息
+- **web**：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。
+- **apk**：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。

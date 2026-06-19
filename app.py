@@ -9,6 +9,7 @@ from typing import Any, Dict
 from flask import Flask, abort, jsonify, render_template, request, send_from_directory
 
 from SentinelGuard.judgement import (
+    run_apk_deep_detection_from_static,
     run_apk_dynamic_detection_from_static,
     run_deep_url_detection_from_static,
     run_detection,
@@ -35,9 +36,12 @@ def index():
         "deep": False,
         "apk_mode": "static",
         "llm_api_key": "",
+        "llm_base_url": "",
         "proxy_http": "",
         "proxy_https": "",
         "proxy_all": "",
+        "apk_explore_rounds": 3,
+        "apk_explore_steps": 5,
     })
 
 
@@ -53,6 +57,16 @@ def analyze():
     deep = request.form.get("deep") == "on"
     apk_mode = (request.form.get("apk_mode") or "static").strip()
     runtime_config = _build_runtime_config(request.form)
+
+    if target and apk_mode == "dynamic" and not deep:
+        return render_template("index.html", report=None, error="动态沙箱仅在开启深度研判后可用，请先勾选深度研判。", defaults={
+            "target": target,
+            "target_type": target_type,
+            "fetch_page": fetch_page,
+            "deep": deep,
+            "apk_mode": "static",
+            **runtime_config.to_dict(),
+        })
 
     uploaded_apk = request.files.get("apk_file")
     if uploaded_apk and uploaded_apk.filename:
@@ -167,6 +181,9 @@ def _start_analysis_task_from_request(req):
 
 def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_page: bool, deep: bool, apk_mode: str, runtime_config: AnalysisRuntimeConfig) -> None:
     try:
+        if apk_mode == "dynamic" and not deep:
+            raise ValueError("动态沙箱仅在开启深度研判后可用，请先勾选深度研判。")
+
         task_manager.update(task_id, status="running", progress=10, stage="static", message="正在进行静态分析")
         report = run_detection(target, target_type=target_type, fetch_page=fetch_page, runtime_config=runtime_config)
         task_manager.update(task_id, progress=65, stage="static_done", message="静态分析已完成，正在整理证据")
@@ -180,6 +197,7 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
 
         if report.target_ir.target_type == "apk":
             if apk_mode == "dynamic":
+                task_manager.update(task_id, progress=68, stage="dynamic_prepare", message="静态证据已整理，正在准备 APK 动态沙箱")
                 report = run_apk_dynamic_detection_from_static(
                     report,
                     persist_report=False,
@@ -216,11 +234,20 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
 
 
 def _build_runtime_config(payload: Dict[str, Any]) -> AnalysisRuntimeConfig:
+    def _parse_int(value: Any, fallback: int) -> int:
+        try:
+            return int(str(value).strip() or fallback)
+        except Exception:
+            return fallback
+
     return AnalysisRuntimeConfig(
         llm_api_key=str(payload.get("llm_api_key") or "").strip(),
         llm_base_url=str(payload.get("llm_base_url") or "").strip(),
         proxy_http=str(payload.get("proxy_http") or "").strip(),
         proxy_https=str(payload.get("proxy_https") or "").strip(),
+        proxy_all=str(payload.get("proxy_all") or "").strip(),
+        apk_explore_rounds=_parse_int(payload.get("apk_explore_rounds"), 3),
+        apk_explore_steps=_parse_int(payload.get("apk_explore_steps"), 5),
     )
 
 

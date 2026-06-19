@@ -14,6 +14,9 @@ class AnalysisRuntimeConfig:
     proxy_http: str = ""
     proxy_https: str = ""
     proxy_all: str = ""
+    apk_explore_rounds: int = 3
+    apk_explore_steps: int = 5
+    apk_dynamic_force_stop_after_explore: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -85,7 +88,11 @@ class AnalysisRuntimeConfig:
         }
 
     def to_analysis_flags(self) -> Dict[str, Any]:
-        return {}
+        return {
+            "apk_explore_rounds": max(int(self.apk_explore_rounds or 0), 0),
+            "apk_explore_steps": max(int(self.apk_explore_steps or 0), 0),
+            "apk_dynamic_force_stop_after_explore": bool(self.apk_dynamic_force_stop_after_explore),
+        }
 
     def proxy_warnings(self) -> List[str]:
         warnings: List[str] = []
@@ -184,6 +191,7 @@ class DetectionReport:
     apk_summary: Dict[str, Any] = field(default_factory=dict)
     apk_dynamic_summary: Dict[str, Any] = field(default_factory=dict)
     apk_dynamic_artifacts: Dict[str, Any] = field(default_factory=dict)
+    apk_dynamic_exploration: Dict[str, Any] = field(default_factory=dict)
     placeholders: Dict[str, str] = field(default_factory=dict)
     analysis_mode: str = "static"
     deep_analysis_used: bool = False
@@ -191,12 +199,16 @@ class DetectionReport:
     parent_markdown_report_path: str = ""
     html_report_path: str = ""
     markdown_report_path: str = ""
+    evidence_score: int = 0
+    deep_score: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "target_ir": self.target_ir.to_dict(),
             "risk_level": self.risk_level,
             "score": self.score,
+            "evidence_score": self.evidence_score,
+            "deep_score": self.deep_score,
             "findings": [finding.to_dict() for finding in self.findings],
             "expert_opinions": self.expert_opinions,
             "expert_models": self.expert_models,
@@ -206,6 +218,7 @@ class DetectionReport:
             "apk_summary": self.apk_summary,
             "apk_dynamic_summary": self.apk_dynamic_summary,
             "apk_dynamic_artifacts": self.apk_dynamic_artifacts,
+            "apk_dynamic_exploration": self.apk_dynamic_exploration,
             "placeholders": self.placeholders,
             "analysis_mode": self.analysis_mode,
             "deep_analysis_used": self.deep_analysis_used,

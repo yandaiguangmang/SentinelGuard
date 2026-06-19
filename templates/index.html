@@ -70,7 +70,7 @@
   <div class="wrap">
     <div class="card">
       <h1>SentinelGuard 安全检测</h1>
-      <p>支持 URL 和 APK 两类对象。APK 默认只做静态分析；勾选“深度研判”后，会进入论坛式多角色深度分析。若你填写了 LLM 的 API Key / Base URL，它只会用于本次检测任务；代理/VPN 仅用于网页抓取，不会影响大模型调用。</p>
+      <p>支持 URL 和 APK 两类对象。APK 默认只做静态分析；勾选“深度研判”后，会进入论坛式多角色深度分析。若你填写了 LLM 的 API Key / Base URL，它只会用于本次检测任务。</p>
 
       {% if error %}
         <div class="alert error">{{ error }}</div>
@@ -103,7 +103,7 @@
           </div>
         </div>
 
-        <div class="row">
+        <div id="proxy-settings" class="row">
           <div>
             <label for="proxy_http">HTTP 代理 / VPN 节点</label>
             <input id="proxy_http" name="proxy_http" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_http }}">
@@ -112,14 +112,12 @@
             <label for="proxy_https">HTTPS 代理 / VPN 节点</label>
             <input id="proxy_https" name="proxy_https" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_https }}">
           </div>
-        </div>
-        <div class="row">
           <div>
             <label for="proxy_all">ALL_PROXY 备用节点</label>
             <input id="proxy_all" name="proxy_all" type="text" placeholder="socks5://127.0.0.1:1080" value="{{ defaults.proxy_all }}">
           </div>
           <div>
-            <div class="hint" style="margin-top: 32px;">如果不填写代理信息，网页会直接使用原网络访问目标网址；若你只做离线静态分析，也可以留空。</div>
+            <div class="hint" style="margin-top: 32px;">该项仅在 URL 抓取时生效，APK 检测（尤其是动态沙箱）不会使用 VPN/代理输入。</div>
           </div>
         </div>
 
@@ -148,12 +146,16 @@
               <label><input type="checkbox" id="deep" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
             </div>
             <div class="checks" data-group="apk-options" style="display:none;">
-<<<<<<< HEAD
               <label><input type="checkbox" id="deep-apk" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
-=======
               <label><input type="radio" name="apk_mode" value="static" checked> 静态分析</label>
-              <label><input type="radio" name="apk_mode" value="dynamic"> 动态沙箱</label>
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
+              <label><input type="radio" id="apk-mode-dynamic" name="apk_mode" value="dynamic"> 动态沙箱</label>
+              <span class="hint" style="margin: 0;">仅在开启“深度研判”后，才能选择动态沙箱。</span>
+              <div id="apk-dynamic-settings" style="display:none; width:100%;">
+                <div class="row" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px;">
+                  <label>探索次数 <input type="number" name="apk_explore_rounds" min="1" max="20" value="{{ defaults.apk_explore_rounds }}" style="width: 96px; margin-left: 8px;"></label>
+                  <label>探索步长 <input type="number" name="apk_explore_steps" min="1" max="20" value="{{ defaults.apk_explore_steps }}" style="width: 96px; margin-left: 8px;"></label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -166,6 +168,8 @@
       <h2>检测结果</h2>
       <div class="meta">
         <div class="pill" id="result-risk-level">风险等级：-</div>
+        <div class="pill" id="result-evidence-score">证据分数：-</div>
+        <div class="pill" id="result-deep-score">深度研判分数：-</div>
         <div class="pill" id="result-score">风险分数：-</div>
         <div class="pill" id="result-mode">分析模式：-</div>
         <div class="pill" id="result-count">证据条数：-</div>
@@ -234,6 +238,8 @@
         <h2>检测结果</h2>
         <div class="meta">
           <div class="pill">风险等级：{{ report.risk_level|upper }}</div>
+          <div class="pill">证据分数：{{ report.evidence_score if report.evidence_score is not none else report.score }}/100</div>
+          <div class="pill">深度研判分数：{{ report.deep_score if report.deep_score is not none else '-' }}/100</div>
           <div class="pill">风险分数：{{ report.score }}/100</div>
           <div class="pill">分析模式：{{ report.analysis_mode }}</div>
           <div class="pill">证据条数：{{ report.findings|length }}</div>
@@ -345,6 +351,8 @@
     const progressLog = document.getElementById('task-progress-log');
     const clientResultPanel = document.getElementById('client-result-panel');
     const resultRiskLevel = document.getElementById('result-risk-level');
+    const resultEvidenceScore = document.getElementById('result-evidence-score');
+    const resultDeepScore = document.getElementById('result-deep-score');
     const resultScore = document.getElementById('result-score');
     const resultMode = document.getElementById('result-mode');
     const resultCount = document.getElementById('result-count');
@@ -364,6 +372,9 @@
     const resultSummary = document.getElementById('result-summary');
     const resultReportLinks = document.getElementById('result-report-links');
     const resultOverview = document.getElementById('result-overview');
+    const apkModeDynamic = document.getElementById('apk-mode-dynamic');
+    const proxySettings = document.getElementById('proxy-settings');
+    const apkDynamicSettings = document.getElementById('apk-dynamic-settings');
 
     let activeTaskId = null;
     let pollTimer = null;
@@ -377,7 +388,40 @@
     }
 
     function syncDeepDependents() {
-      const activeDeep = (document.querySelector('input[name="deep"]:checked') !== null);
+      const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'url';
+      if (urlOptions) urlOptions.style.display = activeTab === 'url' ? 'flex' : 'none';
+      if (apkOptions) apkOptions.style.display = activeTab === 'apk' ? 'flex' : 'none';
+      if (proxySettings) proxySettings.style.display = activeTab === 'url' ? 'grid' : 'none';
+
+      const apkModeInputs = document.querySelectorAll('input[name="apk_mode"]');
+      apkModeInputs.forEach(input => {
+        input.disabled = activeTab !== 'apk';
+      });
+
+      if (deepCheckbox && deepApkCheckbox) {
+        if (activeTab === 'apk') {
+          deepCheckbox.checked = deepApkCheckbox.checked;
+          deepApkCheckbox.disabled = false;
+          deepCheckbox.disabled = true;
+        } else {
+          deepApkCheckbox.checked = deepCheckbox.checked;
+          deepCheckbox.disabled = false;
+          deepApkCheckbox.disabled = true;
+        }
+      }
+
+      if (apkModeDynamic) {
+        const apkDeepEnabled = activeTab === 'apk' && !!deepApkCheckbox?.checked;
+        apkModeDynamic.disabled = !apkDeepEnabled;
+        if (!apkDeepEnabled && apkModeDynamic.checked) {
+          document.querySelector('input[name="apk_mode"][value="static"]')?.click();
+        }
+      }
+
+      if (apkDynamicSettings) {
+        const showDynamicFields = activeTab === 'apk' && !!apkModeDynamic?.checked && !!deepApkCheckbox?.checked;
+        apkDynamicSettings.style.display = showDynamicFields ? 'block' : 'none';
+      }
     }
 
     function getStageLabel(stage, targetType) {
@@ -386,14 +430,16 @@
         queued: '已排队，等待开始',
         received: '任务已接收，准备分析',
         static: `${apkPrefix}静态分析中`,
-<<<<<<< HEAD
-        static_done: '静态分析已完成，正在整理证据',
+        static_done: '静态证据已整理，准备进入下一阶段',
         deep_prepare: `正在准备${apkPrefix}深度研判`,
-=======
+        dynamic_prepare: '正在准备 APK 动态沙箱',
         dynamic_install: '正在安装 APK 到模拟器',
         dynamic_launch: '正在启动应用并采集运行时日志',
+        dynamic_explore_prepare: '正在准备探索引导员',
+        dynamic_exploring: '正在进行动态探索',
+        dynamic_relaunch: '正在回到应用主界面并继续探索',
+        dynamic_exhausted: '动态探索已完成，正在进入深度研判',
         dynamic_done: 'APK 动态沙箱已完成，正在生成报告',
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
         deep_static: '正在进行静态分析',
         deep_behavior: '正在进行行为分析',
         deep_intel: '正在进行情报分析',
@@ -401,11 +447,7 @@
         deep_host: '正在进行主持人总结',
         deep_done: '深度研判已完成，正在生成报告',
         static_only: '静态分析已完成，正在生成报告',
-<<<<<<< HEAD
         done: '检测完成',
-=======
-        deep_prepare: `正在准备${apkPrefix}深度研判`,
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
         failed: '检测失败',
       };
       return map[stage] || stage || '处理中';
@@ -419,8 +461,9 @@
 
       progressPanel.style.display = 'block';
       progressTitle.textContent = data.target_type === 'apk' ? 'APK 检测进度' : '网址检测进度';
-      progressPercent.textContent = `${progress}%`;
-      progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+      const normalizedProgress = Math.max(0, Math.min(100, progress));
+      progressPercent.textContent = `${normalizedProgress}%`;
+      progressFill.style.width = `${normalizedProgress}%`;
       const stageLabel = getStageLabel(stage, data.target_type);
       progressStatus.textContent = `${status} · ${stageLabel}`;
       progressStage.textContent = `阶段：${stageLabel}`;
@@ -511,10 +554,14 @@
 
       window.__lastRiskLevel = report.risk_level || '-';
       window.__lastRiskScore = report.score ?? '-';
+      window.__lastEvidenceScore = report.evidence_score ?? '-';
+      window.__lastDeepScore = report.deep_score ?? '-';
       window.__lastFindingCount = findings.length;
 
       clientResultPanel.classList.add('active');
       resultRiskLevel.textContent = `风险等级：${String(report.risk_level || '-').toUpperCase()}`;
+      resultEvidenceScore.textContent = `证据分数：${report.evidence_score ?? '-'}/100`;
+      resultDeepScore.textContent = `深度研判分数：${report.deep_score ?? '-'}/100`;
       resultScore.textContent = `风险分数：${report.score ?? '-'}/100`;
       resultMode.textContent = `分析模式：${report.analysis_mode || '-'}`;
       resultCount.textContent = `证据条数：${findings.length}`;
@@ -534,8 +581,18 @@
       resultPageSummaryBody.innerHTML = '';
       Object.entries(pageSummary).forEach(([key, value]) => {
         const tr = document.createElement('tr');
-        const rendered = (value && typeof value === 'object') ? `<pre>${JSON.stringify(value, null, 2)}</pre>` : String(value ?? '-');
-        tr.innerHTML = `<th>${key}</th><td>${rendered}</td>`;
+        const th = document.createElement('th');
+        th.textContent = key;
+        const td = document.createElement('td');
+        if (value && typeof value === 'object') {
+          const pre = document.createElement('pre');
+          pre.textContent = JSON.stringify(value, null, 2);
+          td.appendChild(pre);
+        } else {
+          td.textContent = String(value ?? '-');
+        }
+        tr.appendChild(th);
+        tr.appendChild(td);
         resultPageSummaryBody.appendChild(tr);
       });
       if (!Object.keys(pageSummary).length) {
@@ -548,7 +605,12 @@
         resultFindingsTable.style.display = 'table';
         findings.forEach(item => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${item.severity || ''}</td><td>${item.title || ''}</td><td>${item.evidence || ''}</td><td>${item.recommendation || ''}</td>`;
+          const cells = [item.severity || '', item.title || '', item.evidence || '', item.recommendation || ''];
+          cells.forEach(text => {
+            const td = document.createElement('td');
+            td.textContent = text;
+            tr.appendChild(td);
+          });
           resultFindingsBody.appendChild(tr);
         });
       } else {
@@ -559,7 +621,12 @@
       resultOpinionsBody.innerHTML = '';
       Object.entries(opinions).forEach(([role, opinion]) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<th>${role}</th><td>${opinion}</td>`;
+        const th = document.createElement('th');
+        th.textContent = role;
+        const td = document.createElement('td');
+        td.textContent = opinion;
+        tr.appendChild(th);
+        tr.appendChild(td);
         resultOpinionsBody.appendChild(tr);
       });
 
@@ -574,7 +641,11 @@
         reportLinks.push(`<a href="/reports/${encodeURIComponent(mdName)}" target="_blank">打开 Markdown 报告</a>`);
         reportLinks.push(`<a href="/reports/${encodeURIComponent(mdName)}/download">下载 Markdown 报告</a>`);
       }
-      resultReportLinks.innerHTML = reportLinks.length ? reportLinks.join(' · ') : '暂无报告文件。';
+      if (reportLinks.length) {
+        resultReportLinks.innerHTML = reportLinks.join(' · ');
+      } else {
+        resultReportLinks.textContent = '暂无报告文件。';
+      }
     }
 
     function stopPolling() {
@@ -617,6 +688,7 @@
 
     if (deepCheckbox) deepCheckbox.addEventListener('change', syncDeepDependents);
     if (deepApkCheckbox) deepApkCheckbox.addEventListener('change', syncDeepDependents);
+    document.querySelectorAll('input[name="apk_mode"]').forEach(input => input.addEventListener('change', syncDeepDependents));
 
     apkInput.addEventListener('change', () => {
       if (apkInput.files.length > 0) {
@@ -636,8 +708,8 @@
       progressPanel.classList.remove('error');
       progressPanel.style.display = 'block';
       progressTitle.textContent = '正在提交检测任务';
-      progressPercent.textContent = '0%';
-      progressFill.style.width = '0%';
+      progressPercent.textContent = '5%';
+      progressFill.style.width = '5%';
       progressStatus.textContent = '提交中';
       progressStage.textContent = 'queued';
       progressLog.textContent = '正在把样本提交到后台分析任务队列…';
@@ -658,7 +730,7 @@
       const data = await response.json();
       activeTaskId = data.task_id;
       progressTitle.textContent = '检测任务已启动';
-      updateProgressView({ ...data, message: '任务已启动，开始轮询进度', stage: 'queued' });
+      updateProgressView({ ...data, progress: Math.max(Number(data.progress ?? 5), 5), message: '任务已启动，开始轮询进度', stage: 'queued' });
 
       pollTimer = setInterval(() => {
         if (activeTaskId) {

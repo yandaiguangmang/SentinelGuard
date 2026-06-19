@@ -157,7 +157,44 @@ def _enrich_with_zip_fallback(apk_ir: APKIR, path: Path) -> APKIR:
             apk_ir.certificate_subject, apk_ir.certificate_issuer, apk_ir.certificate_sha256 = _extract_certificate_info(names, archive)
     except BadZipFile:
         return apk_ir
+
+    if not apk_ir.package_name:
+        package_name, version_name, version_code = _extract_apk_badging_info(path)
+        apk_ir.package_name = package_name or apk_ir.package_name
+        apk_ir.version_name = version_name or apk_ir.version_name
+        apk_ir.version_code = version_code or apk_ir.version_code
     return apk_ir
+
+
+def _extract_apk_badging_info(path: Path) -> tuple[str, str, str]:
+    """优先使用 aapt/aapt2 从二进制 Manifest 中提取包名与版本信息。"""
+    try:
+        import shutil
+        import subprocess
+
+        for tool_name in ("aapt.exe", "aapt2.exe", "aapt", "aapt2"):
+            tool = shutil.which(tool_name)
+            if not tool:
+                continue
+            result = subprocess.run(
+                [tool, "dump", "badging", str(path)],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="ignore",
+                check=False,
+            )
+            if result.returncode != 0:
+                continue
+            text = result.stdout or ""
+            package_name = _extract_first(text, r"package: name='([^']+)'")
+            version_name = _extract_first(text, r"versionName='([^']+)'")
+            version_code = _extract_first(text, r"versionCode='([^']+)'")
+            if package_name or version_name or version_code:
+                return package_name, version_name, version_code
+    except Exception:
+        return "", "", ""
+    return "", "", ""
 
 
 def _extract_androguard_certificate_info(apk: Any) -> tuple[str, str, str]:
@@ -379,10 +416,6 @@ def _join_preview(values: Any, limit: int = 8) -> str:
 
 def _collect_key_files(names: List[str]) -> List[str]:
     selected: List[str] = []
-<<<<<<< HEAD
-    counters = Counter()
-=======
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
 
     def add_item(label: str, value: str) -> None:
         entry = f"{label}: {value}"
@@ -395,43 +428,23 @@ def _collect_key_files(names: List[str]) -> List[str]:
 
         if name in MANIFEST_CANDIDATES:
             add_item("manifest", name)
-<<<<<<< HEAD
-            counters["manifest"] += 1
-=======
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
             continue
 
         if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
             add_item("signature", name)
-<<<<<<< HEAD
-            counters["signature"] += 1
-=======
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
             continue
 
         if lower.endswith(".dex"):
             add_item("dex", name)
-<<<<<<< HEAD
-            counters["dex"] += 1
-=======
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
             continue
 
         if lower.startswith(("assets/", "res/", "lib/", "smali/")) and lower.endswith(KEY_FILE_EXTENSIONS):
             add_item("resource", name)
-<<<<<<< HEAD
-            counters["resource"] += 1
-=======
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
 
     return selected[:60]
 
 
-<<<<<<< HEAD
-def _build_evidence_summary(names: List[str], archive: ZipFile) -> Dict[str, Any]:
-=======
 def _build_evidence_summary(names: List[str], archive: ZipFile | None) -> Dict[str, Any]:
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
     summary: Dict[str, Any] = {
         "manifest_files": [],
         "signature_files": [],
@@ -447,57 +460,6 @@ def _build_evidence_summary(names: List[str], archive: ZipFile | None) -> Dict[s
         upper = name.upper()
 
         if name in MANIFEST_CANDIDATES:
-<<<<<<< HEAD
-            summary["manifest_files"].append(_describe_archive_entry(name, archive))
-            continue
-        if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
-            summary["signature_files"].append(_describe_archive_entry(name, archive))
-            continue
-        if lower.endswith(".dex"):
-            summary["dex_files"].append(_describe_archive_entry(name, archive))
-            continue
-        if lower.endswith((".so", ".jar", ".aar")):
-            summary["native_libraries"].append(_describe_archive_entry(name, archive))
-            continue
-        if lower.startswith(("assets/", "res/", "smali/")) and lower.endswith(KEY_FILE_EXTENSIONS):
-            entry = _describe_archive_entry(name, archive)
-            summary["resource_files"].append(entry)
-            if lower.endswith((".xml", ".json", ".txt", ".ini", ".cfg", ".conf", ".properties", ".js", ".html", ".htm")):
-                preview = _read_text_preview(archive, name)
-                if preview:
-                    summary["text_previews"].append({"name": name, "preview": preview})
-            continue
-        if lower.endswith((".xml", ".json", ".txt", ".ini", ".cfg", ".conf", ".properties", ".js", ".html", ".htm")) and (lower.startswith("assets/") or lower.startswith("res/")):
-            summary["config_files"].append(_describe_archive_entry(name, archive))
-
-    for key in list(summary.keys()):
-        value = summary[key]
-        if isinstance(value, list):
-            summary[key] = value[:40]
-
-    summary["total_files"] = len(names)
-    summary["key_file_count"] = sum(len(summary[k]) for k in ("manifest_files", "signature_files", "dex_files", "resource_files", "native_libraries", "config_files"))
-    return summary
-
-
-def _describe_archive_entry(name: str, archive: ZipFile) -> Dict[str, Any]:
-    try:
-        info = archive.getinfo(name)
-        return {"name": name, "size": info.file_size, "compressed_size": info.compress_size}
-    except KeyError:
-        return {"name": name, "size": 0, "compressed_size": 0}
-
-
-def _read_text_preview(archive: ZipFile, name: str, limit: int = 512) -> str:
-    try:
-        with archive.open(name) as fp:
-            data = fp.read(limit)
-        return data.decode("utf-8", errors="ignore").strip()
-    except Exception:
-        return ""
-
-
-=======
             summary["manifest_files"].append({"name": name})
             continue
         if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
@@ -525,7 +487,6 @@ def _read_text_preview(archive: ZipFile, name: str, limit: int = 512) -> str:
     return summary
 
 
->>>>>>> ac7142bb106537d8f559320452d986da38460c97
 def _finding(rule_id: str, title: str, severity: str, description: str, evidence: str, recommendation: str) -> DetectionFinding:
     return DetectionFinding(
         rule_id=rule_id,
