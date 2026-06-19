@@ -119,6 +119,7 @@ cd code
 
 ```bash
 pip install -r requirements.txt
+playwright install chromium
 ```
 
 ### 3. 启动服务
@@ -174,6 +175,7 @@ http://127.0.0.1:5000
 | `DETECTION_REPORT_DIR` | 报告输出目录 |
 | `DETECTION_TIMEOUT_SECONDS` | URL 页面抓取超时时间 |
 | `DETECTION_USER_AGENT` | 页面抓取 User-Agent |
+| `DETECTION_ENABLE_SCREENSHOT` | 是否在高风险 URL 上自动采集页面截图 |
 | `ADB_PATH` | adb 可执行文件路径，或 adb 所在目录 |
 | `APK_DYNAMIC_RUNTIME_WINDOW_SECONDS` | APK 动态采集窗口时长 |
 

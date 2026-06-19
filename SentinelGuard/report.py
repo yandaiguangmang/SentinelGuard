@@ -209,6 +209,7 @@ header {{
       <a href="#ir">统一 IR</a>
       <a href="#chain">跳转链</a>
       <a href="#evidence">风险证据</a>
+      <a href="#screenshots">页面截图</a>
       <a href="#discussion">协同研判</a>
       <a href="#appendix">扩展信息</a>
     </div>
@@ -267,6 +268,16 @@ header {{
         <small>按严重度与规则优先级呈现</small>
       </div>
       {findings_panel}
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="screenshots" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>页面截图证据</h3>
+        <small>仅在高风险 URL 上自动采集</small>
+      </div>
+      {_render_screenshot_block(report)}
     </div>
   </section>
 
@@ -347,7 +358,10 @@ def render_markdown_report(report: DetectionReport) -> str:
     else:
         lines.extend(_markdown_browser_evidence(report))
 
-    lines.extend(["", "## 五、风险证据"])
+    lines.extend(["", "## 五、截图证据"])
+    lines.extend(_markdown_screenshots(report))
+
+    lines.extend(["", "## 六、风险证据"])
     if report.findings:
         for index, finding in enumerate(report.findings, start=1):
             lines.extend([
@@ -362,7 +376,7 @@ def render_markdown_report(report: DetectionReport) -> str:
     else:
         lines.append("- 未发现明显风险项。")
 
-    lines.extend(["", "## 六、论坛式协同研判"])
+    lines.extend(["", "## 七、论坛式协同研判"])
     for role in ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]:
         opinion = report.expert_opinions.get(role, "")
         if opinion:
@@ -378,7 +392,7 @@ def render_markdown_report(report: DetectionReport) -> str:
             model_name = report.expert_models.get(role, "unknown")
             lines.append(f"- {role}：`{model_name}`")
 
-    lines.extend(["", "## 七、扩展信息"])
+    lines.extend(["", "## 八、扩展信息"])
     if report.placeholders:
         lines.extend([f"- **{key}**：{value}" for key, value in report.placeholders.items()])
     else:
@@ -666,6 +680,52 @@ def _render_browser_evidence_block(report: DetectionReport) -> str:
         </div>
       </div>
     """
+
+
+def _render_screenshot_block(report: DetectionReport) -> str:
+    screenshots = report.screenshots or []
+    if not screenshots:
+        return "<p class='subtle'>未采集到截图证据。</p>"
+
+    cards = []
+    for index, shot in enumerate(screenshots, start=1):
+        title = html.escape(str(shot.get("page_title") or shot.get("final_url") or shot.get("url") or f"截图 {index}"))
+        url = html.escape(str(shot.get("url") or ""))
+        final_url = html.escape(str(shot.get("final_url") or ""))
+        size_bytes = html.escape(_format_value(shot.get("size_bytes", 0)))
+        viewport = shot.get("viewport") or {}
+        viewport_text = html.escape(_format_value(viewport))
+        captured_at = html.escape(str(shot.get("captured_at") or ""))
+        img_src = html.escape(f"data:{shot.get('mime_type', 'image/png')};base64,{shot.get('base64', '')}")
+        cards.append(f"""
+        <article class='screenshot-card'>
+          <h4>截图 {index} · {title}</h4>
+          <div class='subtle'>URL：<code>{url}</code></div>
+          <div class='subtle'>最终地址：<code>{final_url}</code></div>
+          <div class='subtle'>大小：{size_bytes} 字节 · 视口：{viewport_text} · 采集时间：{captured_at}</div>
+          <div style='margin-top: 12px; overflow: auto; border-radius: 14px; background: #0f172a; padding: 10px;'>
+            <img src="{img_src}" alt="{title}" />
+          </div>
+        </article>
+        """)
+    return f"<div class='screenshot-grid'>{''.join(cards)}</div>"
+
+
+def _markdown_screenshots(report: DetectionReport) -> list[str]:
+    screenshots = report.screenshots or []
+    if not screenshots:
+        return ["- 未采集到截图证据。"]
+
+    lines = [f"- 截图数量：`{len(screenshots)}` 张，完整图像请查看 HTML 报告。"]
+    for index, shot in enumerate(screenshots, start=1):
+        lines.extend([
+            f"- 截图 {index}：",
+            f"  - URL：`{shot.get('url', '')}`",
+            f"  - 最终地址：`{shot.get('final_url', '')}`",
+            f"  - 大小：`{shot.get('size_bytes', 0)}` 字节",
+            f"  - 视口：`{shot.get('viewport', {})}`",
+        ])
+    return lines
 
 
 def _render_apk_dynamic_block(report: DetectionReport) -> str:
