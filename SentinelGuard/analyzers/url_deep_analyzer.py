@@ -381,7 +381,11 @@ class URLDeepAnalyzer:
         host_risk_level = _normalize_risk_level(data.get("risk_level"), static_report.risk_level, host_score)
         evidence_score = _score_from_findings(static_report.findings + additional_findings)
         score = _blend_score(evidence_score, host_score, host_risk_level)
+<<<<<<< HEAD
         risk_level = _risk_level_from_score(score)
+=======
+        risk_level = host_risk_level if host_risk_level in {"low", "medium", "high", "critical"} else _risk_level_from_score(score)
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
         summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
 
@@ -702,6 +706,12 @@ def _summarize_page_observation(page_summary: Dict[str, Any], redirect_chain: Li
         script_count = html_summary.get("script_count")
         if script_count is not None:
             fragments.append(f"脚本={script_count}")
+<<<<<<< HEAD
+=======
+        raw_excerpt = str(html_summary.get("raw_excerpt") or "").strip()
+        if raw_excerpt:
+            fragments.append(f"HTML摘要={raw_excerpt[:120]}")
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
     if page_summary.get("password_forms", 0):
         fragments.append(f"密码框={page_summary['password_forms']}")
     if page_summary.get("hidden_inputs", 0):

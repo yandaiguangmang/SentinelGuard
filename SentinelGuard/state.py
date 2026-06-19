@@ -182,6 +182,8 @@ class DetectionReport:
     redirect_chain: List[str] = field(default_factory=list)
     page_summary: Dict[str, Any] = field(default_factory=dict)
     apk_summary: Dict[str, Any] = field(default_factory=dict)
+    apk_dynamic_summary: Dict[str, Any] = field(default_factory=dict)
+    apk_dynamic_artifacts: Dict[str, Any] = field(default_factory=dict)
     placeholders: Dict[str, str] = field(default_factory=dict)
     analysis_mode: str = "static"
     deep_analysis_used: bool = False
@@ -202,6 +204,8 @@ class DetectionReport:
             "redirect_chain": self.redirect_chain,
             "page_summary": self.page_summary,
             "apk_summary": self.apk_summary,
+            "apk_dynamic_summary": self.apk_dynamic_summary,
+            "apk_dynamic_artifacts": self.apk_dynamic_artifacts,
             "placeholders": self.placeholders,
             "analysis_mode": self.analysis_mode,
             "deep_analysis_used": self.deep_analysis_used,

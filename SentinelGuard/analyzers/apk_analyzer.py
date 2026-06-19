@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, List
 from zipfile import BadZipFile, ZipFile
 
 from SentinelGuard.state import APKIR, DetectionFinding
+
+try:
+    from androguard.core.apk import APK
+except Exception:  # pragma: no cover - dependency fallback
+    APK = None
 
 
 SUSPICIOUS_PERMISSION_KEYWORDS = (
@@ -94,6 +98,47 @@ def _enrich_apk_ir(apk_ir: APKIR) -> APKIR:
     apk_ir.size_bytes = path.stat().st_size
     apk_ir.sha256 = _sha256_file(path)
 
+    if APK is not None:
+        try:
+            return _enrich_with_androguard(apk_ir, path)
+        except Exception:
+            pass
+
+    try:
+        return _enrich_with_zip_fallback(apk_ir, path)
+    except BadZipFile:
+        return apk_ir
+
+
+def _enrich_with_androguard(apk_ir: APKIR, path: Path) -> APKIR:
+    apk = APK(str(path))
+
+    apk_ir.package_name = apk.get_package() or apk_ir.package_name
+    apk_ir.version_name = apk.get_androidversion_name() or apk_ir.version_name
+    apk_ir.version_code = str(apk.get_androidversion_code() or apk_ir.version_code or "")
+    apk_ir.permissions = sorted(set(apk.get_permissions() or []))
+    apk_ir.activities = sorted(set(apk.get_activities() or []))
+    apk_ir.services = sorted(set(apk.get_services() or []))
+    apk_ir.receivers = sorted(set(apk.get_receivers() or []))
+    apk_ir.providers = sorted(set(apk.get_providers() or []))
+    apk_ir.certificate_subject, apk_ir.certificate_issuer, apk_ir.certificate_sha256 = _extract_androguard_certificate_info(apk)
+
+    try:
+        raw = apk.get_all_dex()
+        apk_ir.extracted_strings = _extract_strings_from_dex(raw)
+    except Exception:
+        apk_ir.extracted_strings = apk_ir.extracted_strings
+
+    try:
+        apk_ir.key_files = _collect_key_files(apk.get_files())
+        apk_ir.evidence_summary = _build_evidence_summary(apk.get_files(), None)
+    except Exception:
+        apk_ir.key_files = apk_ir.key_files
+
+    return apk_ir
+
+
+def _enrich_with_zip_fallback(apk_ir: APKIR, path: Path) -> APKIR:
     try:
         with ZipFile(path) as archive:
             names = archive.namelist()
@@ -101,9 +146,9 @@ def _enrich_apk_ir(apk_ir: APKIR) -> APKIR:
             apk_ir.evidence_summary = _build_evidence_summary(names, archive)
             manifest = _read_manifest_text(archive)
             apk_ir.permissions = _extract_permissions(manifest)
-            apk_ir.package_name = _extract_first(manifest, r'package="([^"]+)"')
-            apk_ir.version_name = _extract_first(manifest, r'android:versionName="([^"]+)"')
-            apk_ir.version_code = _extract_first(manifest, r'android:versionCode="([^"]+)"')
+            apk_ir.package_name = _extract_first(manifest, r'package="([^"]+)"') or apk_ir.package_name
+            apk_ir.version_name = _extract_first(manifest, r'android:versionName="([^"]+)"') or apk_ir.version_name
+            apk_ir.version_code = _extract_first(manifest, r'android:versionCode="([^"]+)"') or apk_ir.version_code
             apk_ir.activities = _extract_components(manifest, "activity")
             apk_ir.services = _extract_components(manifest, "service")
             apk_ir.receivers = _extract_components(manifest, "receiver")
@@ -112,8 +157,48 @@ def _enrich_apk_ir(apk_ir: APKIR) -> APKIR:
             apk_ir.certificate_subject, apk_ir.certificate_issuer, apk_ir.certificate_sha256 = _extract_certificate_info(names, archive)
     except BadZipFile:
         return apk_ir
-
     return apk_ir
+
+
+def _extract_androguard_certificate_info(apk: Any) -> tuple[str, str, str]:
+    try:
+        cert = apk.get_certificates()[0]
+    except Exception:
+        return "", "", ""
+
+    subject = ""
+    issuer = ""
+    digest = ""
+    try:
+        subject = str(cert.subject) if cert.subject else ""
+    except Exception:
+        pass
+    try:
+        issuer = str(cert.issuer) if cert.issuer else ""
+    except Exception:
+        pass
+    try:
+        digest = hashlib.sha256(cert.public_bytes()).hexdigest()
+    except Exception:
+        try:
+            digest = hashlib.sha256(bytes(cert)).hexdigest()
+        except Exception:
+            digest = ""
+    return subject, issuer, digest
+
+
+def _extract_strings_from_dex(raw_dex: List[bytes]) -> List[str]:
+    strings: List[str] = []
+    for dex_bytes in raw_dex or []:
+        if not dex_bytes:
+            continue
+        for candidate in re.findall(rb"[\x20-\x7e]{6,}", dex_bytes):
+            text = candidate.decode("utf-8", errors="ignore")
+            if text and text not in strings:
+                strings.append(text)
+            if len(strings) >= 80:
+                return strings
+    return strings
 
 
 def _analyze_apk_ir(apk_ir: APKIR) -> List[DetectionFinding]:
@@ -144,7 +229,7 @@ def _analyze_apk_ir(apk_ir: APKIR) -> List[DetectionFinding]:
             "APK_LARGE_SIZE",
             "安装包体积异常偏大",
             "low",
-            "样本文件体积较大，可能包含大量资源、内嵌载荷或混淆内容。",
+            f"样本文件体积较大，可能包含大量资源、内嵌载荷或混淆内容。",
             f"{apk_ir.size_bytes} bytes",
             "结合资源目录与字符串内容继续检查。",
         ))
@@ -287,14 +372,17 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _join_preview(values: Iterable[str], limit: int = 8) -> str:
+def _join_preview(values: Any, limit: int = 8) -> str:
     items = list(values)
     return "; ".join(items[:limit])
 
 
 def _collect_key_files(names: List[str]) -> List[str]:
     selected: List[str] = []
+<<<<<<< HEAD
     counters = Counter()
+=======
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
 
     def add_item(label: str, value: str) -> None:
         entry = f"{label}: {value}"
@@ -307,27 +395,43 @@ def _collect_key_files(names: List[str]) -> List[str]:
 
         if name in MANIFEST_CANDIDATES:
             add_item("manifest", name)
+<<<<<<< HEAD
             counters["manifest"] += 1
+=======
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
             continue
 
         if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
             add_item("signature", name)
+<<<<<<< HEAD
             counters["signature"] += 1
+=======
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
             continue
 
         if lower.endswith(".dex"):
             add_item("dex", name)
+<<<<<<< HEAD
             counters["dex"] += 1
+=======
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
             continue
 
         if lower.startswith(("assets/", "res/", "lib/", "smali/")) and lower.endswith(KEY_FILE_EXTENSIONS):
             add_item("resource", name)
+<<<<<<< HEAD
             counters["resource"] += 1
+=======
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
 
     return selected[:60]
 
 
+<<<<<<< HEAD
 def _build_evidence_summary(names: List[str], archive: ZipFile) -> Dict[str, Any]:
+=======
+def _build_evidence_summary(names: List[str], archive: ZipFile | None) -> Dict[str, Any]:
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
     summary: Dict[str, Any] = {
         "manifest_files": [],
         "signature_files": [],
@@ -343,6 +447,7 @@ def _build_evidence_summary(names: List[str], archive: ZipFile) -> Dict[str, Any
         upper = name.upper()
 
         if name in MANIFEST_CANDIDATES:
+<<<<<<< HEAD
             summary["manifest_files"].append(_describe_archive_entry(name, archive))
             continue
         if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
@@ -392,6 +497,35 @@ def _read_text_preview(archive: ZipFile, name: str, limit: int = 512) -> str:
         return ""
 
 
+=======
+            summary["manifest_files"].append({"name": name})
+            continue
+        if upper.startswith(SIGNATURE_PREFIX) and upper.endswith((".RSA", ".DSA", ".EC", ".SF", ".MF")):
+            summary["signature_files"].append({"name": name})
+            continue
+        if lower.endswith(".dex"):
+            summary["dex_files"].append({"name": name})
+            continue
+        if lower.endswith((".so", ".jar", ".aar")):
+            summary["native_libraries"].append({"name": name})
+            continue
+        if lower.startswith(("assets/", "res/", "smali/")) and lower.endswith(KEY_FILE_EXTENSIONS):
+            summary["resource_files"].append({"name": name})
+            continue
+        if lower.endswith((".xml", ".json", ".txt", ".ini", ".cfg", ".conf", ".properties", ".js", ".html", ".htm")) and (lower.startswith("assets/") or lower.startswith("res/")):
+            summary["config_files"].append({"name": name})
+
+    if archive is not None:
+        for key in list(summary.keys()):
+            value = summary[key]
+            if isinstance(value, list):
+                summary[key] = value[:40]
+        summary["total_files"] = len(names)
+        summary["key_file_count"] = sum(len(summary[k]) for k in ("manifest_files", "signature_files", "dex_files", "resource_files", "native_libraries", "config_files"))
+    return summary
+
+
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
 def _finding(rule_id: str, title: str, severity: str, description: str, evidence: str, recommendation: str) -> DetectionFinding:
     return DetectionFinding(
         rule_id=rule_id,

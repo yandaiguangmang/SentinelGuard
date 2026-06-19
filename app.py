@@ -9,7 +9,7 @@ from typing import Any, Dict
 from flask import Flask, abort, jsonify, render_template, request, send_from_directory
 
 from SentinelGuard.judgement import (
-    run_apk_deep_detection_from_static,
+    run_apk_dynamic_detection_from_static,
     run_deep_url_detection_from_static,
     run_detection,
 )
@@ -32,8 +32,9 @@ def index():
         "target": "",
         "target_type": "auto",
         "fetch_page": True,
+        "deep": False,
+        "apk_mode": "static",
         "llm_api_key": "",
-        "llm_base_url": "",
         "proxy_http": "",
         "proxy_https": "",
         "proxy_all": "",
@@ -50,6 +51,7 @@ def analyze():
     target_type = (request.form.get("target_type") or "auto").strip()
     fetch_page = request.form.get("fetch_page") == "on"
     deep = request.form.get("deep") == "on"
+    apk_mode = (request.form.get("apk_mode") or "static").strip()
     runtime_config = _build_runtime_config(request.form)
 
     uploaded_apk = request.files.get("apk_file")
@@ -66,6 +68,8 @@ def analyze():
                 "target_type": target_type,
                 "fetch_page": fetch_page,
                 "deep": deep,
+                "apk_mode": apk_mode,
+                **runtime_config.to_dict(),
             })
 
     if not target:
@@ -74,24 +78,28 @@ def analyze():
             "target_type": target_type,
             "fetch_page": fetch_page,
             "deep": deep,
+            "apk_mode": apk_mode,
             **runtime_config.to_dict(),
         })
 
     report = run_detection(target, target_type=target_type, fetch_page=fetch_page, runtime_config=runtime_config)
-    if deep:
-        try:
-            if report.target_ir.target_type == "apk":
+    try:
+        if report.target_ir.target_type == "apk":
+            if apk_mode == "dynamic":
+                report = run_apk_dynamic_detection_from_static(report, persist_report=False, runtime_config=runtime_config)
+            elif deep:
                 report = run_apk_deep_detection_from_static(report, persist_report=False, runtime_config=runtime_config)
-            else:
-                report = run_deep_url_detection_from_static(report, persist_report=False, runtime_config=runtime_config)
-        except Exception as exc:
-            return render_template("index.html", report=report, error=f"深度研判失败，已返回静态结果：{exc}", defaults={
-                "target": target,
-                "target_type": target_type,
-                "fetch_page": fetch_page,
-                "deep": deep,
-                **runtime_config.to_dict(),
-            })
+        elif deep:
+            report = run_deep_url_detection_from_static(report, persist_report=False, runtime_config=runtime_config)
+    except Exception as exc:
+        return render_template("index.html", report=report, error=f"深度研判失败，已返回静态结果：{exc}", defaults={
+            "target": target,
+            "target_type": target_type,
+            "fetch_page": fetch_page,
+            "deep": deep,
+            "apk_mode": apk_mode,
+            **runtime_config.to_dict(),
+        })
 
     report = save_detection_report(report, output_dir=Path(settings.DETECTION_REPORT_DIR))
     return render_template("index.html", report=report, error=None, defaults={
@@ -99,6 +107,7 @@ def analyze():
         "target_type": target_type,
         "fetch_page": fetch_page,
         "deep": deep,
+        "apk_mode": apk_mode,
         **runtime_config.to_dict(),
     })
 
@@ -126,6 +135,7 @@ def _start_analysis_task_from_request(req):
     target_type = (payload.get("target_type") or "auto").strip()
     fetch_page = str(payload.get("fetch_page") or "") in {"on", "true", "1", "yes"}
     deep = str(payload.get("deep") or "") in {"on", "true", "1", "yes"}
+    apk_mode = str(payload.get("apk_mode") or "static").strip()
     runtime_config = _build_runtime_config(payload)
 
     uploaded_apk = req.files.get("apk_file") if hasattr(req, "files") else None
@@ -148,44 +158,56 @@ def _start_analysis_task_from_request(req):
 
     thread = threading.Thread(
         target=_run_analysis_pipeline,
-        args=(task.task_id, target, target_type, fetch_page, deep, runtime_config),
+        args=(task.task_id, target, target_type, fetch_page, deep, apk_mode, runtime_config),
         daemon=True,
     )
     thread.start()
     return task
 
 
-def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_page: bool, deep: bool, runtime_config: AnalysisRuntimeConfig) -> None:
+def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_page: bool, deep: bool, apk_mode: str, runtime_config: AnalysisRuntimeConfig) -> None:
     try:
         task_manager.update(task_id, status="running", progress=10, stage="static", message="正在进行静态分析")
         report = run_detection(target, target_type=target_type, fetch_page=fetch_page, runtime_config=runtime_config)
         task_manager.update(task_id, progress=65, stage="static_done", message="静态分析已完成，正在整理证据")
 
-        if deep:
-            progress_callback = lambda stage, message, progress: task_manager.update(  # noqa: E731
-                task_id,
-                progress=progress,
-                stage=stage,
-                message=message,
-            )
+        progress_callback = lambda stage, message, progress: task_manager.update(  # noqa: E731
+            task_id,
+            progress=progress,
+            stage=stage,
+            message=message,
+        )
 
-            if report.target_ir.target_type == "apk":
+        if report.target_ir.target_type == "apk":
+            if apk_mode == "dynamic":
+                report = run_apk_dynamic_detection_from_static(
+                    report,
+                    persist_report=False,
+                    runtime_config=runtime_config,
+                    progress_callback=progress_callback,
+                )
+                task_manager.update(task_id, progress=94, stage="deep_done", message="APK 动态研判已完成，正在生成报告")
+            elif deep:
                 report = run_apk_deep_detection_from_static(
                     report,
                     persist_report=False,
                     runtime_config=runtime_config,
                     progress_callback=progress_callback,
                 )
+                task_manager.update(task_id, progress=94, stage="deep_done", message="深度研判已完成，正在生成报告")
             else:
+                task_manager.update(task_id, progress=88, stage="static_only", message="静态分析完成，正在生成报告")
+        else:
+            if deep:
                 report = run_deep_url_detection_from_static(
                     report,
                     persist_report=False,
                     runtime_config=runtime_config,
                     progress_callback=progress_callback,
                 )
-            task_manager.update(task_id, progress=94, stage="deep_done", message="深度研判已完成，正在生成报告")
-        else:
-            task_manager.update(task_id, progress=88, stage="static_only", message="静态分析完成，正在生成报告")
+                task_manager.update(task_id, progress=94, stage="deep_done", message="深度研判已完成，正在生成报告")
+            else:
+                task_manager.update(task_id, progress=88, stage="static_only", message="静态分析完成，正在生成报告")
 
         report = save_detection_report(report, output_dir=Path(settings.DETECTION_REPORT_DIR))
         task_manager.finish(task_id, report.to_dict())

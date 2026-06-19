@@ -148,7 +148,12 @@
               <label><input type="checkbox" id="deep" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
             </div>
             <div class="checks" data-group="apk-options" style="display:none;">
+<<<<<<< HEAD
               <label><input type="checkbox" id="deep-apk" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
+=======
+              <label><input type="radio" name="apk_mode" value="static" checked> 静态分析</label>
+              <label><input type="radio" name="apk_mode" value="dynamic"> 动态沙箱</label>
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
             </div>
           </div>
         </div>
@@ -381,8 +386,14 @@
         queued: '已排队，等待开始',
         received: '任务已接收，准备分析',
         static: `${apkPrefix}静态分析中`,
+<<<<<<< HEAD
         static_done: '静态分析已完成，正在整理证据',
         deep_prepare: `正在准备${apkPrefix}深度研判`,
+=======
+        dynamic_install: '正在安装 APK 到模拟器',
+        dynamic_launch: '正在启动应用并采集运行时日志',
+        dynamic_done: 'APK 动态沙箱已完成，正在生成报告',
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
         deep_static: '正在进行静态分析',
         deep_behavior: '正在进行行为分析',
         deep_intel: '正在进行情报分析',
@@ -390,7 +401,11 @@
         deep_host: '正在进行主持人总结',
         deep_done: '深度研判已完成，正在生成报告',
         static_only: '静态分析已完成，正在生成报告',
+<<<<<<< HEAD
         done: '检测完成',
+=======
+        deep_prepare: `正在准备${apkPrefix}深度研判`,
+>>>>>>> ac7142bb106537d8f559320452d986da38460c97
         failed: '检测失败',
       };
       return map[stage] || stage || '处理中';

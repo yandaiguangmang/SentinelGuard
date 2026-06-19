@@ -1,0 +1,42 @@
+{
+  "requested": true,
+  "captured": false,
+  "path": "",
+  "filename": "",
+  "browser": "C:\\\\Program Files (x86)\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe",
+  "error": "Command '['C:\\\\\\\\Program Files (x86)\\\\\\\\Microsoft\\\\\\\\Edge\\\\\\\\Application\\\\\\\\msedge.exe', '--headless=new', '--disable-gpu', '--enable-software-rasterizer', '--disable-dev-shm-usage', '--hide-scrollbars', '--no-first-run', '--no-default-browser-check', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--run-all-compositor-stages-before-draw', '--force-device-scale-factor=1', '--remote-debugging-port=0', '--no-sandbox', '--window-size=1440,2400', '--screenshot=sentinel_reports\\\\sentinel_screenshot_20260617205544293735_9c29d0c0.png', '--virtual-time-budget=30000', '--proxy-server=http://10.250.167.176:7890', 'https://www.baidu.com/']' timed out after 30 seconds",
+  "capture_backend": "chromium",
+  "har_path": "",
+  "attempts": [
+    {
+      "backend": "playwright",
+      "url": "https://www.baidu.com/",
+      "proxy": "http://10.250.167.176:7890"
+    },
+    {
+      "backend": "chromium",
+      "command": [
+        "C:\\\\Program Files (x86)\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe",
+        "--headless=new",
+        "--disable-gpu",
+        "--enable-software-rasterizer",
+        "--disable-dev-shm-usage",
+        "--hide-scrollbars",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--run-all-compositor-stages-before-draw",
+        "--force-device-scale-factor=1",
+        "--remote-debugging-port=0",
+        "--no-sandbox",
+        "--window-size=1440,2400",
+        "--screenshot=sentinel_reports\\sentinel_screenshot_20260617205544293735_9c29d0c0.png",
+        "--virtual-time-budget=30000",
+        "--proxy-server=http://10.250.167.176:7890",
+        "https://www.baidu.com/"
+      ]
+    }
+  ]
+}

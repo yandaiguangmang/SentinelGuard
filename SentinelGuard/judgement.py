@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from typing import Dict, List, Optional
+from typing import Dict, List, Optional
 
 from openai import OpenAI
 
@@ -9,10 +10,12 @@ from config import settings
 
 from SentinelGuard.analyzers.apk_analyzer import analyze_apk
 from SentinelGuard.analyzers.apk_deep_analyzer import deep_analyze_apk
+from SentinelGuard.analyzers.apk_dynamic_analyzer import dynamic_analyze_apk
 from SentinelGuard.analyzers.url_analyzer import analyze_url
 from SentinelGuard.analyzers.url_deep_analyzer import deep_analyze_url
 from SentinelGuard.parsers.input_parser import parse_target
 from SentinelGuard.report import save_detection_report
+from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
 
 
@@ -140,7 +143,10 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
 
 
 def run_deep_url_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
-    deep_result = deep_analyze_url(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+    try:
+        deep_result = deep_analyze_url(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+    except TypeError:
+        deep_result = deep_analyze_url(static_report)
     merged_findings = _deduplicate_findings(static_report.findings + deep_result["additional_findings"])
 
     expert_models = deep_result.get("expert_models") or _build_expert_model_map()
@@ -168,26 +174,31 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
     return report
 
 
-def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
-    deep_result = deep_analyze_apk(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
-    merged_findings = _deduplicate_findings(static_report.findings + deep_result.get("additional_findings", []))
+def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
+    try:
+        dynamic_result = dynamic_analyze_apk(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+    except TypeError:
+        dynamic_result = dynamic_analyze_apk(static_report)
+    dynamic_findings = dynamic_result.get("findings", [])
+    merged_findings = _deduplicate_findings(static_report.findings + dynamic_findings)
 
-    expert_models = deep_result.get("expert_models") or _build_expert_model_map()
-    score = _calculate_score(merged_findings)
-
+    score = int(dynamic_result.get("score", _calculate_score(merged_findings)))
+    risk_level = str(dynamic_result.get("risk_level") or _risk_level(score, merged_findings))
     report = DetectionReport(
         target_ir=static_report.target_ir,
-        risk_level=_risk_level(score, merged_findings),
-        score=score,
+        risk_level=risk_level,
+        score=max(0, min(100, score)),
         findings=merged_findings,
-        expert_opinions=deep_result.get("expert_opinions", static_report.expert_opinions),
-        expert_models=expert_models,
-        deep_summary=deep_result.get("deep_summary", ""),
+        expert_opinions=dynamic_result.get("expert_opinions", static_report.expert_opinions),
+        expert_models=dynamic_result.get("expert_models", _build_expert_model_map()),
+        deep_summary=dynamic_result.get("deep_summary", ""),
         redirect_chain=static_report.redirect_chain,
         page_summary=static_report.page_summary,
         apk_summary=static_report.apk_summary,
+        apk_dynamic_summary=dynamic_result.get("apk_dynamic_summary", {}),
+        apk_dynamic_artifacts=dynamic_result.get("apk_dynamic_artifacts", {}),
         placeholders=static_report.placeholders,
-        analysis_mode="deep",
+        analysis_mode="dynamic",
         deep_analysis_used=True,
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
