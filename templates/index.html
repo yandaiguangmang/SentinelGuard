@@ -145,6 +145,7 @@
             <label>分析选项</label>
             <div class="checks" data-group="url-options">
               <label><input type="checkbox" name="fetch_page" {% if defaults.fetch_page %}checked{% endif %}> 抓取页面内容</label>
+              <label><input type="checkbox" name="enable_screenshot" {% if defaults.enable_screenshot %}checked{% endif %}> 页面截图证据</label>
               <label><input type="checkbox" id="deep" name="deep" {% if defaults.deep %}checked{% endif %}> 深度研判</label>
             </div>
             <div class="checks" data-group="apk-options" style="display:none;">

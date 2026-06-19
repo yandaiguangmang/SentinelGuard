@@ -104,7 +104,26 @@ def test_redirect_response_is_not_followed_but_is_recorded(monkeypatch):
     assert result["page_summary"]["final_url"] == "https://safe.example/login"
 
 
-def test_run_detection_scores_high_for_phishing_signals(monkeypatch):
+def test_screenshot_option_can_be_disabled(monkeypatch):
+    from SentinelGuard.state import AnalysisRuntimeConfig
+
+    monkeypatch.setattr(url_analyzer, "requests", FakeRequests)
+    called = {"count": 0}
+
+    def fake_capture(*_args, **_kwargs):
+        called["count"] += 1
+        return {"base64": "x"}
+
+    monkeypatch.setattr(url_analyzer, "capture_page_screenshot", fake_capture)
+
+    target = parse_target("http://example.com/start")
+    result = url_analyzer.analyze_url(target, fetch_page=True, runtime_config=AnalysisRuntimeConfig(enable_screenshot=False))
+
+    assert result["screenshots"] == []
+    assert called["count"] == 0
+
+
+
     monkeypatch.setattr(url_analyzer, "requests", FakeRequests)
 
     report = run_detection("http://example.com/login?redirect=http://evil.test", fetch_page=True)

@@ -135,6 +135,7 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
         expert_opinions=_build_expert_opinions(risk_level, findings),
         redirect_chain=analysis["redirect_chain"],
         page_summary=analysis["page_summary"],
+        screenshots=analysis.get("screenshots", []),
         placeholders=PLACEHOLDERS,
         analysis_mode="static",
     )
@@ -160,6 +161,7 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         deep_summary=deep_result.get("deep_summary", ""),
         redirect_chain=static_report.redirect_chain,
         page_summary=static_report.page_summary,
+        screenshots=static_report.screenshots,
         apk_summary=static_report.apk_summary,
         placeholders=static_report.placeholders,
         analysis_mode="deep",
@@ -192,6 +194,7 @@ def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persis
         deep_summary=dynamic_result.get("deep_summary", ""),
         redirect_chain=static_report.redirect_chain,
         page_summary=static_report.page_summary,
+        screenshots=static_report.screenshots,
         apk_summary=static_report.apk_summary,
         apk_dynamic_summary=dynamic_result.get("apk_dynamic_summary", {}),
         apk_dynamic_artifacts=dynamic_result.get("apk_dynamic_artifacts", {}),

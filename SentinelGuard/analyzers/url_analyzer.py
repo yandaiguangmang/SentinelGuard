@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover - urllib3 is normally installed with req
 
 from config import settings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, TargetIR
+from SentinelGuard.analyzers.screenshot import capture_page_screenshot
 
 
 SENSITIVE_KEYWORDS = (
@@ -194,13 +195,14 @@ class _PageSignalParser(html.parser.HTMLParser):
 
 def analyze_url(target_ir: TargetIR, fetch_page: bool = True, runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, Any]:
     if target_ir.target_type != "url" or not target_ir.url:
-        return {"findings": [], "redirect_chain": [], "page_summary": {}}
+        return {"findings": [], "redirect_chain": [], "page_summary": {}, "screenshots": []}
 
     findings: List[DetectionFinding] = []
     findings.extend(_analyze_url_structure(target_ir.url))
 
     redirect_chain: List[str] = [target_ir.url.normalized_url]
     page_summary: Dict[str, Any] = {}
+    screenshots: List[Dict[str, Any]] = []
 
     if fetch_page:
         network_result = _fetch_page(target_ir.url.normalized_url, runtime_config=runtime_config)
@@ -210,11 +212,47 @@ def analyze_url(target_ir: TargetIR, fetch_page: bool = True, runtime_config: An
         findings.extend(_analyze_redirect_chain(redirect_chain))
         findings.extend(_analyze_page_summary(page_summary))
 
+        if _should_capture_screenshot(findings, page_summary, runtime_config):
+            screenshot = _capture_page_screenshot(target_ir.url.normalized_url, runtime_config=runtime_config)
+            if screenshot:
+                screenshots.append(screenshot)
+
     return {
         "findings": findings,
         "redirect_chain": redirect_chain,
         "page_summary": page_summary,
+        "screenshots": screenshots,
     }
+
+
+def _should_capture_screenshot(findings: List[DetectionFinding], page_summary: Dict[str, Any], runtime_config: AnalysisRuntimeConfig | None = None) -> bool:
+    enabled = settings.DETECTION_ENABLE_SCREENSHOT if runtime_config is None or runtime_config.enable_screenshot is None else bool(runtime_config.enable_screenshot)
+    if not enabled:
+        return False
+    if not page_summary:
+        return False
+    if any(finding.severity in {"high", "critical"} for finding in findings):
+        return True
+    if page_summary.get("password_forms", 0) > 0:
+        return True
+    if page_summary.get("download_links"):
+        return True
+    return False
+
+
+def _capture_page_screenshot(url: str, runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, Any] | None:
+    proxies = _build_request_proxies(runtime_config)
+    proxy_payload: Dict[str, str] | None = None
+    if proxies:
+        proxy_payload = {"server": proxies.get("https") or proxies.get("http") or proxies.get("all") or ""}
+        if not proxy_payload["server"]:
+            proxy_payload = None
+    return capture_page_screenshot(
+        url,
+        proxy=proxy_payload,
+        timeout_seconds=max(settings.DETECTION_TIMEOUT_SECONDS, 10),
+    )
+
 
 
 def _analyze_url_structure(url_ir) -> List[DetectionFinding]:

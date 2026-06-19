@@ -14,6 +14,7 @@ class AnalysisRuntimeConfig:
     proxy_http: str = ""
     proxy_https: str = ""
     proxy_all: str = ""
+    enable_screenshot: Optional[bool] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -185,6 +186,7 @@ class DetectionReport:
     apk_dynamic_summary: Dict[str, Any] = field(default_factory=dict)
     apk_dynamic_artifacts: Dict[str, Any] = field(default_factory=dict)
     placeholders: Dict[str, str] = field(default_factory=dict)
+    screenshots: List[Dict[str, Any]] = field(default_factory=list)
     analysis_mode: str = "static"
     deep_analysis_used: bool = False
     parent_html_report_path: str = ""
@@ -207,6 +209,7 @@ class DetectionReport:
             "apk_dynamic_summary": self.apk_dynamic_summary,
             "apk_dynamic_artifacts": self.apk_dynamic_artifacts,
             "placeholders": self.placeholders,
+            "screenshots": self.screenshots,
             "analysis_mode": self.analysis_mode,
             "deep_analysis_used": self.deep_analysis_used,
             "parent_html_report_path": self.parent_html_report_path,
