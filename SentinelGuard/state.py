@@ -9,11 +9,11 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class AnalysisRuntimeConfig:
-    llm_api_key: str = ""
-    llm_base_url: str = ""
-    proxy_http: str = ""
-    proxy_https: str = ""
-    proxy_all: str = ""
+    llm_api_key: str = "sk-hFs40fFuY5B9HkA76sD8R9P60uxYUQIuI7LEYfjxz0tMwG1N"
+    llm_base_url: str = "https://api.chatanywhere.tech"
+    proxy_http: str = "http://127.0.0.1:7897"
+    proxy_https: str = "http://127.0.0.1:7897"
+    proxy_all: str = "http://127.0.0.1:7897"
     enable_screenshot: Optional[bool] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -193,6 +193,7 @@ class DetectionReport:
     parent_markdown_report_path: str = ""
     html_report_path: str = ""
     markdown_report_path: str = ""
+    stats: Optional[Dict[str, Any]] = None  # 新增：深度研判性能统计
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -216,4 +217,5 @@ class DetectionReport:
             "parent_markdown_report_path": self.parent_markdown_report_path,
             "html_report_path": self.html_report_path,
             "markdown_report_path": self.markdown_report_path,
+            "stats": self.stats, 
         }

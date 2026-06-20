@@ -27,7 +27,7 @@ SEVERITY_WEIGHTS = {
 SEVERITY_BASE_SCORES = {
     "low": 5,
     "medium": 25,
-    "high": 50,
+    "high": 60,
     "critical": 75,
 }
 
@@ -168,6 +168,7 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         deep_analysis_used=True,
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
+        stats=deep_result.get("stats") 
     )
     if persist_report:
         save_detection_report(report)
