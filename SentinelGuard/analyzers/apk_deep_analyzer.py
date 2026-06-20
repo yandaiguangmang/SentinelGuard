@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import json
 import re
+import logging
 from typing import Any, Dict, List
 
 import httpx
@@ -17,6 +18,7 @@ from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
+LOGGER = logging.getLogger(__name__)
 
 ROLE_CONFIG_KEYS = {
     "主持人": ("DETECTION_HOST_API_KEY", "DETECTION_HOST_BASE_URL", "DETECTION_HOST_MODEL_NAME"),
@@ -36,15 +38,14 @@ ROLE_DEFAULT_MODELS = {
 
 ROLE_SYSTEM_PROMPTS = {
     "主持人": """你是 APK 恶意软件深度研判的主持人。
-你的职责是综合四位专家意见，对 APK 的静态证据链进行最终裁决式总结，并输出结构化 JSON。
+你的职责是仅综合前四位专家意见，对 APK 的静态/动态风险证据进行最终裁决式总结，并输出结构化 JSON。
 
 要求：
-1. 必须基于 APK 的关键文件证据、Manifest、权限、组件、签名、字符串和资源线索进行总结，不要脱离证据链。
-2. 若证据不足，必须明确说明当前仅基于离线静态证据。
+1. 你收到的输入只包含前四位专家输出，请仅基于这些结论做最终总结，不要索要或依赖额外上下文。
+2. 若证据不足，必须明确说明当前研判仅基于已有专家输出。
 3. summary 要体现最终结论，不能只是简单复述。
-4. expert_opinions 必须保留五个角色的原始意见或整理后的摘要。
-5. 你将同时收到仲裁器输出（consistent score、discrepancies、suspected_compromised）与鲁棒性验证输出（adversarial techniques、robustness score），必须纳入最终总结。
-6. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_models、expert_opinions、additional_findings、arbitration_result、robustness_result。
+4. expert_opinions 只需要保留前四个角色的原始意见或整理后的摘要。
+5. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_opinions、additional_findings。
 7. summary 必须使用中文，不要输出英文总结。
 """,
     "静态分析员": """你是 APK 恶意软件深度研判中的静态分析员。
@@ -118,6 +119,7 @@ class APKDeepAnalyzer:
         if progress_callback:
             progress_callback("deep_prepare", "正在准备 APK 深度研判", 72)
         for role in DEEP_ROLE_ORDER[1:]:
+            LOGGER.info("APK 深度研判开始执行角色：%s", role)
             if progress_callback:
                 progress_callback(f"deep_{self._role_stage(role)}", f"正在进行{role}分析", self._role_progress(role))
             try:
@@ -150,19 +152,31 @@ class APKDeepAnalyzer:
 
         if progress_callback:
             progress_callback("deep_host", "正在进行主持人总结", 90)
+        LOGGER.info("APK 深度研判开始执行角色：主持人")
         host_payload = self._build_host_payload(static_report, role_outputs)
-        host_payload["role_scores"] = role_scores
-        host_payload["arbitration_result"] = arbitration_result.to_dict() if arbitration_result else None
-        host_payload["robustness_result"] = robustness_result.to_dict() if robustness_result else None
         host_result = self._call_role_model("主持人", host_payload)
         if not host_result.get("success"):
-            return self._build_degraded_result(static_report, role_outputs, host_result.get("error"))
+            return self._build_host_fallback_result(
+                static_report=static_report,
+                role_outputs=role_outputs,
+                arbitration_result=arbitration_result,
+                robustness_result=robustness_result,
+                role_scores=role_scores,
+                error=host_result.get("error"),
+            )
         try:
             if progress_callback:
                 progress_callback("deep_done", "APK 深度研判已完成", 96)
             return self._normalize_result(host_result, static_report, role_outputs, arbitration_result, robustness_result, role_scores)
         except Exception as exc:
-            return self._build_degraded_result(static_report, role_outputs, exc)
+            return self._build_host_fallback_result(
+                static_report=static_report,
+                role_outputs=role_outputs,
+                arbitration_result=arbitration_result,
+                robustness_result=robustness_result,
+                role_scores=role_scores,
+                error=exc,
+            )
 
     def _resolve_role_models(self) -> Dict[str, str]:
         role_models: Dict[str, str] = {}
@@ -225,28 +239,343 @@ class APKDeepAnalyzer:
         )
 
     def _build_payload(self, static_report: DetectionReport) -> Dict[str, Any]:
-        apk = static_report.target_ir.apk.to_dict() if static_report.target_ir.apk else {}
-        return {
-            "target": static_report.target_ir.to_dict(),
-            "static_report": {
-                "risk_level": static_report.risk_level,
-                "score": static_report.score,
-                "findings": [finding.to_dict() for finding in static_report.findings],
-                "apk_summary": static_report.apk_summary,
-                "expert_opinions": static_report.expert_opinions,
-            },
-            "apk_ir": apk,
-            "key_files": apk.get("key_files", []),
-            "evidence_summary": apk.get("evidence_summary", {}),
-            "expert_models": self.role_models,
-            "proxy_enabled": bool(self.runtime_config.proxy_dict()),
+        payload = {
+            "target": self._build_risk_target_context(static_report.target_ir),
+            "static_report": self._build_risk_static_report_context(static_report),
+            "apk_ir": self._build_lightweight_apk_context(static_report.target_ir.apk),
         }
+        self._log_payload_size("base", payload)
+        return payload
+
+    def _build_risk_static_report_context(self, static_report: DetectionReport) -> Dict[str, Any]:
+        findings = self._summarize_findings(static_report.findings)
+        apk_summary = self._summarize_apk_summary(static_report.apk_summary)
+        expert_opinions = self._summarize_expert_opinions(static_report.expert_opinions)
+        return {
+            "risk_level": static_report.risk_level,
+            "score": static_report.score,
+            "analysis_mode": static_report.analysis_mode,
+            "findings": findings,
+            "findings_count": len(static_report.findings or []),
+            "apk_summary": apk_summary,
+            "expert_opinions": expert_opinions,
+        }
+
+    def _build_risk_target_context(self, target_ir) -> Dict[str, Any]:
+        target = self._build_lightweight_target_context(target_ir)
+        apk = target.get("apk") or {}
+        target["apk"] = {
+            "file_name": apk.get("file_name", ""),
+            "package_name": apk.get("package_name", ""),
+            "size_bytes": apk.get("size_bytes", 0),
+            "permissions": self._limit_list(apk.get("permissions", []), 6),
+            "key_files": self._limit_list(apk.get("key_files", []), 6),
+            "extracted_strings": self._limit_list(apk.get("extracted_strings", []), 5),
+            "graph_data": self._summarize_graph_for_risk(apk.get("graph_data", {})),
+            "evidence_summary": self._summarize_evidence_for_risk(apk.get("evidence_summary", {})),
+        }
+        return target
+
+    def _build_lightweight_target_context(self, target_ir) -> Dict[str, Any]:
+        target = {
+            "target_type": getattr(target_ir, "target_type", ""),
+            "original_input": getattr(target_ir, "original_input", ""),
+            "status": getattr(target_ir, "status", ""),
+            "message": getattr(target_ir, "message", ""),
+        }
+        apk = getattr(target_ir, "apk", None)
+        if apk is not None:
+            target["apk"] = self._build_lightweight_apk_context(apk)
+        else:
+            target["apk"] = None
+        url = getattr(target_ir, "url", None)
+        if url is not None:
+            target["url"] = url.to_dict() if hasattr(url, "to_dict") else url
+        else:
+            target["url"] = None
+        return target
+
+    def _build_lightweight_apk_context(self, apk_ir) -> Dict[str, Any]:
+        if not apk_ir:
+            return {}
+
+        apk = apk_ir.to_dict() if hasattr(apk_ir, "to_dict") else dict(apk_ir)
+        extracted_strings = self._summarize_extracted_strings(apk.get("extracted_strings", []))
+        key_files = self._summarize_key_files(apk.get("key_files", []))
+
+        return {
+            "normalized_path": apk.get("normalized_path", ""),
+            "file_name": apk.get("file_name", ""),
+            "package_name": apk.get("package_name", ""),
+            "version_name": apk.get("version_name", ""),
+            "version_code": apk.get("version_code", ""),
+            "sha256": apk.get("sha256", ""),
+            "size_bytes": apk.get("size_bytes", 0),
+            "permissions": self._limit_list(apk.get("permissions", []), 8),
+            "activities": self._limit_list(apk.get("activities", []), 6),
+            "services": self._limit_list(apk.get("services", []), 6),
+            "receivers": self._limit_list(apk.get("receivers", []), 6),
+            "providers": self._limit_list(apk.get("providers", []), 6),
+            "certificate_subject": apk.get("certificate_subject", ""),
+            "certificate_issuer": apk.get("certificate_issuer", ""),
+            "certificate_sha256": apk.get("certificate_sha256", ""),
+            "extracted_strings": extracted_strings,
+            "extracted_strings_count": len(apk.get("extracted_strings", []) or []),
+            "key_files": key_files,
+            "key_files_count": len(apk.get("key_files", []) or []),
+            "evidence_summary": self._summarize_evidence_summary(apk.get("evidence_summary")),
+            "graph_data": self._summarize_graph_data(apk.get("graph_data")),
+        }
+
+    def _summarize_apk_summary(self, apk_summary: Any) -> Any:
+        if apk_summary is None:
+            return {}
+        if isinstance(apk_summary, dict):
+            summary: Dict[str, Any] = {}
+            for key in ("file_name", "package_name", "risk_level", "score", "manifest", "permissions", "components", "signature", "suspicious_strings"):
+                value = apk_summary.get(key)
+                if value:
+                    summary[key] = self._limit_list(value, 8) if isinstance(value, list) else value
+            return summary
+        if isinstance(apk_summary, list):
+            return self._limit_list(apk_summary, 8)
+        return str(apk_summary)[:1000]
+
+    def _summarize_expert_opinions(self, expert_opinions: Any) -> Dict[str, str]:
+        if not isinstance(expert_opinions, dict):
+            return {}
+        return {role: str(expert_opinions.get(role) or "")[:1200] for role in DEEP_ROLE_ORDER}
+
+    def _summarize_findings(self, findings: Any) -> List[Dict[str, Any]]:
+        if not isinstance(findings, list):
+            return []
+        summarized: List[Dict[str, Any]] = []
+        for finding in findings[:10]:
+            if isinstance(finding, DetectionFinding):
+                finding = finding.to_dict()
+            if not isinstance(finding, dict):
+                summarized.append({"text": str(finding)[:300]})
+                continue
+            summarized.append({
+                "rule_id": str(finding.get("rule_id", "")),
+                "title": str(finding.get("title", "")),
+                "severity": str(finding.get("severity", "")),
+                "evidence": str(finding.get("evidence", ""))[:400],
+                "recommendation": str(finding.get("recommendation", ""))[:300],
+            })
+        return summarized
+
+    @staticmethod
+    def _limit_list(values: Any, limit: int) -> List[Any]:
+        if not isinstance(values, list):
+            return []
+        if limit <= 0:
+            return []
+        return values[:limit]
+
+    def _summarize_extracted_strings(self, strings: Any) -> List[str]:
+        if not isinstance(strings, list):
+            return []
+
+        suspicious_keywords = (
+            "http",
+            "https",
+            "api",
+            "token",
+            "password",
+            "passwd",
+            "secret",
+            "cmd",
+            "shell",
+            "su",
+            "root",
+            "dex",
+            "so",
+        )
+        suspicious: List[str] = []
+        for item in strings:
+            text = str(item).strip()
+            if not text:
+                continue
+            if any(keyword in text.lower() for keyword in suspicious_keywords):
+                suspicious.append(text)
+            if len(suspicious) >= 20:
+                break
+
+        if suspicious:
+            return suspicious[:8]
+
+        return [str(item).strip() for item in strings[:5] if str(item).strip()]
+
+    def _summarize_key_files(self, key_files: Any) -> List[str]:
+        if not isinstance(key_files, list):
+            return []
+
+        preview: List[str] = []
+        priority_keywords = (
+            ".so",
+            ".dex",
+            "manifest",
+            "smali",
+            "classes",
+            "config",
+            "assets",
+            "res/",
+        )
+        for item in key_files:
+            text = str(item).strip()
+            if not text:
+                continue
+            preview.append(text)
+            if len(preview) >= 12:
+                break
+
+        if len(preview) < 12:
+            for item in key_files:
+                text = str(item).strip()
+                if not text or text in preview:
+                    continue
+                if any(keyword in text.lower() for keyword in priority_keywords):
+                    preview.append(text)
+                if len(preview) >= 12:
+                    break
+
+        return preview[:12]
+
+    def _summarize_evidence_summary(self, evidence_summary: Any) -> Dict[str, Any]:
+        if not isinstance(evidence_summary, dict):
+            return {}
+
+        summary: Dict[str, Any] = {
+            "file_count": evidence_summary.get("file_count") or len(evidence_summary.get("files", []) or []),
+            "warnings": self._limit_list([str(item) for item in evidence_summary.get("warnings", []) or [] if str(item).strip()], 5),
+            "files_preview": self._limit_list([str(item) for item in evidence_summary.get("files", []) or [] if str(item).strip()], 12),
+        }
+
+        for key in ("manifest", "summary", "categories", "signature", "counts"):
+            value = evidence_summary.get(key)
+            if value:
+                summary[key] = value
+
+        return summary
+
+    def _summarize_graph_data(self, graph_data: Any) -> Dict[str, Any]:
+        if not graph_data:
+            return {}
+        if isinstance(graph_data, dict):
+            return self._compact_graph_dict(graph_data)
+
+        to_dict = getattr(graph_data, "to_dict", None)
+        if callable(to_dict):
+            return self._compact_graph_dict(to_dict())
+
+        return {}
+
+    def _summarize_graph_for_risk(self, graph_data: Any) -> Dict[str, Any]:
+        compact = self._summarize_graph_data(graph_data)
+        if not isinstance(compact, dict):
+            return {}
+
+        risk_view: Dict[str, Any] = {}
+        for key in ("stats", "fallback", "fallback_reason", "warnings"):
+            if key in compact:
+                risk_view[key] = compact[key]
+
+        for subgraph_name in ("cfg", "fcg", "api_graph"):
+            subgraph = compact.get(subgraph_name)
+            if isinstance(subgraph, dict):
+                risk_view[subgraph_name] = {
+                    "node_count": subgraph.get("node_count", 0),
+                    "edge_count": subgraph.get("edge_count", 0),
+                    "nodes_preview": self._limit_list(subgraph.get("nodes_preview", []), 5),
+                    "edges_preview": self._limit_list(subgraph.get("edges_preview", []), 5),
+                    "api_call_counts_top": self._limit_list(subgraph.get("api_call_counts_top", []), 5),
+                }
+        return risk_view
+
+    def _summarize_evidence_for_risk(self, evidence_summary: Any) -> Dict[str, Any]:
+        summary = self._summarize_evidence_summary(evidence_summary)
+        if not summary:
+            return {}
+        return {
+            "file_count": summary.get("file_count", 0),
+            "warnings": self._limit_list(summary.get("warnings", []), 3),
+            "files_preview": self._limit_list(summary.get("files_preview", []), 5),
+            "manifest": summary.get("manifest", {}),
+            "summary": summary.get("summary", {}),
+        }
+
+    def _compact_graph_dict(self, graph_data: Dict[str, Any]) -> Dict[str, Any]:
+        stats = graph_data.get("stats", {}) if isinstance(graph_data.get("stats", {}), dict) else {}
+        compact: Dict[str, Any] = {
+            "stats": stats,
+            "fallback": bool(graph_data.get("fallback")),
+            "fallback_reason": graph_data.get("fallback_reason", ""),
+            "warnings": self._limit_list([str(item) for item in graph_data.get("warnings", []) or [] if str(item).strip()], 5),
+        }
+
+        for subgraph_name, subgraph in graph_data.items():
+            if subgraph_name in {"stats", "fallback", "fallback_reason", "warnings"}:
+                continue
+            if not isinstance(subgraph, dict):
+                continue
+
+            compact[subgraph_name] = {
+                "node_count": len(subgraph.get("nodes", []) or []),
+                "edge_count": len(subgraph.get("edges", []) or []),
+                "nodes_preview": self._preview_graph_nodes(subgraph.get("nodes", [])),
+                "edges_preview": self._preview_graph_edges(subgraph.get("edges", [])),
+            }
+            if subgraph.get("api_call_counts"):
+                compact[subgraph_name]["api_call_counts_top"] = self._top_mapping_items(subgraph.get("api_call_counts"), 12)
+
+        return compact
+
+    def _preview_graph_nodes(self, nodes: Any, limit: int = 12) -> List[Any]:
+        if not isinstance(nodes, list):
+            return []
+        preview: List[Any] = []
+        for node in nodes[:limit]:
+            if isinstance(node, dict):
+                preview.append({k: node.get(k) for k in ("id", "name", "label", "type") if k in node})
+            else:
+                preview.append(node)
+        return preview
+
+    def _preview_graph_edges(self, edges: Any, limit: int = 12) -> List[Any]:
+        if not isinstance(edges, list):
+            return []
+        preview: List[Any] = []
+        for edge in edges[:limit]:
+            if isinstance(edge, dict):
+                preview.append({k: edge.get(k) for k in ("src", "dst", "source", "target", "label", "type") if k in edge})
+            else:
+                preview.append(edge)
+        return preview
+
+    def _top_mapping_items(self, mapping: Any, limit: int = 12) -> List[Dict[str, Any]]:
+        if not isinstance(mapping, dict):
+            return []
+        items = sorted(mapping.items(), key=lambda kv: (-int(kv[1]) if str(kv[1]).isdigit() else 0, str(kv[0])))
+        return [{"key": str(key), "value": value} for key, value in items[:limit]]
+
+    def _log_payload_size(self, label: str, payload: Dict[str, Any]) -> None:
+        try:
+            payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            size_bytes = len(payload_json.encode("utf-8"))
+        except Exception as exc:
+            LOGGER.warning("APK 深度研判 %s payload 大小统计失败: %s", label, exc)
+            return
+
+        size_kb = size_bytes / 1024
+        print(f"[APK_DEEP_PAYLOAD] {label} payload size: {size_bytes} bytes ({size_kb:.2f} KB)", flush=True)
+        LOGGER.info("APK 深度研判 %s payload size: %s bytes (%.2f KB)", label, size_bytes, size_kb)
 
     def _build_role_payload(self, role: str, static_report: DetectionReport, base_payload: Dict[str, Any]) -> Dict[str, Any]:
         payload = dict(base_payload)
         if role in {"静态分析员", "行为分析员"} and static_report.analysis_mode == "dynamic":
-            dynamic_summary = dict(static_report.apk_dynamic_summary or {})
-            dynamic_artifacts = dict(static_report.apk_dynamic_artifacts or {})
+            dynamic_summary = self._summarize_dynamic_summary(static_report.apk_dynamic_summary or {})
+            dynamic_artifacts = self._summarize_dynamic_artifacts(static_report.apk_dynamic_artifacts or {})
             payload["dynamic_sandbox"] = {
                 "summary": dynamic_summary,
                 "artifacts": dynamic_artifacts,
@@ -254,10 +583,13 @@ class APKDeepAnalyzer:
                 "dynamic_json_path": dynamic_artifacts.get("dynamic_json_path", ""),
                 "dynamic_summary_path": dynamic_artifacts.get("dynamic_summary_path", ""),
                 "dynamic_logcat_path": dynamic_artifacts.get("dynamic_logcat_path", ""),
+                "network_hits": self._limit_list((static_report.apk_dynamic_summary or {}).get("network_hits", []), 5),
+                "logcat_excerpt": str((static_report.apk_dynamic_summary or {}).get("logcat_excerpt", ""))[:1500],
             }
             payload["dynamic_summary"] = dynamic_summary
             payload["dynamic_artifacts"] = dynamic_artifacts
             payload["dynamic_output_dir"] = str(dynamic_artifacts.get("dynamic_output_dir") or "")
+        self._log_payload_size(role, payload)
         return payload
 
     @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
@@ -282,20 +614,7 @@ class APKDeepAnalyzer:
 
     def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         return {
-            "target": static_report.target_ir.to_dict(),
-            "static_report": {
-                "risk_level": static_report.risk_level,
-                "score": static_report.score,
-                "findings": [finding.to_dict() for finding in static_report.findings],
-                "apk_summary": static_report.apk_summary,
-                "expert_opinions": static_report.expert_opinions,
-            },
-            "expert_models": self.role_models,
             "role_outputs": self._serialize_role_outputs(role_outputs),
-            "role_scores": {},
-            "arbitration_result": None,
-            "robustness_result": None,
-            "proxy_enabled": False,
         }
 
     def _build_fallback_role_output(self, role: str, static_report: DetectionReport, error: Any) -> Dict[str, Any]:
@@ -344,15 +663,95 @@ class APKDeepAnalyzer:
             "additional_findings": fallback_findings,
         }
 
+    def _build_host_fallback_result(
+        self,
+        static_report: DetectionReport,
+        role_outputs: Dict[str, Dict[str, Any]],
+        arbitration_result: Any = None,
+        robustness_result: Any = None,
+        role_scores: Dict[str, int] | None = None,
+        error: Any = None,
+    ) -> Dict[str, Any]:
+        fallback_findings: List[DetectionFinding] = []
+        for role_output in role_outputs.values():
+            fallback_findings.extend(_coerce_findings(role_output.get("additional_findings")))
+
+        combined_scores = role_scores or self._extract_role_scores(role_outputs, static_report)
+        evidence_score = score_from_findings(static_report.findings + fallback_findings)
+        host_score = combine_apk_scores(
+            evidence_score,
+            combined_scores.get("静态分析员", static_report.score),
+            arbitration_result,
+            robustness_result,
+        )
+        risk_level = risk_level_from_score(host_score)
+        summary = self._build_host_fallback_summary(static_report, role_outputs, host_score, risk_level, error)
+        expert_opinions = {
+            role: str(role_outputs.get(role, {}).get("opinion") or static_report.expert_opinions.get(role) or "")
+            for role in DEEP_ROLE_ORDER
+        }
+        expert_opinions["主持人"] = summary
+
+        return {
+            "risk_level": risk_level,
+            "score": host_score,
+            "deep_score": host_score,
+            "evidence_score": evidence_score,
+            "expert_opinions": expert_opinions,
+            "expert_models": self.role_models,
+            "deep_summary": summary,
+            "additional_findings": fallback_findings,
+            "role_scores": combined_scores,
+            "arbitration_result": arbitration_result.to_dict() if hasattr(arbitration_result, "to_dict") else _coerce_mapping(arbitration_result),
+            "robustness_result": robustness_result.to_dict() if hasattr(robustness_result, "to_dict") else _coerce_mapping(robustness_result),
+        }
+
+    def _build_host_fallback_summary(
+        self,
+        static_report: DetectionReport,
+        role_outputs: Dict[str, Dict[str, Any]],
+        score: int,
+        risk_level: str,
+        error: Any,
+    ) -> str:
+        role_opinions = []
+        for role in DEEP_ROLE_ORDER[1:]:
+            opinion = str(role_outputs.get(role, {}).get("opinion") or static_report.expert_opinions.get(role) or "").strip()
+            if opinion:
+                role_opinions.append(f"{role}：{opinion[:180]}")
+
+        if role_opinions:
+            joined = "；".join(role_opinions[:4])
+            return (
+                f"主持人模型调用失败，已基于静态分析与已完成的四位专家意见完成本地归纳。"
+                f"综合风险等级为{risk_level}，风险分数为{score}分。"
+                f"主要专家意见：{joined}。"
+            )
+
+        return (
+            f"主持人模型调用失败，已使用静态分析结果降级替代。当前综合风险等级为{risk_level}，"
+            f"风险分数为{score}分。原因：{error}"
+        )
+
     def _serialize_role_outputs(self, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         serialized: Dict[str, Dict[str, Any]] = {}
         for role, output in role_outputs.items():
-            serialized_output = dict(output)
-            findings = serialized_output.get("additional_findings") or []
-            serialized_output["additional_findings"] = [
-                finding.to_dict() if isinstance(finding, DetectionFinding) else finding
-                for finding in findings
-            ]
+            findings = self._limit_list(dict(output).get("additional_findings") or [], 3)
+            serialized_output = {
+                "opinion": str(dict(output).get("opinion") or "")[:1200],
+                "risk_hint": str(dict(output).get("risk_hint") or ""),
+                "additional_findings_count": len(dict(output).get("additional_findings") or []),
+            }
+            if findings:
+                serialized_output["additional_findings_preview"] = [
+                    {
+                        "rule_id": str(finding.rule_id if isinstance(finding, DetectionFinding) else finding.get("rule_id", "")),
+                        "title": str(finding.title if isinstance(finding, DetectionFinding) else finding.get("title", ""))[:200],
+                        "severity": str(finding.severity if isinstance(finding, DetectionFinding) else finding.get("severity", "")),
+                        "evidence": str(finding.evidence if isinstance(finding, DetectionFinding) else finding.get("evidence", ""))[:300],
+                    }
+                    for finding in findings
+                ]
             serialized[role] = serialized_output
         return serialized
 
@@ -408,7 +807,13 @@ class APKDeepAnalyzer:
                 normalized_opinions[role] = str(role_output.get("opinion") or "")
         missing_roles = [role for role, opinion in normalized_opinions.items() if not opinion.strip()]
         if missing_roles:
-            raise ValueError(f"模型输出缺少角色意见: {', '.join(missing_roles)}")
+            for role in missing_roles:
+                normalized_opinions[role] = str(role_outputs.get(role, {}).get("opinion") or static_report.expert_opinions.get(role) or "")
+                if not normalized_opinions[role].strip():
+                    normalized_opinions[role] = self._build_host_role_repair_text(role, static_report, role_outputs)
+            missing_roles = [role for role, opinion in normalized_opinions.items() if not opinion.strip()]
+            if missing_roles:
+                raise ValueError(f"模型输出缺少角色意见: {', '.join(missing_roles)}")
 
         expert_models = _coerce_mapping(data.get("expert_models")) or self.role_models
         normalized_models = {role: str(expert_models.get(role) or self.role_models.get(role) or "unknown") for role in DEEP_ROLE_ORDER}
@@ -421,7 +826,7 @@ class APKDeepAnalyzer:
             default_role="主持人",
             default_rule_prefix="DEEP_MODEL_SIGNAL",
             default_description="模型认为该目标存在额外风险线索。",
-            default_evidence=static_report.target_ir.original_input,
+            default_evidence=self._summarize_host_evidence_source(static_report),
             default_recommendation="结合静态报告进一步复核。",
         ))
 
@@ -454,6 +859,18 @@ class APKDeepAnalyzer:
             "arbitration_result": arbitration_payload,
             "robustness_result": robustness_payload,
         }
+
+    def _summarize_host_evidence_source(self, static_report: DetectionReport) -> str:
+        apk = static_report.target_ir.apk
+        if not apk:
+            return str(static_report.target_ir.original_input or "")[:400]
+        parts = [
+            f"file={getattr(apk, 'file_name', '')}",
+            f"package={getattr(apk, 'package_name', '')}",
+            f"risk={static_report.risk_level}",
+            f"score={static_report.score}",
+        ]
+        return "; ".join(part for part in parts if part)[:500]
 
     def _normalize_host_summary(
         self,

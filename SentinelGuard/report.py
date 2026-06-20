@@ -451,8 +451,16 @@ def render_markdown_report(report: DetectionReport) -> str:
 def _role_summary_reason(role: str, opinion: str) -> str:
     text = (opinion or "").strip()
     if not text:
-        return "未返回独立结果，已降级为静态结论。"
-    if "仅提供静态" in text or "未执行动态沙箱" in text:
+        return "该角色未产生有效输出。"
+
+    normalized_text = text.lower()
+    if any(keyword in normalized_text for keyword in ["模型暂不可用", "降级", "failed", "failure", "error"]):
+        return "该角色模型调用失败，已使用静态分析结果降级替代。"
+    if any(keyword in text for keyword in ["本地汇总已完成", "现有角色摘要补齐", "已由静态分析摘要补齐", "已完成的四位专家意见", "本地归纳"]):
+        return "已返回补齐后的研判结果。"
+    if role == "主持人" and any(keyword in text for keyword in ["已完成", "最终结论", "综合风险等级", "综合研判结论"]):
+        return "已返回补齐后的研判结果。"
+    if role == "静态分析员" and "动态沙箱" in text and ("未执行" in text or "未接入" in text):
         return "该角色当前仅输出静态研判结果，原因是 APK 动态沙箱尚未执行或未接入。"
     if "未接入外部威胁情报" in text:
         return "该角色当前仅能基于本地离线信息输出结论，原因是外部威胁情报未接入。"

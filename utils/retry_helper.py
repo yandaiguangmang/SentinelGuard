@@ -227,16 +227,16 @@ def make_retryable_request(
 # 预定义一些常用的重试配置
 LLM_RETRY_CONFIG = RetryConfig(
     max_retries=6,        # 保持额外重试次数
-    initial_delay=60.0,   # 首次等待至少 1 分钟
+    initial_delay=90.0,   # 首次等待至少 1.5 分钟
     backoff_factor=2.0,   # 继续使用指数退避
-    max_delay=600.0       # 单次等待最长 10 分钟
+    max_delay=900.0       # 单次等待最长 15 分钟
 )
 
 SEARCH_API_RETRY_CONFIG = RetryConfig(
     max_retries=5,        # 增加到5次重试
-    initial_delay=2.0,    # 增加初始延迟
-    backoff_factor=1.6,   # 调整退避因子
-    max_delay=25.0        # 增加最大延迟
+    initial_delay=8.0,    # 拉长初始延迟，避免短时间内反复打模型服务
+    backoff_factor=2.0,   # 保持指数退避
+    max_delay=120.0       # 单次等待最长 2 分钟
 )
 
 DB_RETRY_CONFIG = RetryConfig(

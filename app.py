@@ -19,6 +19,12 @@ from SentinelGuard.task_manager import task_manager
 from SentinelGuard.state import AnalysisRuntimeConfig
 from config import settings
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    force=True,
+)
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "SentinelGuard-URL-Security-Web"
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024

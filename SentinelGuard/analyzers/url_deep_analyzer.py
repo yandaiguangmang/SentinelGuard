@@ -380,7 +380,7 @@ class URLDeepAnalyzer:
 
         host_score = normalize_score(data.get("score"), static_report.score)
         evidence_score = score_from_findings(static_report.findings + additional_findings)
-        score = combine_scores(evidence_score, host_score, data.get("arbitration_result"), data.get("robustness_result"))
+        score = combine_scores(evidence_score, host_score)
         risk_level = risk_level_from_score(score)
         summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
@@ -675,6 +675,34 @@ def _build_httpx_client(proxy_map: Dict[str, str]) -> httpx.Client:
             client_kwargs["proxy"] = proxy_value
 
     return httpx.Client(**client_kwargs)
+
+
+def _normalize_risk_level(value: Any, fallback: str = "medium", fallback_score: int = 50) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"low", "medium", "high", "critical"}:
+        return text
+
+    if text in {"低", "低危", "较低"}:
+        return "low"
+    if text in {"中", "中危", "中等", "一般"}:
+        return "medium"
+    if text in {"高", "高危", "较高", "高风险"}:
+        return "high"
+    if text in {"严重", "极高", "危急", "critical"}:
+        return "critical"
+
+    try:
+        score = int(fallback_score)
+    except (TypeError, ValueError):
+        score = 50
+
+    if score >= 80:
+        return "critical"
+    if score >= 60:
+        return "high"
+    if score >= 30:
+        return "medium"
+    return "low" if fallback not in {"", None} else "medium"
 
 
 def _select_proxy_value(proxy_map: Dict[str, str]) -> str:

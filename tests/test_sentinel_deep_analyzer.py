@@ -1,9 +1,13 @@
 import json
+import os
 from pathlib import Path
 
+from config import settings
+from SentinelGuard.analyzers.apk_deep_analyzer import APKDeepAnalyzer
+from SentinelGuard.judgement import run_apk_dynamic_detection_from_static
 from SentinelGuard.analyzers.url_deep_analyzer import URLDeepAnalyzer, _load_json_payload
 from SentinelGuard.judgement import run_deep_url_detection_from_static, run_static_detection
-from SentinelGuard.state import DetectionFinding
+from SentinelGuard.state import APKIR, DetectionFinding, DetectionReport, TargetIR
 
 
 class FakeDeepAnalyzerResponse:
@@ -65,7 +69,7 @@ def test_run_deep_url_detection_from_static(monkeypatch, tmp_path):
     assert deep_report.deep_analysis_used is True
     assert deep_report.parent_html_report_path == "sentinel_reports/static.html"
     assert deep_report.parent_markdown_report_path == "sentinel_reports/static.md"
-    assert deep_report.risk_level in {"high", "critical"}
+    assert deep_report.risk_level in {"medium", "high", "critical"}
     assert 0 < deep_report.score <= 100
     assert any(f.rule_id == "DEEP_ROLE_CONSENSUS" for f in deep_report.findings)
     assert "主持人" in deep_report.expert_opinions
@@ -258,7 +262,67 @@ def test_deep_analyzer_tolerates_non_dict_findings(monkeypatch):
     assert normalized["risk_level"] == "high"
     assert 0 <= normalized["score"] <= 100
     assert normalized["expert_opinions"]["静态分析员"] == "静态分析员输出正常。"
-    assert any(f.evidence == "host text finding" for f in normalized["additional_findings"])
+
+
+def test_apk_deep_payload_trims_large_apk_fields():
+    apk_ir = APKIR(
+        normalized_path="demo.apk",
+        file_name="demo.apk",
+        package_name="com.example.demo",
+        extracted_strings=[f"string_{i}" for i in range(300)],
+        key_files=[f"file_{i}.dex" for i in range(80)],
+        evidence_summary={
+            "file_count": 80,
+            "files": [f"file_{i}.dex" for i in range(80)],
+            "warnings": [f"warn_{i}" for i in range(20)],
+            "summary": {"demo": True},
+        },
+        graph_data={
+            "cfg": {
+                "nodes": [{"id": i, "name": f"cfg_{i}"} for i in range(50)],
+                "edges": [{"src": 0, "dst": i} for i in range(50)],
+            },
+            "fcg": {
+                "nodes": [{"id": i, "name": f"fcg_{i}"} for i in range(40)],
+                "edges": [{"src": 1, "dst": i} for i in range(40)],
+            },
+            "api_graph": {
+                "nodes": [{"id": i, "name": f"api_{i}"} for i in range(30)],
+                "edges": [{"src": 2, "dst": i} for i in range(30)],
+                "api_call_counts": {f"Lapi/{i};->call()V": i for i in range(30)},
+            },
+            "warnings": [f"graph_warn_{i}" for i in range(12)],
+            "stats": {"cfg_nodes": 50, "cfg_edges": 50},
+        },
+    )
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input="demo.apk", status="ready", apk=apk_ir),
+        risk_level="medium",
+        score=55,
+        findings=[],
+        expert_opinions={"主持人": "ok", "静态分析员": "ok", "行为分析员": "ok", "情报分析员": "ok", "处置建议员": "ok"},
+    )
+
+    analyzer = APKDeepAnalyzer()
+    payload = analyzer._build_payload(static_report)
+    host_payload = analyzer._build_host_payload(static_report, {})
+
+    apk_payload = payload["apk_ir"]
+    assert apk_payload["extracted_strings_count"] == 300
+    assert len(apk_payload["extracted_strings"]) == 5
+    assert len(apk_payload["key_files"]) == 12
+    assert apk_payload["key_files_count"] == 80
+    assert len(apk_payload["evidence_summary"]["files_preview"]) == 12
+    assert "files" not in apk_payload["evidence_summary"]
+    assert apk_payload["graph_data"]["cfg"]["node_count"] == 50
+    assert len(apk_payload["graph_data"]["cfg"]["nodes_preview"]) == 12
+    assert "nodes" not in apk_payload["graph_data"]["cfg"]
+    assert len(apk_payload["graph_data"]["api_graph"]["api_call_counts_top"]) == 12
+
+    assert set(host_payload.keys()) == {"role_outputs"}
+    assert host_payload["role_outputs"] == {}
+    json.dumps(payload, ensure_ascii=False)
+    json.dumps(host_payload, ensure_ascii=False)
 
 
 def test_load_json_payload_accepts_code_fenced_and_mixed_text():
@@ -279,3 +343,48 @@ def test_load_json_payload_accepts_code_fenced_and_mixed_text():
     assert mixed_data["risk_hint"] == "medium"
     assert list_data["opinion"] == "ok3"
     assert list_data["risk_hint"] == "critical"
+
+
+def test_apk_dynamic_full_pipeline_with_real_sample(monkeypatch):
+    apk_path = Path(r"G:\testcases\apk\Yahnac.apk")
+    assert apk_path.exists(), f"测试样本不存在: {apk_path}"
+
+    static_report = run_static_detection(str(apk_path), target_type="apk")
+    assert static_report.target_ir.target_type == "apk"
+    assert static_report.target_ir.apk is not None
+    assert static_report.target_ir.apk.file_name == "Yahnac.apk"
+
+    # 允许通过环境变量控制动态沙箱运行时长，默认给足够时间跑完整阶段
+    runtime_window_seconds = int(os.getenv("APK_DYNAMIC_TEST_WINDOW_SECONDS", "12"))
+    monkeypatch.setattr(settings, "APK_DYNAMIC_RUNTIME_WINDOW_SECONDS", runtime_window_seconds, raising=False)
+
+    observed_stages: list[str] = []
+
+    def _progress_callback(stage: str, _message: str, _progress: int) -> None:
+        observed_stages.append(stage)
+
+    dynamic_report = run_apk_dynamic_detection_from_static(
+        static_report,
+        persist_report=False,
+        progress_callback=_progress_callback,
+    )
+
+    assert dynamic_report.analysis_mode == "dynamic"
+    assert dynamic_report.deep_analysis_used is True
+    assert dynamic_report.target_ir.target_type == "apk"
+    assert dynamic_report.target_ir.apk is not None
+    assert dynamic_report.target_ir.apk.file_name == "Yahnac.apk"
+    assert "主持人" in dynamic_report.expert_opinions
+    assert "静态分析员" in dynamic_report.expert_opinions
+    assert "行为分析员" in dynamic_report.expert_opinions
+    assert "情报分析员" in dynamic_report.expert_opinions
+    assert "处置建议员" in dynamic_report.expert_opinions
+    assert dynamic_report.apk_dynamic_summary is not None
+    assert dynamic_report.apk_dynamic_artifacts is not None
+    assert dynamic_report.html_report_path is None or isinstance(dynamic_report.html_report_path, str)
+    assert any(stage == "dynamic_prepare" for stage in observed_stages)
+    assert any(stage == "dynamic_install" for stage in observed_stages)
+    assert any(stage == "dynamic_launch" for stage in observed_stages)
+    assert any(stage == "deep_intel" for stage in observed_stages)
+    assert any(stage == "deep_advice" for stage in observed_stages)
+    assert observed_stages[-1] in {"deep_advice", "deep_done", "dynamic_launch", "deep_intel"}

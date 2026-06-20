@@ -40,11 +40,19 @@ class APKDynamicModelAnalyzer(APKDeepAnalyzer):
         payload["analysis_instruction"] = "请以 dynamic_sandbox 中整理后的沙盒线索为主要依据进行五角色协同研判，additional_findings 必须来自这些动态线索，不要仅复述静态规则。"
         return payload
 
-    def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        payload = super()._build_host_payload(static_report, role_outputs)
-        payload["dynamic_sandbox"] = self.dynamic_context
-        payload["analysis_instruction"] = "主持人必须综合动态沙盒线索与四位专家意见输出最终 risk_level、score、summary、expert_opinions、additional_findings。"
+    def _build_role_payload(self, role: str, static_report: DetectionReport, base_payload: Dict[str, Any]) -> Dict[str, Any]:
+        payload = super()._build_role_payload(role, static_report, base_payload)
+        if role in {"静态分析员", "行为分析员", "情报分析员", "处置建议员"}:
+            payload["dynamic_sandbox"] = self.dynamic_context
+            payload["dynamic_summary"] = self.dynamic_context.get("dynamic_summary", {})
+            payload["dynamic_artifacts"] = self.dynamic_context.get("dynamic_artifacts", {})
+            payload["dynamic_output_dir"] = self.dynamic_context.get("dynamic_output_dir", "")
+            payload["analysis_instruction"] = "请结合 dynamic_sandbox 中的动态沙箱证据输出对应角色结论，不要忽略运行时线索。"
         return payload
+
+    def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        # 主持人只接收前四个角色的输出，避免把动态沙箱明细再次塞回去导致输入膨胀。
+        return super()._build_host_payload(static_report, role_outputs)
 
 
 class APKDynamicAnalyzer:
@@ -485,10 +493,13 @@ class APKDynamicAnalyzer:
         }
 
     def _build_dynamic_context(self, static_report: DetectionReport, summary: Dict[str, Any], artifacts: Dict[str, Any], events: List[Dict[str, Any]], logcat_output: str) -> Dict[str, Any]:
+        lightweight_target = self._build_lightweight_target_context(static_report.target_ir)
+        lightweight_artifacts = self._summarize_dynamic_artifacts(artifacts)
+        lightweight_events = self._summarize_dynamic_events(events)
         return {
-            "dynamic_summary": summary,
-            "dynamic_artifacts": artifacts,
-            "runtime_events": events,
+            "dynamic_summary": self._summarize_dynamic_summary(summary),
+            "dynamic_artifacts": lightweight_artifacts,
+            "runtime_events": lightweight_events,
             "network_hits": self._extract_network_hits(logcat_output),
             "logcat_excerpt": logcat_output[:6000],
             "static_report": {
@@ -497,12 +508,274 @@ class APKDynamicAnalyzer:
                 "findings": [finding.to_dict() for finding in static_report.findings],
                 "apk_summary": static_report.apk_summary,
             },
-            "target": static_report.target_ir.to_dict(),
+            "target": lightweight_target,
+        }
+
+    def _summarize_dynamic_summary(self, summary: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(summary, dict):
+            return {}
+
+        return {
+            "device_id": summary.get("device_id", ""),
+            "package_name": summary.get("package_name", ""),
+            "static_file_name": summary.get("static_file_name", ""),
+            "resolve_activity": summary.get("resolve_activity", ""),
+            "pidof": summary.get("pidof", ""),
+            "install_success": bool(summary.get("install_success")),
+            "launch_success": bool(summary.get("launch_success")),
+            "event_count": int(summary.get("event_count", 0) or 0),
+            "logcat_excerpt_count": int(summary.get("logcat_excerpt_count", 0) or 0),
+            "network_hit_count": int(summary.get("network_hit_count", 0) or 0),
+            "runtime_window_seconds": int(summary.get("runtime_window_seconds", 0) or 0),
+            "granted_dangerous_permissions": self._limit_list(summary.get("granted_dangerous_permissions", []), 8),
+            "post_install_files": self._limit_list(summary.get("post_install_files", []), 8),
+            "persistent_services": self._compact_persistent_services(summary.get("persistent_services", {})),
+        }
+
+    def _summarize_dynamic_artifacts(self, artifacts: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(artifacts, dict):
+            return {}
+
+        return {
+            "dynamic_json_name": artifacts.get("dynamic_json_name", ""),
+            "dynamic_json_path": artifacts.get("dynamic_json_path", ""),
+            "dynamic_summary_path": artifacts.get("dynamic_summary_path", ""),
+            "dynamic_logcat_path": artifacts.get("dynamic_logcat_path", ""),
+            "dynamic_output_dir": artifacts.get("dynamic_output_dir", ""),
+        }
+
+    def _summarize_dynamic_events(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if not isinstance(events, list):
+            return []
+
+        compact_events: List[Dict[str, Any]] = []
+        for event in events[:20]:
+            if not isinstance(event, dict):
+                compact_events.append({"text": str(event)[:200]})
+                continue
+            compact_events.append({
+                "kind": event.get("kind", ""),
+                "source": event.get("source", ""),
+                "returncode": event.get("returncode", 0),
+                "stdout": str(event.get("stdout", ""))[:240],
+                "stderr": str(event.get("stderr", ""))[:240],
+            })
+        return compact_events
+
+    def _compact_persistent_services(self, persistent_services: Any) -> Dict[str, List[str]]:
+        if not isinstance(persistent_services, dict):
+            return {}
+
+        return {
+            key: self._limit_list([str(item) for item in value or [] if str(item).strip()], 5)
+            for key, value in persistent_services.items()
+            if self._limit_list([str(item) for item in value or [] if str(item).strip()], 5)
         }
 
     def _analyze_dynamic_context(self, static_report: DetectionReport, dynamic_context: Dict[str, Any], progress_callback=None) -> Dict[str, Any]:
         analyzer = APKDynamicModelAnalyzer(runtime_config=self.runtime_config, dynamic_context=dynamic_context)
-        return analyzer.analyze(static_report, progress_callback=progress_callback)
+        try:
+            return analyzer.analyze(static_report, progress_callback=progress_callback)
+        finally:
+            if progress_callback:
+                progress_callback("deep_done", "APK 动态深度研判已完成", 96)
+
+    def _build_lightweight_target_context(self, target_ir) -> Dict[str, Any]:
+        target = {
+            "target_type": getattr(target_ir, "target_type", ""),
+            "original_input": getattr(target_ir, "original_input", ""),
+            "status": getattr(target_ir, "status", ""),
+            "message": getattr(target_ir, "message", ""),
+        }
+        apk = getattr(target_ir, "apk", None)
+        if apk is not None:
+            target["apk"] = self._build_lightweight_apk_context(apk)
+        else:
+            target["apk"] = None
+        url = getattr(target_ir, "url", None)
+        if url is not None:
+            target["url"] = url.to_dict() if hasattr(url, "to_dict") else url
+        else:
+            target["url"] = None
+        return target
+
+    def _build_lightweight_apk_context(self, apk_ir) -> Dict[str, Any]:
+        if not apk_ir:
+            return {}
+
+        apk = apk_ir.to_dict() if hasattr(apk_ir, "to_dict") else dict(apk_ir)
+        extracted_strings = self._summarize_extracted_strings(apk.get("extracted_strings", []))
+        key_files = self._summarize_key_files(apk.get("key_files", []))
+
+        return {
+            "normalized_path": apk.get("normalized_path", ""),
+            "file_name": apk.get("file_name", ""),
+            "package_name": apk.get("package_name", ""),
+            "version_name": apk.get("version_name", ""),
+            "version_code": apk.get("version_code", ""),
+            "sha256": apk.get("sha256", ""),
+            "size_bytes": apk.get("size_bytes", 0),
+            "permissions": self._limit_list(apk.get("permissions", []), 8),
+            "activities": self._limit_list(apk.get("activities", []), 6),
+            "services": self._limit_list(apk.get("services", []), 6),
+            "receivers": self._limit_list(apk.get("receivers", []), 6),
+            "providers": self._limit_list(apk.get("providers", []), 6),
+            "certificate_subject": apk.get("certificate_subject", ""),
+            "certificate_issuer": apk.get("certificate_issuer", ""),
+            "certificate_sha256": apk.get("certificate_sha256", ""),
+            "extracted_strings": extracted_strings,
+            "extracted_strings_count": len(apk.get("extracted_strings", []) or []),
+            "key_files": key_files,
+            "key_files_count": len(apk.get("key_files", []) or []),
+            "evidence_summary": self._summarize_evidence_summary(apk.get("evidence_summary")),
+            "graph_data": self._summarize_graph_data(apk.get("graph_data")),
+        }
+
+    @staticmethod
+    def _limit_list(values: Any, limit: int) -> List[Any]:
+        if not isinstance(values, list):
+            return []
+        if limit <= 0:
+            return []
+        return values[:limit]
+
+    def _summarize_extracted_strings(self, strings: Any) -> List[str]:
+        if not isinstance(strings, list):
+            return []
+
+        suspicious_keywords = (
+            "http",
+            "https",
+            "api",
+            "token",
+            "password",
+            "passwd",
+            "secret",
+            "cmd",
+            "shell",
+            "su",
+            "root",
+            "dex",
+            "so",
+        )
+        suspicious: List[str] = []
+        for item in strings:
+            text = str(item).strip()
+            if not text:
+                continue
+            if any(keyword in text.lower() for keyword in suspicious_keywords):
+                suspicious.append(text)
+            if len(suspicious) >= 20:
+                break
+
+        if suspicious:
+            return suspicious[:8]
+
+        return [str(item).strip() for item in strings[:5] if str(item).strip()]
+
+    def _summarize_key_files(self, key_files: Any) -> List[str]:
+        if not isinstance(key_files, list):
+            return []
+
+        preview: List[str] = []
+        priority_keywords = (
+            ".so",
+            ".dex",
+            "manifest",
+            "smali",
+            "classes",
+            "config",
+            "assets",
+            "res/",
+        )
+        for item in key_files:
+            text = str(item).strip()
+            if not text:
+                continue
+            preview.append(text)
+            if len(preview) >= 12:
+                break
+
+        if len(preview) < 12:
+            for item in key_files:
+                text = str(item).strip()
+                if not text or text in preview:
+                    continue
+                if any(keyword in text.lower() for keyword in priority_keywords):
+                    preview.append(text)
+                if len(preview) >= 12:
+                    break
+
+        return preview[:12]
+
+    def _summarize_evidence_summary(self, evidence_summary: Any) -> Dict[str, Any]:
+        if not isinstance(evidence_summary, dict):
+            return {}
+
+        summary: Dict[str, Any] = {
+            "file_count": evidence_summary.get("file_count") or len(evidence_summary.get("files", []) or []),
+            "warnings": self._limit_list([str(item) for item in evidence_summary.get("warnings", []) or [] if str(item).strip()], 5),
+            "files_preview": self._limit_list([str(item) for item in evidence_summary.get("files", []) or [] if str(item).strip()], 12),
+        }
+
+        for key in ("manifest", "summary", "categories", "signature", "counts"):
+            value = evidence_summary.get(key)
+            if value:
+                summary[key] = value
+
+        return summary
+
+    def _summarize_graph_data(self, graph_data: Any) -> Dict[str, Any]:
+        if not graph_data:
+            return {}
+        if isinstance(graph_data, dict):
+            return self._compact_graph_dict(graph_data)
+
+        to_dict = getattr(graph_data, "to_dict", None)
+        if callable(to_dict):
+            return self._compact_graph_dict(to_dict())
+
+        return {}
+
+    def _compact_graph_dict(self, graph_data: Dict[str, Any]) -> Dict[str, Any]:
+        stats = graph_data.get("stats", {}) if isinstance(graph_data.get("stats", {}), dict) else {}
+        compact: Dict[str, Any] = {
+            "stats": stats,
+            "fallback": bool(graph_data.get("fallback")),
+            "fallback_reason": graph_data.get("fallback_reason", ""),
+            "warnings": self._limit_list([str(item) for item in graph_data.get("warnings", []) or [] if str(item).strip()], 5),
+        }
+
+        for subgraph_name, subgraph in graph_data.items():
+            if subgraph_name in {"stats", "fallback", "fallback_reason", "warnings"}:
+                continue
+            if not isinstance(subgraph, dict):
+                compact[subgraph_name] = subgraph
+                continue
+
+            compact[subgraph_name] = {
+                "node_count": subgraph.get("node_count") or len(subgraph.get("nodes", []) or []),
+                "edge_count": subgraph.get("edge_count") or len(subgraph.get("edges", []) or []),
+                "nodes_preview": self._limit_list(subgraph.get("nodes", []), 12),
+                "edges_preview": self._limit_list(subgraph.get("edges", []), 12),
+            }
+
+            if subgraph_name == "api_graph":
+                api_counts = subgraph.get("api_call_counts", {}) if isinstance(subgraph.get("api_call_counts", {}), dict) else {}
+                compact[subgraph_name]["api_call_counts_top"] = self._limit_dict(api_counts, 12)
+
+        return compact
+
+    @staticmethod
+    def _limit_dict(data: Dict[str, Any], limit: int) -> Dict[str, Any]:
+        if not isinstance(data, dict) or limit <= 0:
+            return {}
+        limited: Dict[str, Any] = {}
+        for index, (key, value) in enumerate(data.items()):
+            if index >= limit:
+                break
+            limited[key] = value
+        return limited
 
     def _extract_events_from_logcat(self, logcat_output: str, package_name: str) -> List[Dict[str, Any]]:
         events: List[Dict[str, Any]] = []
