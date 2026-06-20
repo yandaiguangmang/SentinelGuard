@@ -299,6 +299,7 @@ header {{
         <small>便于后续扩展更多对象类型</small>
       </div>
       {placeholders_panel}
+      {_render_stats_block(report)}
     </div>
   </section>
 </main>
@@ -399,6 +400,24 @@ def render_markdown_report(report: DetectionReport) -> str:
         lines.append("- 当前无扩展项。")
 
     lines.append("")
+
+        # 性能统计（深度研判）
+    if report.stats and report.stats.get("roles"):
+        lines.extend(["", "## 九、分析性能统计", ""])
+        total = report.stats.get("total_elapsed", 0)
+        lines.append(f"- 总耗时：{total:.2f} 秒")
+        lines.append("")
+        lines.append("| 角色 | 耗时 (秒) | 输入 Token | 输出 Token | 总 Token |")
+        lines.append("|------|-----------|------------|------------|----------|")
+        for role, info in report.stats["roles"].items():
+            elapsed = info.get("elapsed", 0)
+            usage = info.get("usage") or {}
+            prom = usage.get("prompt_tokens", "N/A")
+            comp = usage.get("completion_tokens", "N/A")
+            tot = usage.get("total_tokens", "N/A")
+            lines.append(f"| {role} | {elapsed:.2f} | {prom} | {comp} | {tot} |")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -638,6 +657,50 @@ def _render_model_panel(report: DetectionReport) -> str:
       </div>
     """
 
+
+def _render_stats_block(report: DetectionReport) -> str:
+    if not report.stats or not report.stats.get("roles"):
+        return ""
+
+    total = report.stats.get("total_elapsed", 0)
+    roles = report.stats.get("roles", {})
+
+    rows = ""
+    for role, info in roles.items():
+        elapsed = info.get("elapsed", 0)
+        usage = info.get("usage") or {}
+        prompt_tokens = usage.get("prompt_tokens", "N/A")
+        completion_tokens = usage.get("completion_tokens", "N/A")
+        total_tokens = usage.get("total_tokens", "N/A")
+        rows += f"""
+        <tr>
+            <td>{html.escape(role)}</td>
+            <td>{elapsed:.2f} 秒</td>
+            <td>{prompt_tokens}</td>
+            <td>{completion_tokens}</td>
+            <td>{total_tokens}</td>
+        </tr>
+        """
+
+    return f"""
+    <div style="margin-top: 18px;" class="panel">
+        <div class="panel-inner">
+            <div class="section-title">
+                <h3>分析性能统计</h3>
+                <small>深度研判耗时与 Token 消耗</small>
+            </div>
+            <p>总耗时：<strong>{total:.2f} 秒</strong></p>
+            <div class="scroll-box slim">
+                <table class="table">
+                    <thead><tr>
+                        <th>角色</th><th>耗时</th><th>输入 Token</th><th>输出 Token</th><th>总 Token</th>
+                    </tr></thead>
+                    <tbody>{rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    """
 
 def _render_placeholders_panel(report: DetectionReport) -> str:
     if not report.placeholders:
