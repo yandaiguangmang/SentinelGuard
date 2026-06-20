@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #f59e0b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #f59e0b; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 12</span>
+      <span class="chip warning">风险 MEDIUM</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">MEDIUM</div>
+      <div class="hint">0 条高危 / 4 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">31/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度检查报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://karnevalkleider.de/mlsgents/</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度检查报告</small>
+        </div>
+        
+      <p><span class="badge">MEDIUM</span></p>
+      <p>风险分数：<strong>31/100</strong></p>
+      <p>原始输入：<code>https://karnevalkleider.de/mlsgents/</code></p>
+      <p>报告类型：<strong>模型深度检查报告</strong></p>
+      <div class="pill-row"><span class='pill low'>LOW · 页面访问失败</span><span class='pill low'>LOW · URL路径段与域名主题不符</span><span class='pill medium'>MEDIUM · 页面内容无法获取，静态分析受限</span><span class='pill low'>LOW · 页面无法访问</span><span class='pill medium'>MEDIUM · 目标连接超时，存在环境或可用性不确定性</span><span class='pill low'>LOW · 外网/VPN节点差异的研判方法与含义</span><span class='pill low'>LOW · 离线证据与浏览器证据包的边界说明</span><span class='pill low'>LOW · 网络侧排障与归因思路（DNS/路由/TLS前置）</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_url_static_20260619_093316_394276.html' target='_blank'>关联静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_url_static_20260619_093316_394276.md' target='_blank'>关联静态 Markdown 报告</a></p>
+        
+        
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>规范化 URL</th><td>https://karnevalkleider.de/mlsgents/</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>karnevalkleider.de</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/mlsgents/</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://karnevalkleider.de/mlsgents/</li></ol>
+        <h4>页面线索</h4>
+        <p class='subtle'>未获取页面内容线索。</p>
+      </div>
+      <div class="pill-row"><span class='pill muted'>LOW · 页面访问失败</span><span class='pill muted'>LOW · URL路径段与域名主题不符</span><span class='pill muted'>MEDIUM · 页面内容无法获取，静态分析受限</span><span class='pill muted'>LOW · 页面无法访问</span><span class='pill muted'>MEDIUM · 目标连接超时，存在环境或可用性不确定性</span><span class='pill muted'>LOW · 外网/VPN节点差异的研判方法与含义</span><span class='pill muted'>LOW · 离线证据与浏览器证据包的边界说明</span><span class='pill muted'>LOW · 网络侧排障与归因思路（DNS/路由/TLS前置）</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>MEDIUM（4）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>页面内容无法获取，静态分析受限 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_FETCH_FAILURE_IMPACT</div>
+      <p>由于连接超时，无法获取页面内容（HTML、脚本、可见文本等），导致无法进行深入的静态内容分析。这限制了对编码混淆、可疑关键词、恶意脚本注入、隐藏表单、下载链接等客户端风险的评估。</p>
+      <div class="kv">
+        <b>证据</b><span><code>PAGE_FETCH_FAILED: HTTPSConnectionPool(host=&#x27;karnevalkleider.de&#x27;, port=443): Max retries exceeded with url: /mlsgents/ (Caused by ConnectTimeoutError(&lt;HTTPSConnection(host=&#x27;karnevalkleider.de&#x27;, port=443) at 0x1faef7ffd90&gt;, &#x27;Connection to karnevalkleider.de timed out. (connect timeout=6)&#x27;))</code></span>
+        <b>建议</b><span>在网络环境可达时重新尝试访问并分析页面内容。在无法获取内容的情况下，应谨慎对待，并结合其他情报来源进行判断，不应仅凭URL结构判断为安全。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>目标连接超时，存在环境或可用性不确定性 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ACCESS_TIMEOUT</div>
+      <p>对目标发起的HTTPS连接在TCP阶段即超时，导致无法进入TLS与HTTP层，这更像是路由/防火墙/地理封锁/ASN风控或服务端暂时不可用，而非典型应用层拦截。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态报错：ConnectTimeoutError(&#x27;Connection to karnevalkleider.de timed out. (connect timeout=6)&#x27;)；browser_evidence.has_page_fetch=false；status_code=null；proxy_enabled=false；redirect_chain仅为原始URL，无后续跳转。</code></span>
+        <b>建议</b><span>在多出口环境复测并扩大网络诊断维度：1) 采用住宅型VPN节点，优先选择DE/EU地区，同时覆盖IPv4与IPv6；2) 提高连接超时(≥20s)与重试次数，记录SYN/SYN-ACK行为并做traceroute到443端口；3) 多解析器获取A/AAAA并比对落地IP与ASN；4) 分别直连 https://karnevalkleider.de/ 与 /mlsgents/ 路径，排除子路径策略；5) 若可达，采集完整HAR/证书链与响应头用于后续行为判定。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>页面无法访问，无法进行深度研判 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_PAGE_UNREACHABLE</div>
+      <p>浏览器证据包显示页面访问超时，未能抓取到页面正文。这意味着无法分析页面的实际内容、脚本行为或潜在的恶意载荷。当前的低风险评估是基于无法访问，而非内容安全。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTTPSConnectionPool(host=&#x27;karnevalkleider.de&#x27;, port=443): Max retries exceeded with url: /mlsgents/ (Caused by ConnectTimeoutError(&lt;HTTPSConnection(host=&#x27;karnevalkleider.de&#x27;, port=443) at 0x1faef7ffd90&gt;, &#x27;Connection to karnevalkleider.de timed out. (connect timeout=6)&#x27;))</code></span>
+        <b>建议</b><span>不建议直接放行。建议将该URL提交至沙箱环境进行复测，以确保在可访问的情况下，能够捕获并分析其真实行为和内容。在沙箱复测前，无需拦截或隔离，但应保留访问记录以备后续分析。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>目标连接超时，存在环境或可用性不确定性 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ACCESS_TIMEOUT</div>
+      <p>HTTPS 连接在 TCP 阶段超时，更像路由、防火墙、地理封锁或服务端暂时不可用，而非应用层恶意行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>ConnectTimeoutError(&#x27;Connection to karnevalkleider.de timed out. (connect timeout=6)&#x27;)；browser_evidence.status_code=null；page_signals 为空。</code></span>
+        <b>建议</b><span>在多出口环境复测，优先使用住宅型 VPN、DE/EU 节点，并补采证书链、响应头、HAR 和页面正文。</span>
+      </div>
+    </div>
+    </div><h4>LOW（8）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>页面访问失败 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：PAGE_FETCH_FAILED</div>
+      <p>检测器无法访问目标页面，可能是网络错误、证书问题或目标主动阻断。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTTPSConnectionPool(host=&#x27;karnevalkleider.de&#x27;, port=443): Max retries exceeded with url: /mlsgents/ (Caused by ConnectTimeoutError(&lt;HTTPSConnection(host=&#x27;karnevalkleider.de&#x27;, port=443) at 0x1faef7ffd90&gt;, &#x27;Connection to karnevalkleider.de timed out. (connect timeout=6)&#x27;))</code></span>
+        <b>建议</b><span>在隔离网络环境中复测，并结合域名结构风险判断。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>URL路径段与域名主题不符 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_STATIC_UNUSUAL_PATH</div>
+      <p>URL路径&#x27;/mlsgents/&#x27;与域名&#x27;karnevalkleider.de&#x27;（狂欢节服装）的主题关联性不强。这可能表示该目录被滥用、托管了不相关的营销内容或是一个被入侵的子目录。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Hostname: &#x27;karnevalkleider.de&#x27;, Path: &#x27;/mlsgents/&#x27;</code></span>
+        <b>建议</b><span>在网络可达时，进一步分析该路径下的实际内容，以确认其合法性及与主域名的关系。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面无法访问 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_PAGE_UNREACHABLE</div>
+      <p>动态行为分析沙箱无法访问目标 URL。服务器无响应或连接超时，导致无法获取页面内容和分析后续行为。这可能是由于服务器离线、网络问题或主动封锁了分析环境。</p>
+      <div class="kv">
+        <b>证据</b><span><code>浏览器沙箱访问 https://karnevalkleider.de/mlsgents/ 失败，未能获取页面内容。静态分析报告同样指出连接超时。</code></span>
+        <b>建议</b><span>建议检查目标服务器的在线状态，并尝试从不同的网络环境重新访问。如果目标持续不可达，则无法进行深入的行为分析。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>外网/VPN节点差异的研判方法与含义 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ENV_DIFF_INTERPRETATION</div>
+      <p>部分站点对数据中心出口、自动化指纹、非常驻地域访问实施限制，需要以符合目标受众的网络与设备画像访问。外网/VPN仅作为还原真实用户访问环境的技术手段，不直接指向恶意或安全结论。</p>
+      <div class="kv">
+        <b>证据</b><span><code>本次取证未使用代理（proxy_enabled=false），导致仅能反映当前采集节点的可达性。未获取到正文（has_page_fetch=false），无法验证是否存在WAF/JS挑战等应用层差异。</code></span>
+        <b>建议</b><span>以阶梯式外网策略复测：1) 切换住宅ISP ASN与目标所在国家节点；2) 启用HTTP/2/ALPN与常见浏览器UA、SNI；3) 允许执行JS与存储Cookie/LocalStorage，等待挑战通过；4) 比对不同出口下的状态码、响应头、页面体积与脚本行为差异，归因于地理、ASN或指纹策略。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>离线证据与浏览器证据包的边界说明 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_EVIDENCE_BOUNDARY</div>
+      <p>离线规则仅提供结构性与错误栈层面的初筛结论，不包含页面内容与动态资源。浏览器证据包在本案中仅记录到抓取失败的基本元信息，未包含状态码、响应头、HTML、脚本、截图等关键行为证据，因而无法对页面是否存在钓鱼、投放、跳转链或利用链作出判断。</p>
+      <div class="kv">
+        <b>证据</b><span><code>static_report.findings=PAGE_FETCH_FAILED；browser_evidence.status_code=null；page_signals为空；无脚本列表与表单统计；最终URL未变化。</code></span>
+        <b>建议</b><span>在成功连通后补齐证据：1) 完整HTML/HAR与关键子资源请求；2) 证书链、CT-SCT与TLS握手参数；3) 首屏截图与可见文案；4) 脚本源清单与敏感表单/外链提取；5) 若涉及重定向，保留全链路与中间页。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>网络侧排障与归因思路（DNS/路由/TLS前置） <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_NETWORK_DIAG_PLAN</div>
+      <p>当前表现为TCP连接阶段的超时，更倾向于路由/防火墙/地理封锁或服务端暂时不可用，而非TLS或应用层问题。需先验证解析与路径连通性，再进入应用层验证。</p>
+      <div class="kv">
+        <b>证据</b><span><code>错误类型为ConnectTimeout而非握手失败或HTTP错误码；无任何响应头与状态码产出。</code></span>
+        <b>建议</b><span>1) 多DNS解析器获取A/AAAA，确认是否仅AAAA或IP漂移；2) 对解析出的各IP执行icmp与TCP:443探测/TTL对比；3) 进行mtr/traceroute到443识别丢包/黑洞段；4) 在可达时再进行 openssl s_client/curl -v 校验证书与SNI；5) 若存在地域差异，记录各地域的可达性矩阵用于归因。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>信誉与历史情报缺口 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_INTEL_GAPS</div>
+      <p>当前为离线研判，未引入域名注册信息、证书透明度、被动DNS与威胁黑名单等外部情报，难以从信誉维度评估该目录是否异常或近期是否有滥用迹象。</p>
+      <div class="kv">
+        <b>证据</b><span><code>expert_opinions.情报分析员已提示“当前版本采用离线规则研判；建议补充域名信誉、证书透明度和黑名单情报”。</code></span>
+        <b>建议</b><span>补充查询：1) CT日志/证书指纹与签发时间线；2) WHOIS/注册商与历史NS变更；3) 被动DNS与解析波动；4) 威胁情报源（黑名单/钓鱼/恶意投放/篡改）；5) Wayback/搜索引擎快照确认目录历史用途。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面无法访问 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_PAGE_UNREACHABLE</div>
+      <p>动态行为分析沙箱无法访问目标 URL，未能获取页面内容和后续行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>浏览器沙箱访问 https://karnevalkleider.de/mlsgents/ 失败，未能获取页面内容；browser_evidence.has_page_fetch=false。</code></span>
+        <b>建议</b><span>建议在不同网络环境中复测；若持续不可达，则无法进行深入行为分析。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>基于当前静态检测结果、browser_evidence 与四位专家意见，目标 URL 未能成功获取页面正文，唯一可确认的证据是 HTTPS 连接在 TCP 阶段超时，浏览器侧仅记录到原始 URL 的跳转链，未见状态码、响应头、脚本、表单、下载链接或可见正文等可用于判定恶意性的内容证据。因此，本案当前不能认定为恶意站点；更准确的结论是“内容未核验、可达性异常、离线证据不足”。
+
+同时，URL 路径 /mlsgents/ 与主域名 karnevalkleider.de 的主题关联度不强，属于轻度结构异常，但仅凭这一点不足以升级风险。结合情报分析员的判断，这种超时更可能来自服务端不可达、地域/ASN 风控、路由问题或目标对自动化环境的限制，而非已证实的应用层恶意行为。由于本次没有代理出口，也未获取外部威胁情报、证书透明度、被动 DNS 或历史信誉数据，最终结论必须明确限定为：当前仅基于离线证据与失败抓取结果，风险维持 low，但证据完整性不足，不能视为已验证安全。 综合 1 条证据，当前风险等级为 low。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>页面因连接超时无法获取，静态内容分析受限；URL 路径 /mlsgents/ 与主域主题关联不强，存在轻度目录滥用或不相关内容托管的可能，但缺乏页面正文与脚本证据，不能据此定性为恶意。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>沙箱未能访问目标页面，未获取任何页面内容、脚本或跳转行为；当前仅能确认服务器不可达，无法评估是否存在恶意动态行为。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>当前离线研判仅反映连接超时和抓取失败，未使用代理且缺少外部情报；需在合适的外网/VPN 出站条件下复测并补齐 HTML/HAR/证书链/响应头等证据后再定性。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>当前低风险评估是基于无法访问而非内容安全；建议在隔离沙箱中复测，获取页面实际内容后再作二次研判，当前不宜直接放行结论化。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">基于当前静态检测结果、browser_evidence 与四位专家意见，目标 URL 未能成功获取页面正文，唯一可确认的证据是 HTTPS 连接在 TCP 阶段超时，浏览器侧仅记录到原始 URL 的跳转链，未见状态码、响应头、脚本、表单、下载链接或可见正文等可用于判定恶意性的内容证据。因此，本案当前不能认定为恶意站点；更准确的结论是“内容未核验、可达性异常、离线证据不足”。
+
+同时，URL 路径 /mlsgents/ 与主域名 karnevalkleider.de 的主题关联度不强，属于轻度结构异常，但仅凭这一点不足以升级风险。结合情报分析员的判断，这种超时更可能来自服务端不可达、地域/ASN 风控、路由问题或目标对自动化环境的限制，而非已证实的应用层恶意行为。由于本次没有代理出口，也未获取外部威胁情报、证书透明度、被动 DNS 或历史信誉数据，最终结论必须明确限定为：当前仅基于离线证据与失败抓取结果，风险维持 low，但证据完整性不足，不能视为已验证安全。 综合 1 条证据，当前风险等级为 low。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">页面因连接超时无法获取，静态内容分析受限；URL 路径 /mlsgents/ 与主域主题关联不强，存在轻度目录滥用或不相关内容托管的可能，但缺乏页面正文与脚本证据，不能据此定性为恶意。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">沙箱未能访问目标页面，未获取任何页面内容、脚本或跳转行为；当前仅能确认服务器不可达，无法评估是否存在恶意动态行为。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">当前离线研判仅反映连接超时和抓取失败，未使用代理且缺少外部情报；需在合适的外网/VPN 出站条件下复测并补齐 HTML/HAR/证书链/响应头等证据后再定性。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">当前低风险评估是基于无法访问而非内容安全；建议在隔离沙箱中复测，获取页面实际内容后再作二次研判，当前不宜直接放行结论化。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">基于当前静态检测结果、browser_evidence 与四位专家意见，目标 URL 未能成功获取页面正文，唯一可确认的证据是 HTTPS 连接在 TCP 阶段超时，浏览器侧仅记录到原始 URL 的跳转链，未见状态码、响应头、脚本、表单、下载链接或可见正文等可用于判定恶意性的内容证据。因此，本案当前不能认定为恶意站点；更准确的结论是“内容未核验、可达性异常、离线证据不足”。
+
+同时，URL 路径 /mlsgents/ 与主域名 karnevalkleider.de 的主题关联度不强，属于轻度结构异常，但仅凭这一点不足以升级风险。结合情报分析员的判断，这种超时更可能来自服务端不可达、地域/ASN 风控、路由问题或目标对自动化环境的限制，而非已证实的应用层恶意行为。由于本次没有代理出口，也未获取外部威胁情报、证书透明度、被动 DNS 或历史信誉数据，最终结论必须明确限定为：当前仅基于离线证据与失败抓取结果，风险维持 low，但证据完整性不足，不能视为已验证安全。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5.4-mini</td><td>基于当前静态检测结果、browser_evidence 与四位专家意见，目标 URL 未能成功获取页面正文，唯一可确认的证据是 HTTPS 连接在 TCP 阶段超时，浏览器侧仅记录到原始 URL 的跳转链，未见状态码、响应头、脚本、表单、下载链接或可见正文等可用于判定恶意性的内容证据。因此，本案当前不能认定为恶意站点；更准确的结论是“内容未核验、可达性异常、离线证据不足”。
+
+同时，URL 路径 /mlsgents/ 与主域名 karnevalkleider.de 的主题关联度不强，属于轻度结构异常，但仅凭这一点不足以升级风险。结合情报分析员的判断，这种超时更可能来自服务端不可达、地域/ASN 风控、路由问题或目标对自动化环境的限制，而非已证实的应用层恶意行为。由于本次没有代理出口，也未获取外部威胁情报、证书透明度、被动 DNS 或历史信誉数据，最终结论必须明确限定为：当前仅基于离线证据与失败抓取结果，风险维持 low，但证据完整性不足，不能视为已验证安全。 综合 1 条证据，当前风险等级为 low。</td></tr><tr><th>静态分析员</th><td>gemini-2.5-flash</td><td>页面因连接超时无法获取，静态内容分析受限；URL 路径 /mlsgents/ 与主域主题关联不强，存在轻度目录滥用或不相关内容托管的可能，但缺乏页面正文与脚本证据，不能据此定性为恶意。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>沙箱未能访问目标页面，未获取任何页面内容、脚本或跳转行为；当前仅能确认服务器不可达，无法评估是否存在恶意动态行为。</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>当前离线研判仅反映连接超时和抓取失败，未使用代理且缺少外部情报；需在合适的外网/VPN 出站条件下复测并补齐 HTML/HAR/证书链/响应头等证据后再定性。</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>当前低风险评估是基于无法访问而非内容安全；建议在隔离沙箱中复测，获取页面实际内容后再作二次研判，当前不宜直接放行结论化。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

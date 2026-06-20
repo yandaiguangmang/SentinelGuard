@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #f59e0b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #f59e0b; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">静态研判</span>
+      <span class="chip">证据数 24</span>
+      <span class="chip warning">风险 MEDIUM</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">MEDIUM</div>
+      <div class="hint">1 条高危 / 11 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">70/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">APK 动态沙箱报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">apk</div>
+      <div class="hint">C:\Users\lenovo\AppData\Local\Temp\tmp2c1p3ieo.apk</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>APK 动态沙箱报告</small>
+        </div>
+        
+      <p><span class="badge">MEDIUM</span></p>
+      <p>风险分数：<strong>70/100</strong></p>
+      <p>原始输入：<code>C:\Users\lenovo\AppData\Local\Temp\tmp2c1p3ieo.apk</code></p>
+      <p>报告类型：<strong>APK 动态沙箱报告</strong></p>
+      <div class="pill-row"><span class='pill low'>LOW · 关键文件证据已提取</span><span class='pill medium'>MEDIUM · 未解析到包名</span><span class='pill medium'>MEDIUM · 存在可疑字符串线索</span><span class='pill medium'>MEDIUM · 运行时暴露可疑网络线索</span><span class='pill high'>HIGH · 发现持久化或高危服务注册线索</span><span class='pill low'>LOW · 动态分析成功解析包名</span><span class='pill low'>LOW · 动态分析澄清了权限列表</span><span class='pill medium'>MEDIUM · 发现测试签名证书</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_apk_static_20260619_104605_298243.html' target='_blank'>关联静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_apk_static_20260619_104605_298243.md' target='_blank'>关联静态 Markdown 报告</a></p>
+        
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>APK 动态沙箱摘要</h4>
+          <div class='scroll-box slim'>
+            <table class='table'><tr><th>device_id</th><td>emulator-5554</td></tr><tr><th>package_name</th><td>com.malmstein.yahnac</td></tr><tr><th>static_file_name</th><td>tmp2c1p3ieo.apk</td></tr><tr><th>resolve_activity</th><td>priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+com.malmstein.yahnac/.stories.NewsActivity</td></tr><tr><th>pidof</th><td>9700</td></tr><tr><th>granted_dangerous_permissions</th><td>ANDROID.PERMISSION.INTERNET, ANDROID.PERMISSION.ACCESS_NETWORK_STATE, ANDROID.PERMISSION.ACCESS_WIFI_STATE, ANDROID.PERMISSION.WAKE_LOCK</td></tr><tr><th>post_install_files</th><td>无</td></tr><tr><th>persistent_services</th><td>{&#x27;device_policy&#x27;: [&#x27;6: com.malmstein.yahnac&#x27;], &#x27;notification&#x27;: [&#x27;AppSettings: com.malmstein.yahnac (10174) importance=NONE userSet=false&#x27;]}</td></tr><tr><th>install_success</th><td>True</td></tr><tr><th>launch_success</th><td>True</td></tr><tr><th>event_count</th><td>34</td></tr><tr><th>logcat_excerpt_count</th><td>529</td></tr><tr><th>network_hit_count</th><td>12</td></tr><tr><th>runtime_window_seconds</th><td>12</td></tr><tr><th>dynamic_json_path</th><td>C:/Users/lenovo/AppData/Local/Temp/sentinelguard_dynamic/sentinel_apk_dynamic_com.malmstein.yahnac_20260619_104608_858337.json</td></tr><tr><th>dynamic_json_name</th><td>sentinel_apk_dynamic_com.malmstein.yahnac_20260619_104608_858337.json</td></tr></table>
+          </div>
+        </div>
+      </div>
+    
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>APK 文件</th><td>tmp2c1p3ieo.apk</td></tr><tr><th>规范化路径</th><td>C:/Users/lenovo/AppData/Local/Temp/tmp2c1p3ieo.apk</td></tr><tr><th>包名</th><td>-</td></tr><tr><th>版本名</th><td>-</td></tr><tr><th>版本号</th><td>-</td></tr><tr><th>SHA256</th><td>b34ee7bdbd6c9b034f38c7f3a27969445d5ebf351b92214356f4db16576275fd</td></tr><tr><th>大小</th><td>4125881 字节</td></tr><tr><th>权限数量</th><td>0</td></tr><tr><th>组件数量</th><td>0</td></tr><tr><th>证书主体</th><td>-</td></tr><tr><th>证书签发者</th><td>-</td></tr><tr><th>证书指纹</th><td>7a9fda6ae4d150f37993c2f8d499c726cfd831377e4b55e8bf1adf853f8d5c2f</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>未获取跳转链。</li></ol>
+        <h4>页面线索</h4>
+        <p class='subtle'>未获取页面内容线索。</p>
+      </div>
+      <div class="pill-row"><span class='pill muted'>LOW · 关键文件证据已提取</span><span class='pill muted'>MEDIUM · 未解析到包名</span><span class='pill muted'>MEDIUM · 存在可疑字符串线索</span><span class='pill muted'>MEDIUM · 运行时暴露可疑网络线索</span><span class='pill muted'>HIGH · 发现持久化或高危服务注册线索</span><span class='pill muted'>LOW · 动态分析成功解析包名</span><span class='pill muted'>LOW · 动态分析澄清了权限列表</span><span class='pill muted'>MEDIUM · 发现测试签名证书</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>HIGH（1）</h4><div class='grid-list'>
+    <div class="finding high">
+      <h4>发现持久化或高危服务注册线索 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：APK_DYNAMIC_PERSISTENT_SERVICE</div>
+      <p>运行时系统服务状态中出现无障碍、设备管理器或通知相关注册线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>6: com.malmstein.yahnac; AppSettings: com.malmstein.yahnac (10174) importance=NONE userSet=false</code></span>
+        <b>建议</b><span>建议重点复核是否存在无障碍滥用、设备管理器驻留或通知监听行为。</span>
+      </div>
+    </div>
+    </div><h4>MEDIUM（11）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>未解析到包名 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_MISSING_PACKAGE</div>
+      <p>APK 中未能提取出明确的包名，样本身份不够清晰。</p>
+      <div class="kv">
+        <b>证据</b><span><code>tmp2c1p3ieo.apk</code></span>
+        <b>建议</b><span>补充样本来源与签名信息后再复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>存在可疑字符串线索 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_SUSPICIOUS_STRINGS</div>
+      <p>样本中出现命令执行、远程地址或系统调用相关字符串。</p>
+      <div class="kv">
+        <b>证据</b><span><code>http://schemas.android.com/apk/res/android; http://schemas.android.com/apk/res-auto; android.support.design.widget.AppBarLayout; android.support.v7.widget.Toolbar; --android.support.design.widget.TextInputLayout; android.support.v7.widget.AppCompatEditText; 55android.support.design.widget.Snackbar; android.support.v7.widget.ButtonBarLayout</code></span>
+        <b>建议</b><span>结合反编译结果确认这些字符串是否参与实际行为。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>运行时暴露可疑网络线索 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_DYNAMIC_NETWORK</div>
+      <p>logcat 中出现可疑网络地址、域名或远程连接线索，说明样本可能存在联网行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>settings.get.glo; package.install; vmdl1843509505.tmp; com.malmstein.yahnac; base.dm</code></span>
+        <b>建议</b><span>后续可结合抓包或代理进行复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>发现测试签名证书 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_SIGNATURE_TESTKEY</div>
+      <p>APK 使用了 `TESTKEY` 签名证书。这通常用于开发或测试阶段，但也可能被恶意行为者用于重新打包合法应用。</p>
+      <div class="kv">
+        <b>证据</b><span><code>签名文件: &quot;META-INF/TESTKEY.SF&quot;, &quot;META-INF/TESTKEY.RSA&quot;; 证书SHA256: &quot;7a9fda6ae4d150f37993c2f8d499c726cfd831377e4b55e8bf1adf853f8d5c2f&quot;</code></span>
+        <b>建议</b><span>建议追溯 APK 来源，确认其是否为官方发布版本。如果不是，则存在被篡改的风险。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>应用在运行时被关联到异常的系统服务 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_UNUSUAL_SERVICE_REGISTRATION</div>
+      <p>沙箱动态分析显示，应用包 &#x27;com.malmstein.yahnac&#x27; 在运行时被系统列入 &#x27;device_policy&#x27; 服务中。对于一个新闻阅读器应用，这是一个非典型的行为。虽然在测试期间未观察到应用请求设备管理器权限，但这种关联可能被用作一种持久化或权限提升的潜在手段。</p>
+      <div class="kv">
+        <b>证据</b><span><code>dumpsys persistent_services: {&quot;device_policy&quot;: [&quot;6: com.malmstein.yahnac&quot;]}</code></span>
+        <b>建议</b><span>监控该应用是否会弹出设备管理器激活请求。检查代码中与 DevicePolicyManager 相关的API调用，以确定其意图。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>应用在不安全的签名上下文中运行 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_INSECURE_SIGNATURE_CONTEXT</div>
+      <p>动态行为确认该应用包（com.malmstein.yahnac）成功安装并运行，但其身份验证依赖于一个通用的“TESTKEY”调试证书。这意味着任何恶意行为都发生在一个易于被仿冒和篡改的身份之下，增加了供应链攻击的风险。使用调试密钥签名的应用不应在生产环境中使用。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Dynamic analysis confirms successful installation and launch of package &#x27;com.malmstein.yahnac&#x27;, which static analysis shows is signed with &#x27;TESTKEY.RSA&#x27;.</code></span>
+        <b>建议</b><span>不要信任使用通用调试密钥签名的应用。仅从官方或可信的应用商店下载应用，并验证其开发者签名。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>存在设备策略管理服务提及 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_004</div>
+      <p>动态沙箱报告的持久化服务中提及 &#x27;device_policy&#x27;: [&#x27;6: com.malmstein.yahnac&#x27;]。这表明该应用可能具备或尝试获取设备管理员权限，若被恶意利用，可能导致设备被远程控制或数据被擦除等严重后果。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱报告中 &#x27;persistent_services&#x27;: {&#x27;device_policy&#x27;: [&#x27;6: com.malmstein.yahnac&#x27;]}</code></span>
+        <b>建议</b><span>对样本进行逆向工程，分析其代码中与设备策略管理相关的API调用，确认其是否实际请求或激活了设备管理员权限，以及其使用目的。在部署前，务必谨慎评估其必要性。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>静态分析发现可疑字符串，动态行为未完全验证 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_005</div>
+      <p>静态分析报告指出样本中存在 &#x27;命令执行、远程地址或系统调用相关字符串&#x27;。尽管动态沙箱未直接观察到这些字符串被用于恶意行为，但其潜在风险依然存在，需要进一步的代码层面的确认。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态分析报告中 &#x27;APK_SUSPICIOUS_STRINGS&#x27; 规则的 &#x27;evidence&#x27; 部分。</code></span>
+        <b>建议</b><span>进行详细的代码逆向分析，追踪这些可疑字符串在代码中的引用和使用方式，以判断其是否构成实际威胁。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>当前结论仅基于离线静态证据与短时动态窗口 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：STATIC_EVIDENCE_SCOPE_LIMITATION</div>
+      <p>静态侧能确认关键文件、签名与资源线索，动态侧仅覆盖 12 秒运行窗口；未做完整逆向与长时行为观测，因此对延迟触发、条件触发或分阶段载荷无法定性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>dynamic_sandbox.runtime_window_seconds=12; classes.dex 存在但未提供完整反编译结果；AndroidManifest.xml 仅作为关键文件提取，未给出完整组件清单。</code></span>
+        <b>建议</b><span>继续进行 dex 逆向、Manifest 深挖和更长时长动态监控。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>使用 TESTKEY 调试/测试签名 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_SIGNATURE_TESTKEY</div>
+      <p>META-INF/TESTKEY.SF 与 META-INF/TESTKEY.RSA 表明样本并非标准官方签名链，存在测试构建外泄、二次打包或供应链风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>certificate_sha256=7a9fda6ae4d150f37993c2f8d499c726cfd831377e4b55e8bf1adf853f8d5c2f; META-INF/TESTKEY.SF; META-INF/TESTKEY.RSA</code></span>
+        <b>建议</b><span>核查来源渠道与历史签名，确认是否为官方构建。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>device_policy 关联为非典型风险信号 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：UNUSUAL_DEVICE_POLICY_ASSOCIATION</div>
+      <p>动态沙箱 persistent_services 中出现 device_policy: [&quot;6: com.malmstein.yahnac&quot;]，对新闻类应用而言不常见，可能涉及设备管理员、持久化或系统级权限相关逻辑，但本次窗口内未观察到实际激活。</p>
+      <div class="kv">
+        <b>证据</b><span><code>persistent_services.device_policy=[&quot;6: com.malmstein.yahnac&quot;]</code></span>
+        <b>建议</b><span>重点检查 DevicePolicyManager、设备管理员接收器及相关权限声明/请求逻辑。</span>
+      </div>
+    </div>
+    </div><h4>LOW（12）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>关键文件证据已提取 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：APK_KEY_FILES_REVIEWED</div>
+      <p>已优先检查 APK 内部关键文件、签名文件、资源配置与代码承载文件，用于后续静态研判与深度分析。</p>
+      <div class="kv">
+        <b>证据</b><span><code>manifest: AndroidManifest.xml; resource: res/anim-v21/design_bottom_sheet_slide_in.xml; resource: res/anim-v21/design_bottom_sheet_slide_out.xml; resource: res/anim/abc_fade_in.xml; resource: res/anim/abc_fade_out.xml; resource: res/anim/abc_grow_fade_in_from_bottom.xml; resource: res/anim/abc_popup_enter.xml; resource: res/anim/abc_popup_exit.xml; resource: res/anim/abc_shrink_fade_out_from_bottom.xml; resource: res/anim/abc_slide_in_bottom.xml; resource: res/anim/abc_slide_in_top.xml; resource: res/anim/abc_slide_out_bottom.xml</code></span>
+        <b>建议</b><span>结合 manifest、资源、签名与代码文件继续确认风险链条。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>动态分析成功解析包名 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_PACKAGE_RESOLVED</div>
+      <p>静态分析未能提取到包名，但动态沙箱运行后成功识别出 APK 的包名为 `com.malmstein.yahnac`，并确认了主启动活动为 `com.malmstein.yahnac/.stories.NewsActivity`。这澄清了静态分析中的主要疑点。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱报告的包名: &quot;com.malmstein.yahnac&quot;，主活动: &quot;com.malmstein.yahnac/.stories.NewsActivity&quot;</code></span>
+        <b>建议</b><span>更新静态分析工具以提高包名提取的准确性。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>动态分析澄清了权限列表 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_PERMISSIONS_CLARIFIED</div>
+      <p>静态分析未能识别任何权限，但动态沙箱报告了应用程序请求并被授予的权限，包括 `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `WAKE_LOCK`。这些权限对于大多数正常应用程序来说是常见的，不构成高风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱报告的权限: &quot;ANDROID.PERMISSION.INTERNET&quot;, &quot;ANDROID.PERMISSION.ACCESS_NETWORK_STATE&quot;, &quot;ANDROID.PERMISSION.ACCESS_WIFI_STATE&quot;, &quot;ANDROID.PERMISSION.WAKE_LOCK&quot;</code></span>
+        <b>建议</b><span>结合代码分析确认这些权限的使用方式是否符合预期。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>可疑字符串经动态分析判断为良性 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_BENIGN_STRINGS</div>
+      <p>静态分析中标记为“可疑”的字符串（如 `android.support.design.widget.AppBarLayout`, `com.malmstein.yahnac.login.LoginView` 等）在动态分析确认了包名和应用类型后，被判断为正常的 Android UI 组件、库引用或应用内部类名，不具有直接的恶意行为指示。</p>
+      <div class="kv">
+        <b>证据</b><span><code>提取字符串中包含: &quot;com.malmstein.yahnac.login.LoginView&quot;, &quot;android.support.design.widget.AppBarLayout&quot;, &quot;android.support.v7.widget.Toolbar&quot;, &quot;android.support.design.widget.Snackbar&quot;, &quot;android.support.v7.widget.AppCompatEditText&quot;</code></span>
+        <b>建议</b><span>结合反编译代码进一步验证这些字符串的具体用途。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>动态网络活动主要为内部系统操作 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_NETWORK_ACTIVITY_INTERNAL</div>
+      <p>动态沙箱检测到的网络活动（`network_hits`）主要涉及 `settings.get.glo`, `package.install` 等系统级操作以及文件路径，未发现与外部恶意服务器进行通信的明确证据。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱网络命中: &quot;settings.get.glo&quot;, &quot;package.install&quot;, &quot;com.malmstein.yahnac&quot;, &quot;base.apk&quot;, &quot;base.odex&quot;</code></span>
+        <b>建议</b><span>尽管当前未发现恶意网络行为，但仍需对 DEX 代码进行更深入的分析，以排除隐藏的通信机制。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>动态分析成功识别包名 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_001</div>
+      <p>静态分析未能解析到APK包名，但动态沙箱运行后，成功识别出包名为 &#x27;com.malmstein.yahnac&#x27;。这有助于明确样本身份，降低了因包名缺失带来的不确定性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱报告中 &#x27;package_name&#x27;: &#x27;com.malmstein.yahnac&#x27;</code></span>
+        <b>建议</b><span>更新样本信息，将包名 &#x27;com.malmstein.yahnac&#x27; 纳入记录。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>沙箱环境内行为正常，未发现外部恶意通信 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_002</div>
+      <p>样本在沙箱中成功安装和启动，其网络活动主要表现为系统内部组件（如包管理器、dex优化）的交互，未检测到与已知恶意C2服务器的通信或数据外泄行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱报告显示 &#x27;install_success&#x27;: true, &#x27;launch_success&#x27;: true, &#x27;network_hits&#x27; 主要为系统内部或安装相关条目。</code></span>
+        <b>建议</b><span>持续监控样本的长期行为，以防延迟触发的恶意活动。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>申请了常见权限，但未滥用 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_003</div>
+      <p>样本在运行时获取了 &#x27;INTERNET&#x27;, &#x27;ACCESS_NETWORK_STATE&#x27;, &#x27;ACCESS_WIFI_STATE&#x27;, &#x27;WAKE_LOCK&#x27; 等常见权限。在沙箱观察期间，这些权限未被用于恶意目的。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱报告中 &#x27;granted_dangerous_permissions&#x27;: [&#x27;ANDROID.PERMISSION.INTERNET&#x27;, &#x27;ANDROID.PERMISSION.ACCESS_NETWORK_STATE&#x27;, &#x27;ANDROID.PERMISSION.ACCESS_WIFI_STATE&#x27;, &#x27;ANDROID.PERMISSION.WAKE_LOCK&#x27;]</code></span>
+        <b>建议</b><span>这些权限本身不构成高风险，但仍需结合应用功能判断其合理性。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>动态沙箱已解析出包名与主活动 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DYNAMIC_PACKAGE_RESOLVED</div>
+      <p>静态阶段未能提取包名，但动态安装与启动成功后确认包名为 com.malmstein.yahnac，主活动为 .stories.NewsActivity，说明样本具备完整可执行应用结构。</p>
+      <div class="kv">
+        <b>证据</b><span><code>package_name=com.malmstein.yahnac; resolve_activity=com.malmstein.yahnac/.stories.NewsActivity; launch_success=true</code></span>
+        <b>建议</b><span>将该包名纳入后续情报检索与样本归档。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>权限组合符合常规联网应用特征 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：COMMON_NETWORK_PERMISSIONS</div>
+      <p>仅见 INTERNET、ACCESS_NETWORK_STATE、ACCESS_WIFI_STATE、WAKE_LOCK，未见高危敏感权限集合（如短信、通讯录、无障碍、设备管理等）作为静态已知权限。</p>
+      <div class="kv">
+        <b>证据</b><span><code>granted_dangerous_permissions: ANDROID.PERMISSION.INTERNET; ANDROID.PERMISSION.ACCESS_NETWORK_STATE; ANDROID.PERMISSION.ACCESS_WIFI_STATE; ANDROID.PERMISSION.WAKE_LOCK</code></span>
+        <b>建议</b><span>结合代码确认这些权限是否被用于正常联网与前台保持。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>字符串主要指向正常 UI/框架组件 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：UI_FRAMEWORK_STRINGS_BENIGN</div>
+      <p>提取字符串以 AppBarLayout、Toolbar、TextInputLayout、Snackbar、AppCompatEditText、ButtonBarLayout、样式资源与自定义视图类名为主，更符合 Android 应用界面资源，而非典型恶意载荷特征。</p>
+      <div class="kv">
+        <b>证据</b><span><code>android.support.design.widget.AppBarLayout; android.support.v7.widget.Toolbar; com.malmstein.yahnac.login.LoginView; android.support.design.widget.Snackbar; android.support.v7.widget.AppCompatEditText</code></span>
+        <b>建议</b><span>在反编译中确认这些类名对应的 UI 逻辑是否仅限于界面展示。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>未观察到直接恶意行为 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：NO_DIRECT_MALICIOUS_BEHAVIOR_OBSERVED</div>
+      <p>在安装、启动和短时运行窗口内，未检测到明确的 C2 通信、数据外传、静默安装、SMS/通话窃取或高危破坏行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>install_success=true; launch_success=true; network_hit_count=12; network_hits mostly installation/system artifacts; no explicit malicious domain or payload observed.</code></span>
+        <b>建议</b><span>保持监控，防止延迟触发或条件触发行为。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>APK 动态协同研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>基于当前离线静态证据与短时动态沙箱结果，这个 APK 更像是一个功能性新闻应用（包名已在沙箱中解析为 com.malmstein.yahnac，主活动为 .stories.NewsActivity），而非已证实的恶意样本。证据上，Manifest/组件信息在静态侧未完整解析，但动态侧确认了正常启动链路；权限仅见 INTERNET、ACCESS_NETWORK_STATE、ACCESS_WIFI_STATE、WAKE_LOCK，符合联网类应用常见配置；资源与字符串大量指向 Android UI 组件、Design Support Library 和应用内部类名，没有出现明确的 C2 域名、加密落地、短信/通话窃取、无障碍劫持或明显执行载荷线索。另一方面，样本使用 TESTKEY 签名，且证书 SHA256 已给出，这意味着它不是标准官方发布签名，存在被重打包或测试构建流入外部的供应链风险；动态日志还出现 device_policy 相关关联，这对新闻阅读器来说是非典型信号，虽未在本次 12 秒窗口内触发设备管理员激活或其他恶意动作，但不能忽略其潜在持久化/权限扩展可能。综上，当前裁决为“中等风险、偏可疑但未实证恶意”，结论仅能建立在本次离线静态证据与短时动态观测之上，若要定性仍需进一步逆向 classes.dex、核查 Manifest 组件与签名来源、并做更长时长动态验证。 综合静态证据、动态沙箱和四位专家意见，样本身份已从静态缺失澄清为 com.malmstein.yahnac，但 TESTKEY 签名与 device_policy 异常关联保留风险点，因此不判定为恶意已实证，但应保持中等风险。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>静态侧未解析到包名与权限，但动态沙箱已补全为 com.malmstein.yahnac / .stories.NewsActivity；网络与权限行为看起来像正常新闻应用；TESTKEY 签名提示可能是开发版或重打包版本，暂无直接恶意证据。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>沙箱中表现为功能性新闻阅读器，安装与启动成功，未见数据窃取、C2 或安装其他应用；但 TESTKEY 签名不安全，且 device_policy 服务关联对新闻应用不典型，需警惕潜在持久化或权限提升尝试。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>建议继续结合市场来源、签名证书与历史信誉核验，当前证据不足以确认恶意，但签名与来源可信度仍是关键风险控制点。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>建议在隔离环境中继续复核，重点逆向代码中可疑字符串与设备策略管理相关逻辑；在未确认来源与意图前，不应在真实设备或生产环境中信任该 APK。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">基于当前离线静态证据与短时动态沙箱结果，这个 APK 更像是一个功能性新闻应用（包名已在沙箱中解析为 com.malmstein.yahnac，主活动为 .stories.NewsActivity），而非已证实的恶意样本。证据上，Manifest/组件信息在静态侧未完整解析，但动态侧确认了正常启动链路；权限仅见 INTERNET、ACCESS_NETWORK_STATE、ACCESS_WIFI_STATE、WAKE_LOCK，符合联网类应用常见配置；资源与字符串大量指向 Android UI 组件、Design Support Library 和应用内部类名，没有出现明确的 C2 域名、加密落地、短信/通话窃取、无障碍劫持或明显执行载荷线索。另一方面，样本使用 TESTKEY 签名，且证书 SHA256 已给出，这意味着它不是标准官方发布签名，存在被重打包或测试构建流入外部的供应链风险；动态日志还出现 device_policy 相关关联，这对新闻阅读器来说是非典型信号，虽未在本次 12 秒窗口内触发设备管理员激活或其他恶意动作，但不能忽略其潜在持久化/权限扩展可能。综上，当前裁决为“中等风险、偏可疑但未实证恶意”，结论仅能建立在本次离线静态证据与短时动态观测之上，若要定性仍需进一步逆向 classes.dex、核查 Manifest 组件与签名来源、并做更长时长动态验证。 综合静态证据、动态沙箱和四位专家意见，样本身份已从静态缺失澄清为 com.malmstein.yahnac，但 TESTKEY 签名与 device_policy 异常关联保留风险点，因此不判定为恶意已实证，但应保持中等风险。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">静态侧未解析到包名与权限，但动态沙箱已补全为 com.malmstein.yahnac / .stories.NewsActivity；网络与权限行为看起来像正常新闻应用；TESTKEY 签名提示可能是开发版或重打包版本，暂无直接恶意证据。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">沙箱中表现为功能性新闻阅读器，安装与启动成功，未见数据窃取、C2 或安装其他应用；但 TESTKEY 签名不安全，且 device_policy 服务关联对新闻应用不典型，需警惕潜在持久化或权限提升尝试。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">建议继续结合市场来源、签名证书与历史信誉核验，当前证据不足以确认恶意，但签名与来源可信度仍是关键风险控制点。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">建议在隔离环境中继续复核，重点逆向代码中可疑字符串与设备策略管理相关逻辑；在未确认来源与意图前，不应在真实设备或生产环境中信任该 APK。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">基于当前离线静态证据与短时动态沙箱结果，这个 APK 更像是一个功能性新闻应用（包名已在沙箱中解析为 com.malmstein.yahnac，主活动为 .stories.NewsActivity），而非已证实的恶意样本。证据上，Manifest/组件信息在静态侧未完整解析，但动态侧确认了正常启动链路；权限仅见 INTERNET、ACCESS_NETWORK_STATE、ACCESS_WIFI_STATE、WAKE_LOCK，符合联网类应用常见配置；资源与字符串大量指向 Android UI 组件、Design Support Library 和应用内部类名，没有出现明确的 C2 域名、加密落地、短信/通话窃取、无障碍劫持或明显执行载荷线索。另一方面，样本使用 TESTKEY 签名，且证书 SHA256 已给出，这意味着它不是标准官方发布签名，存在被重打包或测试构建流入外部的供应链风险；动态日志还出现 device_policy 相关关联，这对新闻阅读器来说是非典型信号，虽未在本次 12 秒窗口内触发设备管理员激活或其他恶意动作，但不能忽略其潜在持久化/权限扩展可能。综上，当前裁决为“中等风险、偏可疑但未实证恶意”，结论仅能建立在本次离线静态证据与短时动态观测之上，若要定性仍需进一步逆向 classes.dex、核查 Manifest 组件与签名来源、并做更长时长动态验证。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5.4-mini</td><td>基于当前离线静态证据与短时动态沙箱结果，这个 APK 更像是一个功能性新闻应用（包名已在沙箱中解析为 com.malmstein.yahnac，主活动为 .stories.NewsActivity），而非已证实的恶意样本。证据上，Manifest/组件信息在静态侧未完整解析，但动态侧确认了正常启动链路；权限仅见 INTERNET、ACCESS_NETWORK_STATE、ACCESS_WIFI_STATE、WAKE_LOCK，符合联网类应用常见配置；资源与字符串大量指向 Android UI 组件、Design Support Library 和应用内部类名，没有出现明确的 C2 域名、加密落地、短信/通话窃取、无障碍劫持或明显执行载荷线索。另一方面，样本使用 TESTKEY 签名，且证书 SHA256 已给出，这意味着它不是标准官方发布签名，存在被重打包或测试构建流入外部的供应链风险；动态日志还出现 device_policy 相关关联，这对新闻阅读器来说是非典型信号，虽未在本次 12 秒窗口内触发设备管理员激活或其他恶意动作，但不能忽略其潜在持久化/权限扩展可能。综上，当前裁决为“中等风险、偏可疑但未实证恶意”，结论仅能建立在本次离线静态证据与短时动态观测之上，若要定性仍需进一步逆向 classes.dex、核查 Manifest 组件与签名来源、并做更长时长动态验证。 综合静态证据、动态沙箱和四位专家意见，样本身份已从静态缺失澄清为 com.malmstein.yahnac，但 TESTKEY 签名与 device_policy 异常关联保留风险点，因此不判定为恶意已实证，但应保持中等风险。</td></tr><tr><th>静态分析员</th><td>gemini-2.5-flash</td><td>静态侧未解析到包名与权限，但动态沙箱已补全为 com.malmstein.yahnac / .stories.NewsActivity；网络与权限行为看起来像正常新闻应用；TESTKEY 签名提示可能是开发版或重打包版本，暂无直接恶意证据。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>沙箱中表现为功能性新闻阅读器，安装与启动成功，未见数据窃取、C2 或安装其他应用；但 TESTKEY 签名不安全，且 device_policy 服务关联对新闻应用不典型，需警惕潜在持久化或权限提升尝试。</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>建议继续结合市场来源、签名证书与历史信誉核验，当前证据不足以确认恶意，但签名与来源可信度仍是关键风险控制点。</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>建议在隔离环境中继续复核，重点逆向代码中可疑字符串与设备策略管理相关逻辑；在未确认来源与意图前，不应在真实设备或生产环境中信任该 APK。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

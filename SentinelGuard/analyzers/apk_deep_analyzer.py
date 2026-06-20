@@ -10,15 +10,7 @@ from openai import OpenAI
 from config import settings
 from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
-from utils.retry_helper import RetryConfig, with_graceful_retry
-
-
-APK_DEEP_MODEL_RETRY_CONFIG = RetryConfig(
-    max_retries=0,
-    initial_delay=0.0,
-    backoff_factor=1.0,
-    max_delay=0.0,
-)
+from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
@@ -158,12 +150,7 @@ class APKDeepAnalyzer:
         if not api_key:
             return None
 
-        client_kwargs: Dict[str, Any] = {
-            "api_key": api_key,
-            "http_client": _build_httpx_client(self.proxy_map),
-            "timeout": httpx.Timeout(35.0, connect=10.0),
-            "max_retries": 0,
-        }
+        client_kwargs: Dict[str, Any] = {"api_key": api_key, "http_client": _build_httpx_client(self.proxy_map)}
         if base_url:
             client_kwargs["base_url"] = base_url
 
@@ -222,7 +209,7 @@ class APKDeepAnalyzer:
             "proxy_enabled": bool(self.runtime_config.proxy_dict()),
         }
 
-    @with_graceful_retry(APK_DEEP_MODEL_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
+    @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
             response = self._get_client(role).chat.completions.create(
@@ -239,8 +226,6 @@ class APKDeepAnalyzer:
             if not content:
                 return {"success": False, "error": "模型未返回内容"}
             return {"success": True, "content": content}
-        except (httpx.TimeoutException, TimeoutError) as exc:
-            return {"success": False, "error": f"模型调用超时: {exc}"}
         except Exception as exc:
             return {"success": False, "error": f"模型调用异常: {exc}"}
 

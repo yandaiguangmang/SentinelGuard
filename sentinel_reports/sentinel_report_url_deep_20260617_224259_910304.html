@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #f59e0b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #f59e0b; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 14</span>
+      <span class="chip warning">风险 MEDIUM</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">MEDIUM</div>
+      <div class="hint">0 条高危 / 10 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">45/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度研判报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://www.baidu.com</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度研判报告</small>
+        </div>
+        
+      <p><span class="badge">MEDIUM</span></p>
+      <p>风险分数：<strong>45/100</strong></p>
+      <p>原始输入：<code>https://www.baidu.com</code></p>
+      <p>报告类型：<strong>模型深度研判报告</strong></p>
+      <div class="pill-row"><span class='pill medium'>MEDIUM · 合法知名域名</span><span class='pill medium'>MEDIUM · URL结构规范，无异常参数</span><span class='pill medium'>MEDIUM · 页面内容无恶意关键词或混淆</span><span class='pill medium'>MEDIUM · 未发现可疑表单、下载或脚本线索</span><span class='pill medium'>MEDIUM · 取证环境使用代理导致可达性与呈现差异</span><span class='pill low'>LOW · 品牌主域HTTPS直达，未见异常重定向</span><span class='pill low'>LOW · 离线规则与浏览器证据的边界与局限</span><span class='pill low'>LOW · 地域/CDN差异对资源域与内容的影响</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_url_static_20260617_224133_840520.html' target='_blank'>静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_url_static_20260617_224133_840520.md' target='_blank'>静态 Markdown 报告</a></p>
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          <p class='subtle'>抓取模式：proxy / 代理：是</p>
+        </div>
+      </div>
+    
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>规范化 URL</th><td>https://www.baidu.com/</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>www.baidu.com</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://www.baidu.com/</li></ol>
+        <h4>页面线索</h4>
+        <table class='table'><tr><td>status_code</td><td>200</td></tr><tr><td>content_type</td><td>text/html; charset=utf-8</td></tr><tr><td>final_url</td><td>https://www.baidu.com/</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>proxy</td></tr><tr><td>proxy_used</td><td>True</td></tr><tr><td>proxy_config</td><td>{&#x27;http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;https&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_https&#x27;: &#x27;http://10.250.167.176:7890&#x27;}</td></tr><tr><td>title</td><td>百度一下，你就知道</td></tr><tr><td>visible_text_excerpt</td><td>百度一下，你就知道 #form .bdsug{top:39px}.bdsug{display:none;position:absolute;width:535px;background:#fff;border:1px solid #ccc!important;_overflow:hidden;box-shadow:1px 1px 3px #ededed;-webkit-box-shadow:1px 1px 3px #ededed;-moz-box-shadow:1px 1px 3px #ededed;-o-box-shadow:1px 1px 3px #ededed}.bdsug li{width:519px;color:#000;font:14px arial;line-height:25px;padding:0 8px;position:relative;cursor:default}.bdsug li.bdsug-s{background:#f0f0f0}.bdsug-store span,.bdsug-store b{color:#7A77C8}.bdsug-store-del{font-size:12px;color:#666;text-decoration:underline;position:absolute;right:8px;top:0;cursor:pointer;display:none}.bdsug-s .bdsug-store-del{display:inline-block}.bdsug-ala{display:inline-block;border-bottom:1px solid #e6e6e6}.bdsug-ala h3{line-height:14px;background:url(//www.baidu.com/img/sug_bd.p</td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>0</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>无</td></tr><tr><td>form_actions</td><td>无</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&lt;!DOCTYPE html&gt;&lt;!--STATUS OK--&gt;&lt;html&gt;&lt;head&gt;&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html;charset=utf-8&quot;&gt;&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge,chrome=1&quot;&gt;&lt;meta content=&quot;origin-when-cross-origin&quot; name=&quot;referrer&quot;&gt;&lt;meta name=&quot;theme-color&quot; content=&quot;#ffffff&quot;&gt;&lt;meta name=&quot;description&quot; content=&quot;全球领先的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。百度超过千亿的中文网页数据库，可以瞬间找到相关的搜索结果。&quot;&gt;&lt;link rel=&quot;shortcut icon&quot; href=&quot;https://www.baidu.com/favicon.ico&quot; type=&quot;image/x-icon&quot; /&gt;&lt;link rel=&quot;search&quot; type=&quot;application/opensearchdescription+xml&quot; href=&quot;/content-search.xml&quot; title=&quot;百度搜索&quot; /&gt;&lt;link rel=&quot;stylesheet&quot; data-for=&quot;result&quot; href=&quot;https://pss.bdstatic.com/r/www/static/font/cosmic/pc/cos-icon_3df378f.css&quot;/&gt;&lt;link rel=&quot;icon&quot; sizes=&quot;any&quot; mask href=&quot;https://www.baidu.com/favicon.ico&quot;&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//dss0.bdstatic.com&quot;/&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//dss1.bdstatic.com&quot;/&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//ss1.bdstatic.com&quot;/&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//sp0.baidu.com&quot;/&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//sp1.baidu.com&quot;/&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//sp2.baidu.com&quot;/&gt;&lt;link rel=&quot;dns-prefetch&quot; href=&quot;//pss.bdstatic.com&quot;/&gt;&lt;link rel=&quot;apple-touch-icon-precomposed&quot; href=&quot;https://psstatic.cdn.bcebos.com/vid&#x27;, &#x27;text_excerpt&#x27;: &#x27;百度一下，你就知道 #form .bdsug{top:39px}.bdsug{display:none;position:absolute;width:535px;background:#fff;border:1px solid #ccc!important;_overflow:hidden;box-shadow:1px 1px 3px #ededed;-webkit-box-shadow:1px 1px 3px #ededed;-moz-box-shadow:1px 1px 3px #ededed;-o-box-shadow:1px 1px 3px #ededed}.bdsug li{width:519px;color:#000;font:14px arial;line-height:25px;padding:0 8px;position:relative;cursor:default}.bdsug li.bdsug-s{background:#f0f0f0}.bdsug-store span,.bdsug-store b{color:#7A77C8}.bdsug-store-del{font-size:12px;color:#666;text-decoration:underline;position:absolute;right:8px;top:0;cursor:pointer;display:none}.bdsug-s .bdsug-store-del{display:inline-block}.bdsug-ala{display:inline-block;border-bottom:1px solid #e6e6e6}.bdsug-ala h3{line-height:14px;background:url(//www.baidu.com/img/sug_bd.p&#x27;}</td></tr></table>
+      </div>
+      <div class="pill-row"><span class='pill muted'>MEDIUM · 合法知名域名</span><span class='pill muted'>MEDIUM · URL结构规范，无异常参数</span><span class='pill muted'>MEDIUM · 页面内容无恶意关键词或混淆</span><span class='pill muted'>MEDIUM · 未发现可疑表单、下载或脚本线索</span><span class='pill muted'>MEDIUM · 取证环境使用代理导致可达性与呈现差异</span><span class='pill muted'>LOW · 品牌主域HTTPS直达，未见异常重定向</span><span class='pill muted'>LOW · 离线规则与浏览器证据的边界与局限</span><span class='pill muted'>LOW · 地域/CDN差异对资源域与内容的影响</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>MEDIUM（10）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>合法知名域名 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_001_LEGITIMATE_DOMAIN</div>
+      <p>目标URL的域名 (www.baidu.com) 是一个全球知名的合法搜索引擎服务提供商，具有高度可信度。</p>
+      <div class="kv">
+        <b>证据</b><span><code>域名: www.baidu.com；DNS预取链接指向百度相关资产。</code></span>
+        <b>建议</b><span>无需特殊处理，确认为合法域名。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>URL结构规范，无异常参数 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_002_CLEAN_URL_STRUCTURE</div>
+      <p>URL结构简单，无复杂子域名、异常端口或路径，且未包含任何可疑的查询参数，降低了参数注入或重定向的风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>URL: https://www.baidu.com/；查询参数为空。</code></span>
+        <b>建议</b><span>URL结构无异常，符合预期。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>页面内容无恶意关键词或混淆 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_003_NO_SUSPICIOUS_CONTENT</div>
+      <p>页面标题、可见文本和HTML摘要内容与百度官方页面一致，未检测到任何常见的恶意关键词（如钓鱼、诈骗、病毒等）或编码混淆迹象。</p>
+      <div class="kv">
+        <b>证据</b><span><code>页面标题: &#x27;百度一下，你就知道&#x27;；可见文本和HTML摘要内容正常，无混淆。</code></span>
+        <b>建议</b><span>页面内容静态分析无风险。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>未发现可疑表单、下载或脚本线索 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_004_NO_MALICIOUS_INTERACTIONS</div>
+      <p>静态分析未发现页面包含密码表单、隐藏输入、可疑下载链接或外部恶意脚本，降低了数据窃取或恶意软件传播的风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>password_forms: 0；hidden_inputs: 0；download_links: []；script_srcs: []；external_script_count: 0。</code></span>
+        <b>建议</b><span>静态层面未发现交互式恶意载荷。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>取证环境使用代理导致可达性与呈现差异 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_INTEL_ENV_PROXY_DIVERGENCE</div>
+      <p>本次抓取通过内网代理完成，复现场景若缺少外网/VPN会产生访问失败或内容差异（CDN/地域化/A/B），影响风险判断与可复现性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>page_summary.fetch_mode=proxy; proxy_used=true; proxy=10.250.167.176:7890; status=200; final_url=https://www.baidu.com/</code></span>
+        <b>建议</b><span>在对比测试时固定出口节点与DNS，分别在有/无代理与不同地域VPN下复采并导出HAR；报告中标注出口IP/ASN与时间窗，确保结论可复现。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>合法网站识别 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_LEGITIMATE_SITE</div>
+      <p>目标URL &#x27;https://www.baidu.com/&#x27; 是一个知名的合法搜索引擎网站。所有分析结果均表明该页面安全无害。</p>
+      <div class="kv">
+        <b>证据</b><span><code>浏览器证据包中的页面行为、HTML摘要和可见文本快照均显示为百度首页的正常内容（标题：&#x27;百度一下，你就知道&#x27;，可见文本与百度主页一致）。静态分析未发现任何可疑的URL结构、脚本或重定向。专家意见也一致认为未发现明显高危特征。</code></span>
+        <b>建议</b><span>允许正常访问。无需拦截、隔离或沙箱复核。建议正常留痕，作为常规访问记录。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>www.baidu.com；https://www.baidu.com/；无异常参数、无异常端口、无可疑子域名。</code></span>
+        <b>建议</b><span>按正常可信站点处理。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>status_code=200；redirect_chain 仅含自身；password_forms=0；hidden_inputs=0；meta_refresh=[]；download_links=[]；external_script_count=0。</code></span>
+        <b>建议</b><span>无需拦截或隔离。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>title=“百度一下，你就知道”；HTML 摘要和可见文本均呈现百度首页特征。</code></span>
+        <b>建议</b><span>可作为正常访问留痕。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>主持人补充风险 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_MODEL_SIGNAL</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>未接入外部威胁情报；抓取通过代理完成；浏览器证据为单次快照。</code></span>
+        <b>建议</b><span>如需更高置信度，补充多时段、多出口与完整 HAR 复核。</span>
+      </div>
+    </div>
+    </div><h4>LOW（4）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>品牌主域HTTPS直达，未见异常重定向 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_BRAND_DOMAIN_BASELINE</div>
+      <p>目标为百度主域首页，HTTPS直达200，未观察到可疑跳转或钓鱼指纹，密码表单为0。</p>
+      <div class="kv">
+        <b>证据</b><span><code>redirect_chain=[https://www.baidu.com/]; status_code=200; title=“百度一下，你就知道”; password_forms=0</code></span>
+        <b>建议</b><span>将该页面视作低风险落地页，但对搜索结果外链逐一独立核验（检查重定向、证书与域名欺骗），避免在非必要页面提交敏感信息。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>离线规则与浏览器证据的边界与局限 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_EVIDENCE_BOUNDARY</div>
+      <p>离线分析未接入外部威胁情报且以静态特征为主；浏览器证据是单次快照，当前脚本清单为空可能因抓取策略所致，无法代表动态加载全貌。</p>
+      <div class="kv">
+        <b>证据</b><span><code>expert_opinions.情报分析员=“当前离线版本未接入外部威胁情报”；external_script_count=0; script_srcs=[]</code></span>
+        <b>建议</b><span>针对动态站点补充分析：开启JS执行与完整网络捕获（HAR/JS堆栈/第三方请求清单），并与外部威胁情报交叉校验；必要时进行多时段、多地域二次取证。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>地域/CDN差异对资源域与内容的影响 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_CDN_GEO_VARIANCE</div>
+      <p>页面声明对多个静态与服务域的DNS预取，实际加载可能因地域选择不同CDN节点，导致资源主机、证书链与指纹差异。</p>
+      <div class="kv">
+        <b>证据</b><span><code>html中dns-prefetch包含：//dss0.bdstatic.com, //dss1.bdstatic.com, //ss1.bdstatic.com, //sp0.baidu.com, //sp1.baidu.com, //sp2.baidu.com, //pss.bdstatic.com</code></span>
+        <b>建议</b><span>在目标环境放通上述资源域名与HTTPS流量；对关键取证任务在CN/非CN出口均进行采样，并校验TLS证书与内容哈希差异。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>全局代理标志与页面证据不一致的元数据风险 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_INTEL_PROXY_FLAG_INCONSISTENCY</div>
+      <p>顶层proxy_enabled=false，但页面与静态报告均显示实际使用了代理，可能造成取证路径误读。</p>
+      <div class="kv">
+        <b>证据</b><span><code>root.proxy_enabled=false vs page_summary.proxy_used=true &amp; browser_evidence.proxy_used=true</code></span>
+        <b>建议</b><span>统一管线标注规范：在报告中显式记录是否用代理/VPN、出口IP与解析器；如有冲突，以页面级证据为准并在备注中说明。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>综合静态检测结果、浏览器证据包与四位专家意见，目标 URL https://www.baidu.com/ 被一致判定为百度官网首页，未发现钓鱼、跳转劫持、恶意脚本、可疑表单、下载投递或编码混淆等风险特征。页面返回 200，最终地址未发生重定向，标题与可见文本均符合百度首页特征，HTML 摘要与常规官方站点一致，静态规则未命中异常项。当前结论仅基于离线证据与单次抓取快照；外部威胁情报未接入，且此次取证实际通过代理完成，故对地域化内容、动态脚本、后续搜索结果外链行为不作超出证据链的推断。总体裁决：低风险、可正常访问，但若进入搜索结果页或提交敏感信息，仍应按常规安全习惯复核目标域名与跳转链路。 未发现明显高危特征，仍建议结合链接来源和访问上下文复核。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>URL 结构未命中当前规则库中的明显异常项。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>未观察到可疑跳转或页面行为证据。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>当前离线版本未接入外部威胁情报，结论基于本地规则。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>可正常访问，但不要在陌生页面提交敏感信息。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">综合静态检测结果、浏览器证据包与四位专家意见，目标 URL https://www.baidu.com/ 被一致判定为百度官网首页，未发现钓鱼、跳转劫持、恶意脚本、可疑表单、下载投递或编码混淆等风险特征。页面返回 200，最终地址未发生重定向，标题与可见文本均符合百度首页特征，HTML 摘要与常规官方站点一致，静态规则未命中异常项。当前结论仅基于离线证据与单次抓取快照；外部威胁情报未接入，且此次取证实际通过代理完成，故对地域化内容、动态脚本、后续搜索结果外链行为不作超出证据链的推断。总体裁决：低风险、可正常访问，但若进入搜索结果页或提交敏感信息，仍应按常规安全习惯复核目标域名与跳转链路。 未发现明显高危特征，仍建议结合链接来源和访问上下文复核。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">URL 结构未命中当前规则库中的明显异常项。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">未观察到可疑跳转或页面行为证据。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">当前离线版本未接入外部威胁情报，结论基于本地规则。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">可正常访问，但不要在陌生页面提交敏感信息。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">综合静态检测结果、浏览器证据包与四位专家意见，目标 URL https://www.baidu.com/ 被一致判定为百度官网首页，未发现钓鱼、跳转劫持、恶意脚本、可疑表单、下载投递或编码混淆等风险特征。页面返回 200，最终地址未发生重定向，标题与可见文本均符合百度首页特征，HTML 摘要与常规官方站点一致，静态规则未命中异常项。当前结论仅基于离线证据与单次抓取快照；外部威胁情报未接入，且此次取证实际通过代理完成，故对地域化内容、动态脚本、后续搜索结果外链行为不作超出证据链的推断。总体裁决：低风险、可正常访问，但若进入搜索结果页或提交敏感信息，仍应按常规安全习惯复核目标域名与跳转链路。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5.4-mini</td><td>综合静态检测结果、浏览器证据包与四位专家意见，目标 URL https://www.baidu.com/ 被一致判定为百度官网首页，未发现钓鱼、跳转劫持、恶意脚本、可疑表单、下载投递或编码混淆等风险特征。页面返回 200，最终地址未发生重定向，标题与可见文本均符合百度首页特征，HTML 摘要与常规官方站点一致，静态规则未命中异常项。当前结论仅基于离线证据与单次抓取快照；外部威胁情报未接入，且此次取证实际通过代理完成，故对地域化内容、动态脚本、后续搜索结果外链行为不作超出证据链的推断。总体裁决：低风险、可正常访问，但若进入搜索结果页或提交敏感信息，仍应按常规安全习惯复核目标域名与跳转链路。 未发现明显高危特征，仍建议结合链接来源和访问上下文复核。</td></tr><tr><th>静态分析员</th><td>gemini-2.5-flash</td><td>URL 结构未命中当前规则库中的明显异常项。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>未观察到可疑跳转或页面行为证据。</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>当前离线版本未接入外部威胁情报，结论基于本地规则。</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>可正常访问，但不要在陌生页面提交敏感信息。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -157,44 +157,7 @@ def _enrich_with_zip_fallback(apk_ir: APKIR, path: Path) -> APKIR:
             apk_ir.certificate_subject, apk_ir.certificate_issuer, apk_ir.certificate_sha256 = _extract_certificate_info(names, archive)
     except BadZipFile:
         return apk_ir
-
-    if not apk_ir.package_name:
-        package_name, version_name, version_code = _extract_apk_badging_info(path)
-        apk_ir.package_name = package_name or apk_ir.package_name
-        apk_ir.version_name = version_name or apk_ir.version_name
-        apk_ir.version_code = version_code or apk_ir.version_code
     return apk_ir
-
-
-def _extract_apk_badging_info(path: Path) -> tuple[str, str, str]:
-    """优先使用 aapt/aapt2 从二进制 Manifest 中提取包名与版本信息。"""
-    try:
-        import shutil
-        import subprocess
-
-        for tool_name in ("aapt.exe", "aapt2.exe", "aapt", "aapt2"):
-            tool = shutil.which(tool_name)
-            if not tool:
-                continue
-            result = subprocess.run(
-                [tool, "dump", "badging", str(path)],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="ignore",
-                check=False,
-            )
-            if result.returncode != 0:
-                continue
-            text = result.stdout or ""
-            package_name = _extract_first(text, r"package: name='([^']+)'")
-            version_name = _extract_first(text, r"versionName='([^']+)'")
-            version_code = _extract_first(text, r"versionCode='([^']+)'")
-            if package_name or version_name or version_code:
-                return package_name, version_name, version_code
-    except Exception:
-        return "", "", ""
-    return "", "", ""
 
 
 def _extract_androguard_certificate_info(apk: Any) -> tuple[str, str, str]:

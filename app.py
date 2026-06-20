@@ -36,12 +36,9 @@ def index():
         "deep": False,
         "apk_mode": "static",
         "llm_api_key": "",
-        "llm_base_url": "",
         "proxy_http": "",
         "proxy_https": "",
         "proxy_all": "",
-        "apk_explore_rounds": 3,
-        "apk_explore_steps": 5,
     })
 
 
@@ -197,7 +194,6 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
 
         if report.target_ir.target_type == "apk":
             if apk_mode == "dynamic":
-                task_manager.update(task_id, progress=68, stage="dynamic_prepare", message="静态证据已整理，正在准备 APK 动态沙箱")
                 report = run_apk_dynamic_detection_from_static(
                     report,
                     persist_report=False,
@@ -234,20 +230,12 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
 
 
 def _build_runtime_config(payload: Dict[str, Any]) -> AnalysisRuntimeConfig:
-    def _parse_int(value: Any, fallback: int) -> int:
-        try:
-            return int(str(value).strip() or fallback)
-        except Exception:
-            return fallback
-
     return AnalysisRuntimeConfig(
         llm_api_key=str(payload.get("llm_api_key") or "").strip(),
         llm_base_url=str(payload.get("llm_base_url") or "").strip(),
         proxy_http=str(payload.get("proxy_http") or "").strip(),
         proxy_https=str(payload.get("proxy_https") or "").strip(),
         proxy_all=str(payload.get("proxy_all") or "").strip(),
-        apk_explore_rounds=_parse_int(payload.get("apk_explore_rounds"), 3),
-        apk_explore_steps=_parse_int(payload.get("apk_explore_steps"), 5),
     )
 
 
