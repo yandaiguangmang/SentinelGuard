@@ -380,7 +380,7 @@ class URLDeepAnalyzer:
 
         host_score = normalize_score(data.get("score"), static_report.score)
         evidence_score = score_from_findings(static_report.findings + additional_findings)
-        score = combine_scores(evidence_score, host_score)
+        score = combine_scores(evidence_score, host_score, data.get("arbitration_result"), data.get("robustness_result"))
         risk_level = risk_level_from_score(score)
         summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()

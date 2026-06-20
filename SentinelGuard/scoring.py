@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from SentinelGuard.state import DetectionFinding
 
@@ -59,8 +59,54 @@ def risk_level_from_score(score: int) -> str:
     return "critical"
 
 
+def calculate_arbitration_adjustment(arbitration_result: Any) -> int:
+    if not arbitration_result:
+        return 0
+    if isinstance(arbitration_result, dict):
+        level = str(arbitration_result.get("consistency_level", "")).lower()
+    else:
+        level = str(getattr(arbitration_result, "consistency_level", "")).lower()
+    if level == "high":
+        return 0
+    if level == "medium":
+        return -5
+    if level == "low":
+        return -15
+    return 0
+
+
+def calculate_robustness_bonus(robustness_result: Any) -> int:
+    if not robustness_result:
+        return 0
+    score = getattr(robustness_result, "robustness_score", None)
+    if score is None and isinstance(robustness_result, dict):
+        score = robustness_result.get("robustness_score", 0)
+    score = clamp_score(int(score or 0))
+    if score < 30:
+        return 0
+    if score < 60:
+        return 5
+    if score <= 90:
+        return 10
+    return 15
+
+
 def combine_scores(evidence_score: int, deep_score: Optional[int]) -> int:
     evidence_score = clamp_score(evidence_score)
     if deep_score is None:
         return evidence_score
     return clamp_score(round(evidence_score * 0.5 + clamp_score(deep_score) * 0.5))
+
+
+def combine_apk_scores(
+    evidence_score: int,
+    deep_score: Optional[int],
+    arbitration_result: Any = None,
+    robustness_result: Any = None,
+) -> int:
+    evidence_score = clamp_score(evidence_score)
+    deep_component = clamp_score(deep_score) if deep_score is not None else 0
+    arbitration_adjustment = calculate_arbitration_adjustment(arbitration_result)
+    robustness_bonus = calculate_robustness_bonus(robustness_result)
+    final_score = evidence_score * 0.4 + deep_component * 0.3 + arbitration_adjustment + robustness_bonus
+    return clamp_score(round(final_score))

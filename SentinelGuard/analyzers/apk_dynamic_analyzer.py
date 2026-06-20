@@ -4,7 +4,6 @@ import json
 import re
 import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +11,7 @@ from typing import Any, Dict, List, Tuple
 
 from config import settings
 from SentinelGuard.analyzers.apk_deep_analyzer import APKDeepAnalyzer
-from SentinelGuard.scoring import combine_scores, risk_level_from_score, score_from_findings
+from SentinelGuard.scoring import combine_apk_scores, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 
 
@@ -181,8 +180,18 @@ class APKDynamicAnalyzer:
             "expert_opinions": model_result.get("expert_opinions", {}),
             "expert_models": model_result.get("expert_models", {}),
             "deep_summary": model_result.get("deep_summary", ""),
-            "risk_level": model_result.get("risk_level", risk_level_from_score(combine_scores(score_from_findings(merged_findings), model_result.get("deep_score")))),
-            "score": combine_scores(score_from_findings(merged_findings), model_result.get("deep_score")),
+            "risk_level": model_result.get("risk_level", risk_level_from_score(combine_apk_scores(
+                score_from_findings(merged_findings),
+                model_result.get("deep_score"),
+                model_result.get("arbitration_result"),
+                model_result.get("robustness_result"),
+            ))),
+            "score": combine_apk_scores(
+                score_from_findings(merged_findings),
+                model_result.get("deep_score"),
+                model_result.get("arbitration_result"),
+                model_result.get("robustness_result"),
+            ),
             "evidence_score": score_from_findings(merged_findings),
             "deep_score": model_result.get("deep_score"),
         }
@@ -335,10 +344,18 @@ class APKDynamicAnalyzer:
         events: List[Dict[str, Any]],
         logcat_output: str,
     ) -> Dict[str, Any]:
-        output_dir = Path(tempfile.gettempdir()) / "sentinelguard_dynamic"
-        output_dir.mkdir(parents=True, exist_ok=True)
+        project_root = Path(__file__).resolve().parents[2]
+        output_root = project_root / "information" / "apk_dynamic"
+        output_root.mkdir(parents=True, exist_ok=True)
+
+        safe_package_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", package_name or "unknown.package").strip("._-") or "unknown.package"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        json_path = output_dir / f"sentinel_apk_dynamic_{package_name}_{timestamp}.json"
+        run_dir = output_root / f"{timestamp}_{safe_package_name}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        json_path = run_dir / "dynamic_artifacts.json"
+        summary_path = run_dir / "dynamic_summary.json"
+        logcat_path = run_dir / "logcat_excerpt.txt"
         payload = {
             "target": static_report.target_ir.to_dict(),
             "device_id": device_id,
@@ -353,9 +370,22 @@ class APKDynamicAnalyzer:
             "logcat_excerpt": logcat_output[:20000],
         }
         json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        summary_path.write_text(json.dumps({
+            "device_id": device_id,
+            "package_name": package_name,
+            "runtime_window_seconds": self.runtime_window_seconds,
+            "event_count": len(events),
+            "network_hit_count": len(self._extract_network_hits(logcat_output)),
+            "target_file": static_report.target_ir.apk.file_name if static_report.target_ir.apk else "",
+            "generated_at": timestamp,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        logcat_path.write_text(logcat_output[:20000], encoding="utf-8")
         return {
             "dynamic_json_path": str(json_path.as_posix()),
             "dynamic_json_name": json_path.name,
+            "dynamic_summary_path": str(summary_path.as_posix()),
+            "dynamic_logcat_path": str(logcat_path.as_posix()),
+            "dynamic_output_dir": str(run_dir.as_posix()),
         }
 
     def _build_findings(

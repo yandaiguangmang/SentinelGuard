@@ -8,11 +8,16 @@ from typing import Any, Dict, List
 from zipfile import BadZipFile, ZipFile
 
 from SentinelGuard.state import APKIR, DetectionFinding
+from .apk_graph_extractor import APKGraphExtractor
 
-try:
+try:  # pragma: no cover - optional dependency fallback
     from androguard.core.apk import APK
 except Exception:  # pragma: no cover - dependency fallback
-    APK = None
+    try:
+        # androguard==3.3.5 uses the legacy module path.
+        from androguard.core.bytecodes.apk import APK
+    except Exception:  # pragma: no cover - dependency fallback
+        APK = None
 
 
 SUSPICIOUS_PERMISSION_KEYWORDS = (
@@ -134,6 +139,8 @@ def _enrich_with_androguard(apk_ir: APKIR, path: Path) -> APKIR:
         apk_ir.evidence_summary = _build_evidence_summary(apk.get_files(), None)
     except Exception:
         apk_ir.key_files = apk_ir.key_files
+
+    _attach_graph_data(apk_ir, apk)
 
     return apk_ir
 
@@ -293,6 +300,9 @@ def _analyze_apk_ir(apk_ir: APKIR) -> List[DetectionFinding]:
 
 
 def _build_apk_summary(apk_ir: APKIR, findings: List[DetectionFinding]) -> Dict[str, Any]:
+    graph_data = apk_ir.graph_data or {}
+    graph_stats = graph_data.get("stats", {}) if isinstance(graph_data, dict) else {}
+    api_graph = graph_data.get("api_graph", {}) if isinstance(graph_data, dict) else {}
     return {
         "file_name": apk_ir.file_name,
         "package_name": apk_ir.package_name,
@@ -305,7 +315,47 @@ def _build_apk_summary(apk_ir: APKIR, findings: List[DetectionFinding]) -> Dict[
         "finding_count": len(findings),
         "key_file_count": len(apk_ir.key_files),
         "evidence_summary": apk_ir.evidence_summary,
+        "graph_summary": {
+            "cfg_node_count": graph_stats.get("cfg_node_count", 0),
+            "cfg_edge_count": graph_stats.get("cfg_edge_count", 0),
+            "fcg_node_count": graph_stats.get("fcg_node_count", 0),
+            "fcg_edge_count": graph_stats.get("fcg_edge_count", 0),
+            "api_graph_node_count": graph_stats.get("api_graph_node_count", 0),
+            "api_graph_edge_count": graph_stats.get("api_graph_edge_count", 0),
+            "api_call_type_count": graph_stats.get("api_call_type_count", 0),
+            "api_call_count": sum((api_graph.get("api_call_counts", {}) or {}).values()) if isinstance(api_graph, dict) else 0,
+            "total_node_count": graph_stats.get("total_node_count", 0),
+            "total_edge_count": graph_stats.get("total_edge_count", 0),
+            "density": graph_stats.get("density", 0.0),
+            "average_degree": graph_stats.get("average_degree", 0.0),
+            "has_fallback": graph_stats.get("has_fallback", False),
+        },
+        "graph_warnings": (graph_data.get("warnings", []) if isinstance(graph_data, dict) else []),
     }
+
+
+def _attach_graph_data(apk_ir: APKIR, apk: Any) -> None:
+    warnings: List[str] = []
+    try:
+        extractor = APKGraphExtractor()
+        # 直接传入 APK 对象，兼容 androguard==3.3.5 的 get_dex()/get_all_dex()
+        # 以及 extractor 内部基于 APK.get_dex() 的归一化逻辑。
+        graph_result = extractor.extract_all(apk, {
+            "file_name": apk_ir.file_name,
+            "package_name": apk_ir.package_name,
+            "dex_file_count": len(list(apk.get_all_dex())) if hasattr(apk, "get_all_dex") else 0,
+        })
+        apk_ir.graph_data = graph_result
+    except Exception as exc:
+        warnings.append(f"图结构提取失败：{exc}")
+        apk_ir.graph_data = None
+
+    if warnings:
+        evidence_summary = apk_ir.evidence_summary if isinstance(apk_ir.evidence_summary, dict) else {}
+        existing = list(evidence_summary.get("warnings", [])) if isinstance(evidence_summary.get("warnings"), list) else []
+        existing.extend(warnings)
+        evidence_summary["warnings"] = existing
+        apk_ir.evidence_summary = evidence_summary
 
 
 def _read_manifest_text(archive: ZipFile) -> str:

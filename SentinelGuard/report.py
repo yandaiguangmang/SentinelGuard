@@ -49,6 +49,11 @@ def render_html_report(report: DetectionReport) -> str:
     parent_report_block = _render_parent_report_block(report)
     browser_evidence_block = _render_browser_evidence_block(report)
     apk_dynamic_block = _render_apk_dynamic_block(report)
+    apk_graph_block = _render_apk_graph_block(report)
+    apk_consistency_block = _render_apk_consistency_block(report)
+    apk_robustness_block = _render_apk_robustness_block(report)
+    arbitration_block = _render_arbitration_block(report)
+    role_limitations_block = _render_role_limitations_block(report)
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -236,6 +241,11 @@ header {{
         {parent_report_block}
         {browser_evidence_block}
         {apk_dynamic_block}
+        {apk_graph_block}
+        {apk_consistency_block}
+        {apk_robustness_block}
+        {arbitration_block}
+        {role_limitations_block}
       </div>
     </section>
 
@@ -243,7 +253,7 @@ header {{
       <div class="panel-inner">
         <div class="section-title">
           <h3>统一 IR 摘要</h3>
-          <small>输入归一化与对象识别</small>
+          <small>{html.escape(analysis_mode_label)} · URL 采用 0.5×证据分数 + 0.5×深度研判分数，APK 采用 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</small>
         </div>
         {artifact_panel}
       </div>
@@ -278,6 +288,7 @@ header {{
       </div>
       {discussion_panel}
       {model_panel}
+        {role_limitations_block}
     </div>
   </section>
 
@@ -305,6 +316,7 @@ def render_markdown_report(report: DetectionReport) -> str:
         "",
         f"> {analysis_mode_label} · 风险等级：**{report.risk_level.upper()}** · 风险分数：**{report.score}/100**",
         f"> 证据分数：**{report.evidence_score}/100** · 深度研判分数：**{report.deep_score if report.deep_score is not None else '-'} /100**",
+        f"> 评分口径：URL 采用 `0.5 × 证据分数 + 0.5 × 深度研判分数`；APK 采用 `0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励`。",
         "模型深度研判" if report.analysis_mode == "deep" else "",
         "",
         "## 一、检测结论",
@@ -331,6 +343,29 @@ def render_markdown_report(report: DetectionReport) -> str:
             f"- 路径：`{ir.url.path}`",
             f"- 查询参数数量：`{len(ir.url.query_params)}`",
         ])
+    elif ir.apk:
+        lines.extend([
+            f"- APK 文件：`{ir.apk.file_name}`",
+            f"- 包名：`{ir.apk.package_name or '-'}`",
+            f"- 版本名：`{ir.apk.version_name or '-'}`",
+            f"- 版本号：`{ir.apk.version_code or '-'}`",
+            f"- SHA256：`{ir.apk.sha256 or '-'}`",
+            f"- 大小：`{ir.apk.size_bytes}` 字节",
+            f"- 关键文件数：`{len(ir.apk.key_files)}`",
+        ])
+        if ir.apk.robustness:
+            lines.extend([
+                "",
+                "### APK 鲁棒性验证",
+                f"- 鲁棒性分数：`{ir.apk.robustness.robustness_score}`",
+                f"- 检测到的对抗技术：{', '.join(ir.apk.robustness.adversarial_techniques) if ir.apk.robustness.adversarial_techniques else '无'}",
+                f"- 防沙箱：`{ir.apk.robustness.anti_emulator_detected}`",
+                f"- 混淆：`{ir.apk.robustness.obfuscation_detected}`",
+                f"- 反射：`{ir.apk.robustness.reflection_detected}`",
+                f"- 动态加载：`{ir.apk.robustness.dynamic_loading_detected}`",
+            ])
+        if ir.apk.graph_data:
+            lines.extend(["", "### APK 图结构分析", "- 已检测到 APK 图结构数据，可在 HTML 报告中查看 CFG / FCG / API 调用图统计。"])
     else:
         lines.append(ir.message or "该对象类型尚未实现。")
 
@@ -346,6 +381,21 @@ def render_markdown_report(report: DetectionReport) -> str:
             lines.extend([f"- {key}：`{value}`" for key, value in report.apk_dynamic_artifacts.items()])
     else:
         lines.extend(_markdown_browser_evidence(report))
+
+    apk_graph_lines = _markdown_apk_graph_block(report)
+    if apk_graph_lines:
+        lines.extend(["", "## 四点二、图结构分析"])
+        lines.extend(apk_graph_lines)
+
+    consistency_lines = _markdown_apk_consistency_block(report)
+    if consistency_lines:
+        lines.extend(["", "## 四点三、一致性验证"])
+        lines.extend(consistency_lines)
+
+    robustness_lines = _markdown_apk_robustness_block(report)
+    if robustness_lines:
+        lines.extend(["", "## 四点四、鲁棒性分析"])
+        lines.extend(robustness_lines)
 
     lines.extend(["", "## 五、风险证据"])
     if report.findings:
@@ -372,6 +422,16 @@ def render_markdown_report(report: DetectionReport) -> str:
     if report.deep_summary:
         lines.extend(["", "### 主持人最终总结", report.deep_summary, ""])
 
+    role_limitations_lines = _markdown_role_limitations(report)
+    if role_limitations_lines:
+        lines.extend(["", "## 六点一、角色结果说明"])
+        lines.extend(role_limitations_lines)
+
+    arbitration_lines = _markdown_arbitration_block(report)
+    if arbitration_lines:
+        lines.extend(["", "## 七、仲裁结果"])
+        lines.extend(arbitration_lines)
+
     if report.expert_models:
         lines.extend(["", "### 专家模型映射"])
         for role in ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]:
@@ -386,6 +446,58 @@ def render_markdown_report(report: DetectionReport) -> str:
 
     lines.append("")
     return "\n".join(lines)
+
+
+def _role_summary_reason(role: str, opinion: str) -> str:
+    text = (opinion or "").strip()
+    if not text:
+        return "未返回独立结果，已降级为静态结论。"
+    if "仅提供静态" in text or "未执行动态沙箱" in text:
+        return "该角色当前仅输出静态研判结果，原因是 APK 动态沙箱尚未执行或未接入。"
+    if "未接入外部威胁情报" in text:
+        return "该角色当前仅能基于本地离线信息输出结论，原因是外部威胁情报未接入。"
+    if "模型暂不可用" in text or "降级" in text:
+        return "该角色模型调用失败，已使用静态分析结果降级替代。"
+    return "已返回独立研判结果。"
+
+
+def _markdown_role_limitations(report: DetectionReport) -> list[str]:
+    if report.target_ir.target_type != "apk":
+        return []
+    lines = []
+    for role in ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]:
+        opinion = report.expert_opinions.get(role, "")
+        reason = _role_summary_reason(role, opinion)
+        if reason == "已返回独立研判结果。":
+            continue
+        lines.append(f"- **{role}**：{reason}")
+    return lines
+
+
+def _render_role_limitations_block(report: DetectionReport) -> str:
+    if report.target_ir.target_type != "apk":
+        return ""
+    items = []
+    for role in ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]:
+        opinion = report.expert_opinions.get(role, "")
+        reason = _role_summary_reason(role, opinion)
+        if reason == "已返回独立研判结果。":
+            continue
+        items.append(
+            f"<li><strong>{html.escape(role)}</strong>：{html.escape(reason)}</li>"
+        )
+    if not items:
+        return ""
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>角色结果说明</h4>
+          <p class='subtle'>如果某些角色只给出了静态结果，以下会说明原因；这通常发生在动态沙箱未开启、模型服务不可用或外部情报未接入时。</p>
+          <ul>{''.join(items)}</ul>
+        </div>
+      </div>
+    """
 
 
 def _finding_card(finding: DetectionFinding) -> str:
@@ -456,7 +568,7 @@ def _render_summary_cards(report: DetectionReport, stats: dict[str, int]) -> str
         _summary_card("风险等级", report.risk_level.upper(), f"{stats['high_count']} 条高危 / {stats['medium_count']} 条中危证据", "risk"),
         _summary_card("证据分数", f"{report.evidence_score}/100", "基于已采集证据统一计算", "score"),
         _summary_card("深度研判分数", f"{report.deep_score if report.deep_score is not None else '-'} /100", "主持人总结后的单独评分", "mode"),
-        _summary_card("最终风险分数", f"{report.score}/100", "0.5 × 证据分数 + 0.5 × 深度研判分数", "target"),
+        _summary_card("最终风险分数", f"{report.score}/100", "APK：0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励", "target"),
         _summary_card("分析模式", _analysis_mode_label(report), "静态检测结果可继续叠加深度研判", "mode"),
         _summary_card("输入对象", report.target_ir.target_type, report.target_ir.original_input, "target"),
     ]
@@ -485,6 +597,7 @@ def _render_result_panel(report: DetectionReport) -> str:
       <p>证据分数：<strong>{report.evidence_score}/100</strong></p>
       <p>深度研判分数：<strong>{html.escape(deep_score_text)}/100</strong></p>
       <p>最终风险分数：<strong>{report.score}/100</strong></p>
+      <p class="subtle">APK 组合公式：<code>0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励</code></p>
       <p>原始输入：<code>{html.escape(report.target_ir.original_input)}</code></p>
       <p>报告类型：<strong>{html.escape(_analysis_mode_label(report))}</strong></p>
       <div class="pill-row">{tag_html}</div>
@@ -529,6 +642,15 @@ def _render_artifact_panel(ir, url, apk) -> str:
             ("证书签发者", apk.certificate_issuer or "-"),
             ("证书指纹", apk.certificate_sha256 or "-"),
         ]
+        if apk.robustness:
+            rows.extend([
+                ("鲁棒性分数", str(apk.robustness.robustness_score)),
+                ("对抗技术", ", ".join(apk.robustness.adversarial_techniques) or "-"),
+                ("防沙箱", str(apk.robustness.anti_emulator_detected)),
+                ("混淆", str(apk.robustness.obfuscation_detected)),
+                ("反射", str(apk.robustness.reflection_detected)),
+                ("动态加载", str(apk.robustness.dynamic_loading_detected)),
+            ])
         items = "".join(f"<tr><th>{html.escape(k)}</th><td>{html.escape(v)}</td></tr>" for k, v in rows)
         return f"<table class='table'>{items}</table>"
     return f"<p>{html.escape(ir.message or '当前对象尚未实现专用摘要。')}</p>"
@@ -698,6 +820,264 @@ def _render_apk_dynamic_block(report: DetectionReport) -> str:
     """
 
 
+def _render_apk_graph_block(report: DetectionReport) -> str:
+    apk = report.target_ir.apk
+    graph_data = _apk_graph_data_map(getattr(apk, "graph_data", None) if apk else None)
+    if not apk:
+        return ""
+
+    stats = graph_data.get("stats", {}) if isinstance(graph_data.get("stats", {}), dict) else {}
+    cfg = graph_data.get("cfg", {}) if isinstance(graph_data.get("cfg", {}), dict) else {}
+    fcg = graph_data.get("fcg", {}) if isinstance(graph_data.get("fcg", {}), dict) else {}
+    api_graph = graph_data.get("api_graph", {}) if isinstance(graph_data.get("api_graph", {}), dict) else {}
+
+    cfg_nodes = int(stats.get("cfg_node_count", len(cfg.get("nodes", []) or [])))
+    cfg_edges = int(stats.get("cfg_edge_count", len(cfg.get("edges", []) or [])))
+    fcg_nodes = int(stats.get("fcg_node_count", len(fcg.get("nodes", []) or [])))
+    fcg_edges = int(stats.get("fcg_edge_count", len(fcg.get("edges", []) or [])))
+    api_nodes = int(stats.get("api_graph_node_count", len(api_graph.get("nodes", []) or [])))
+    api_edges = int(stats.get("api_graph_edge_count", len(api_graph.get("edges", []) or [])))
+    api_call_counts = api_graph.get("api_call_counts", {}) if isinstance(api_graph.get("api_call_counts", {}), dict) else {}
+    total_api_calls = sum(int(v or 0) for v in api_call_counts.values())
+    density = stats.get("density")
+    density_text = f"{float(density):.4f}" if density is not None else "-"
+    sensitive_api_dist = ", ".join(f"{html.escape(str(k))}:{v}" for k, v in sorted(api_call_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0])))[:12]) or "无"
+    fallback_reason = str(graph_data.get("fallback_reason") or "").strip()
+    graph_warnings = list(graph_data.get("warnings", []) or [])
+    if isinstance(apk.evidence_summary, dict):
+        graph_warnings.extend([str(item) for item in apk.evidence_summary.get("warnings", []) or []])
+    warning_text = "；".join([text for text in [fallback_reason, *graph_warnings] if text])
+    graph_status = "已生成"
+    if graph_data.get("fallback"):
+        graph_status = "回退生成"
+    elif not graph_data:
+        graph_status = "图结构缺失"
+        if not warning_text:
+            warning_text = "未检测到图结构数据，可能是 APK 解析失败、androguard 不可用或未能提取 DEX 图。"
+    elif api_nodes == 0 and api_edges == 0 and not api_call_counts:
+        graph_status = "API 图为空"
+        if not warning_text:
+            warning_text = "已提取 CFG / FCG，但未识别到敏感 API 调用。"
+
+    api_call_items = "".join(
+        f"<li><code>{html.escape(str(k))}</code>：{v}</li>"
+        for k, v in sorted(api_call_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0])))[:20]
+    ) or "<li>无</li>"
+
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>CFG / FCG / API 调用图分析</h4>
+          <p class='subtle'>以下统计基于 APK 解析出的 CFG、FCG 与 API 调用图，仅展示关键数字，不绘制图形。</p>
+          <p class='subtle'>图结构状态：<strong>{html.escape(graph_status)}</strong>{f" · 原因：{html.escape(warning_text)}" if warning_text else ""}</p>
+          <table class='table'>
+            <tr><th>CFG 节点数</th><td>{cfg_nodes}</td></tr>
+            <tr><th>CFG 边数</th><td>{cfg_edges}</td></tr>
+            <tr><th>FCG 节点数</th><td>{fcg_nodes}</td></tr>
+            <tr><th>FCG 边数</th><td>{fcg_edges}</td></tr>
+            <tr><th>FCG 密度</th><td>{density_text}</td></tr>
+            <tr><th>API 调用图节点数</th><td>{api_nodes}</td></tr>
+            <tr><th>API 调用图边数</th><td>{api_edges}</td></tr>
+            <tr><th>API 总调用数</th><td>{total_api_calls}</td></tr>
+            <tr><th>敏感 API 调用分布</th><td>{sensitive_api_dist}</td></tr>
+          </table>
+          <div style='height:12px'></div>
+          <h4>API 调用明细</h4>
+          <ul>{api_call_items}</ul>
+        </div>
+      </div>
+    """
+
+
+def _render_apk_consistency_block(report: DetectionReport) -> str:
+    apk = report.target_ir.apk
+    arbitration = getattr(apk, "arbitration_result", None) if apk else None
+    if not arbitration:
+        arbitration = report.arbitration_result
+    if not arbitration:
+        return ""
+
+    consistency_score = getattr(arbitration, "consistency_score", None)
+    consistency_level = str(getattr(arbitration, "consistency_level", "-") or "-").lower()
+    discrepancies = list(getattr(arbitration, "discrepancies", []) or [])
+    suspected = list(getattr(arbitration, "suspected_compromised", []) or [])
+    level_label, level_color = _consistency_level_style(consistency_level)
+    discrepancy_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in discrepancies) or "<li>无</li>"
+    suspected_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in suspected) or "<li>无</li>"
+
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>一致性验证</h4>
+          <p class='subtle'>
+            <span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>一致性 {html.escape(level_label)}</span>
+            <span class='pill muted' style='margin-left:8px;'>一致性分数 {html.escape(str(consistency_score if consistency_score is not None else '-'))}</span>
+          </p>
+          <table class='table'>
+            <tr><th>一致性分数</th><td>{html.escape(str(consistency_score if consistency_score is not None else '-'))}</td></tr>
+            <tr><th>一致性等级</th><td><span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>{html.escape(str(consistency_level).upper())}</span></td></tr>
+            <tr><th>分歧点</th><td><ul>{discrepancy_items}</ul></td></tr>
+            <tr><th>被污染模块</th><td><ul>{suspected_items}</ul></td></tr>
+          </table>
+        </div>
+      </div>
+    """
+
+
+def _render_apk_robustness_block(report: DetectionReport) -> str:
+    apk = report.target_ir.apk
+    robustness = getattr(apk, "robustness", None) if apk else None
+    if not robustness:
+        return ""
+
+    techniques = list(getattr(robustness, "adversarial_techniques", []) or [])
+    score = getattr(robustness, "robustness_score", None)
+    assessment = _robustness_assessment(score, techniques)
+    techniques_html = "".join(f"<li>{html.escape(str(item))}</li>" for item in techniques) or "<li>无</li>"
+
+    warning_color = "#dc2626" if techniques else "#f59e0b" if (score is not None and float(score) >= 70) else "#16a34a"
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>鲁棒性分析</h4>
+          <p class='subtle'>
+            <span class='pill' style='background:{warning_color}; border-color:{warning_color}; color:#fff;'>抗干扰能力：{html.escape(assessment)}</span>
+            <span class='pill muted' style='margin-left:8px;'>鲁棒性分数 {html.escape(str(score if score is not None else '-'))}</span>
+          </p>
+          <table class='table'>
+            <tr><th>对抗技术</th><td><ul>{techniques_html}</ul></td></tr>
+            <tr><th>鲁棒性分数</th><td>{html.escape(str(score if score is not None else '-'))}</td></tr>
+            <tr><th>抗干扰能力评估</th><td>{html.escape(assessment)}</td></tr>
+          </table>
+        </div>
+      </div>
+    """
+
+
+def _markdown_apk_graph_block(report: DetectionReport) -> list[str]:
+    apk = report.target_ir.apk
+    graph_data = _apk_graph_data_map(getattr(apk, "graph_data", None) if apk else None)
+    if not apk:
+        return []
+    stats = graph_data.get("stats", {}) if isinstance(graph_data.get("stats", {}), dict) else {}
+    cfg = graph_data.get("cfg", {}) if isinstance(graph_data.get("cfg", {}), dict) else {}
+    fcg = graph_data.get("fcg", {}) if isinstance(graph_data.get("fcg", {}), dict) else {}
+    api_graph = graph_data.get("api_graph", {}) if isinstance(graph_data.get("api_graph", {}), dict) else {}
+    api_call_counts = api_graph.get("api_call_counts", {}) if isinstance(api_graph.get("api_call_counts", {}), dict) else {}
+    api_nodes = int(stats.get("api_graph_node_count", len(api_graph.get("nodes", []) or [])))
+    api_edges = int(stats.get("api_graph_edge_count", len(api_graph.get("edges", []) or [])))
+    total_api_calls = sum(int(v or 0) for v in api_call_counts.values())
+    density = stats.get("density")
+    fallback_reason = str(graph_data.get("fallback_reason") or "").strip()
+    graph_warnings = [str(item) for item in (graph_data.get("warnings", []) or []) if str(item).strip()]
+    if isinstance(apk.evidence_summary, dict):
+        graph_warnings.extend([str(item) for item in apk.evidence_summary.get("warnings", []) or [] if str(item).strip()])
+    warning_text = "；".join([text for text in [fallback_reason, *graph_warnings] if text])
+    graph_status = "已生成"
+    if graph_data.get("fallback"):
+        graph_status = "回退生成"
+    elif not graph_data:
+        graph_status = "图结构缺失"
+        if not warning_text:
+            warning_text = "未检测到图结构数据，可能是 APK 解析失败、androguard 不可用或未能提取 DEX 图。"
+    elif api_nodes == 0 and api_edges == 0 and not api_call_counts:
+        graph_status = "API 图为空"
+        if not warning_text:
+            warning_text = "已提取 CFG / FCG，但未识别到敏感 API 调用。"
+    sensitive_api_dist = ", ".join(f"{k}:{v}" for k, v in sorted(api_call_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0])))[:12]) or "无"
+    lines = [
+        f"- 图结构状态：`{graph_status}`" + (f"；原因：{warning_text}" if warning_text else ""),
+        "### CFG / FCG / API 调用图",
+        f"- CFG 节点数：`{int(stats.get('cfg_node_count', len(cfg.get('nodes', []) or [])))}`",
+        f"- CFG 边数：`{int(stats.get('cfg_edge_count', len(cfg.get('edges', []) or [])))}`",
+        f"- FCG 节点数：`{int(stats.get('fcg_node_count', len(fcg.get('nodes', []) or [])))}`",
+        f"- FCG 边数：`{int(stats.get('fcg_edge_count', len(fcg.get('edges', []) or [])))}`",
+        f"- FCG 密度：`{float(density):.4f}`" if density is not None else "- FCG 密度：`-`",
+        f"- API 调用图节点数：`{int(stats.get('api_graph_node_count', len(api_graph.get('nodes', []) or [])))}`",
+        f"- API 调用图边数：`{int(stats.get('api_graph_edge_count', len(api_graph.get('edges', []) or [])))}`",
+        f"- API 总调用数：`{total_api_calls}`",
+        f"- 敏感 API 调用分布：{sensitive_api_dist}",
+    ]
+    if api_call_counts:
+        lines.append("- API 调用明细：")
+        lines.extend([f"  - `{k}`：{v}" for k, v in sorted(api_call_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0])))[:20]])
+    return lines
+
+
+def _markdown_apk_consistency_block(report: DetectionReport) -> list[str]:
+    apk = report.target_ir.apk
+    arbitration = getattr(apk, "arbitration_result", None) if apk else None
+    if not arbitration:
+        arbitration = report.arbitration_result
+    if not arbitration:
+        return []
+    lines = [
+        f"- 一致性分数：`{getattr(arbitration, 'consistency_score', '-')}`",
+        f"- 一致性等级：`{str(getattr(arbitration, 'consistency_level', '-') or '-').upper()}`",
+    ]
+    discrepancies = list(getattr(arbitration, "discrepancies", []) or [])
+    suspected = list(getattr(arbitration, "suspected_compromised", []) or [])
+    lines.append(f"- 分歧点：{', '.join(discrepancies) if discrepancies else '无'}")
+    lines.append(f"- 被污染模块：{', '.join(suspected) if suspected else '无'}")
+    return lines
+
+
+def _markdown_apk_robustness_block(report: DetectionReport) -> list[str]:
+    apk = report.target_ir.apk
+    robustness = getattr(apk, "robustness", None) if apk else None
+    if not robustness:
+        return []
+    techniques = list(getattr(robustness, "adversarial_techniques", []) or [])
+    score = getattr(robustness, "robustness_score", '-')
+    return [
+        f"- 对抗技术：{', '.join(techniques) if techniques else '无'}",
+        f"- 鲁棒性分数：`{score}`",
+        f"- 抗干扰能力评估：**{_robustness_assessment(score, techniques)}**",
+    ]
+
+
+def _render_arbitration_block(report: DetectionReport) -> str:
+    result = report.arbitration_result
+    if not result:
+        return ""
+    discrepancies = "<br>".join(html.escape(item) for item in result.discrepancies) or "无"
+    compromised = ", ".join(html.escape(item) for item in result.suspected_compromised) or "无"
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>仲裁结果</h4>
+          <table class='table'>
+            <tr><th>一致性分数</th><td>{result.consistency_score}</td></tr>
+            <tr><th>一致性等级</th><td>{html.escape(result.consistency_level)}</td></tr>
+            <tr><th>加权置信度</th><td>{result.weighted_confidence}</td></tr>
+            <tr><th>疑似污染源</th><td>{compromised}</td></tr>
+            <tr><th>分歧与模式</th><td>{discrepancies}</td></tr>
+          </table>
+        </div>
+      </div>
+    """
+
+
+def _markdown_arbitration_block(report: DetectionReport) -> list[str]:
+    result = report.arbitration_result
+    if not result:
+        return []
+    lines = [
+        f"- 一致性分数：`{result.consistency_score}`",
+        f"- 一致性等级：`{result.consistency_level}`",
+        f"- 加权置信度：`{result.weighted_confidence}`",
+        f"- 疑似污染源：{', '.join(result.suspected_compromised) if result.suspected_compromised else '无'}",
+    ]
+    if result.discrepancies:
+        lines.append("- 分歧与模式：")
+        lines.extend([f"  - {item}" for item in result.discrepancies])
+    return lines
+
+
 def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
     lines: list[str] = []
     evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
@@ -706,6 +1086,56 @@ def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
     if evidence.get("proxy_used") is not None:
         lines.append(f"- 代理是否参与：`{bool(evidence.get('proxy_used'))}`")
     return lines
+
+
+def _apk_graph_data_map(graph_data):
+    if not graph_data:
+        return {}
+    if isinstance(graph_data, dict):
+        return graph_data
+
+    # 兼容未来可能直接传入 GraphStructure 数据类的情况。
+    mapped = {
+        "cfg": {"nodes": getattr(graph_data, "cfg_nodes", []) or [], "edges": getattr(graph_data, "edges", []) or []},
+        "fcg": {"nodes": getattr(graph_data, "fcg_nodes", []) or [], "edges": getattr(graph_data, "fcg_edges", []) or []},
+        "api_graph": {
+            "nodes": getattr(graph_data, "api_graph_nodes", []) or [],
+            "edges": getattr(graph_data, "api_graph_edges", []) or [],
+            "api_call_counts": getattr(graph_data, "api_call_counts", {}) or {},
+        },
+        "stats": getattr(graph_data, "graph_stats", {}) or {},
+    }
+    return mapped
+
+
+def _consistency_level_style(consistency_level: str) -> tuple[str, str]:
+    level = (consistency_level or "").lower()
+    if level == "high":
+        return "HIGH", "#16a34a"
+    if level == "medium":
+        return "MEDIUM", "#f59e0b"
+    if level == "low":
+        return "LOW", "#dc2626"
+    return (level.upper() if level else "UNKNOWN"), "#64748b"
+
+
+def _robustness_assessment(score, techniques: Sequence[str]) -> str:
+    technique_count = len([item for item in techniques if str(item).strip()])
+    try:
+        numeric_score = float(score)
+    except (TypeError, ValueError):
+        numeric_score = None
+
+    if technique_count >= 3:
+        return "弱"
+    if technique_count >= 1:
+        return "中"
+    if numeric_score is not None:
+        if numeric_score < 40:
+            return "弱"
+        if numeric_score < 70:
+            return "中"
+    return "强"
 
 
 def _group_findings_by_severity(findings: Sequence[DetectionFinding]) -> dict[str, list[DetectionFinding]]:

@@ -134,6 +134,9 @@ class APKIR:
     extracted_strings: List[str] = field(default_factory=list)
     key_files: List[str] = field(default_factory=list)
     evidence_summary: Dict[str, Any] = field(default_factory=dict)
+    graph_data: Optional[GraphStructure] = None
+    arbitration_result: Optional[ArbitrationResult] = None
+    robustness: Optional[RobustnessResult] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -193,6 +196,7 @@ class DetectionReport:
     markdown_report_path: str = ""
     evidence_score: int = 0
     deep_score: Optional[int] = None
+    arbitration_result: Optional[ArbitrationResult] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -217,4 +221,98 @@ class DetectionReport:
             "parent_markdown_report_path": self.parent_markdown_report_path,
             "html_report_path": self.html_report_path,
             "markdown_report_path": self.markdown_report_path,
+            "arbitration_result": self.arbitration_result.to_dict() if self.arbitration_result else None,
         }
+
+
+@dataclass
+class GraphNodeFeature:
+    move_count: int = 0
+    return_count: int = 0
+    monitor_count: int = 0
+    instance_count: int = 0
+    array_count: int = 0
+    jump_count: int = 0
+    compare_count: int = 0
+    field_count: int = 0
+    call_count: int = 0
+    transform_count: int = 0
+    arithmetic_count: int = 0
+    logic_count: int = 0
+    string_const_count: int = 0
+    number_const_count: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class GraphStructure:
+    cfg: Dict[str, Any] = field(default_factory=lambda: {"nodes": [], "edges": []})
+    fcg: Dict[str, Any] = field(default_factory=lambda: {"nodes": [], "edges": []})
+    api_graph: Dict[str, Any] = field(default_factory=lambda: {"nodes": [], "edges": [], "api_call_counts": {}})
+    stats: Dict[str, Any] = field(default_factory=dict)
+    fallback: bool = False
+    fallback_reason: str = ""
+    source: Dict[str, Any] = field(default_factory=dict)
+    warnings: List[str] = field(default_factory=list)
+
+    @property
+    def cfg_nodes(self) -> List[Any]:
+        return list(self.cfg.get("nodes", []) or [])
+
+    @property
+    def edges(self) -> List[Any]:
+        return list(self.cfg.get("edges", []) or [])
+
+    @property
+    def fcg_nodes(self) -> List[Any]:
+        return list(self.fcg.get("nodes", []) or [])
+
+    @property
+    def fcg_edges(self) -> List[Any]:
+        return list(self.fcg.get("edges", []) or [])
+
+    @property
+    def api_graph_nodes(self) -> List[Any]:
+        return list(self.api_graph.get("nodes", []) or [])
+
+    @property
+    def api_graph_edges(self) -> List[Any]:
+        return list(self.api_graph.get("edges", []) or [])
+
+    @property
+    def api_call_counts(self) -> Dict[str, int]:
+        return dict(self.api_graph.get("api_call_counts", {}) or {})
+
+    @property
+    def graph_stats(self) -> Dict[str, Any]:
+        return dict(self.stats)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ArbitrationResult:
+    consistency_score: float = 0.0
+    consistency_level: str = "low"
+    discrepancies: List[str] = field(default_factory=list)
+    suspected_compromised: List[str] = field(default_factory=list)
+    weighted_confidence: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class RobustnessResult:
+    adversarial_techniques: List[str] = field(default_factory=list)
+    robustness_score: float = 0.0
+    anti_emulator_detected: bool = False
+    obfuscation_detected: bool = False
+    reflection_detected: bool = False
+    dynamic_loading_detected: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)

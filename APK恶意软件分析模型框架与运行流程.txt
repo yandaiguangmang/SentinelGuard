@@ -1,0 +1,254 @@
+SentinelGuard APK 恶意软件分析模型框架与运行流程
+==================================================
+
+一、模型定位
+-----------
+SentinelGuard 是一个面向 URL 与 APK 的恶意检测平台。
+其中，APK 恶意软件分析模型以“统一输入解析 + 静态证据提取 + 深度协同研判 + 动态沙箱采集 + 报告输出”为主线，形成一套可用于样本初筛、风险研判和结果留痕的分析流程。
+
+APK 模型并不是单一分类器，而是一个分层式分析框架：
+- 第一层：APK 输入识别与中间表示构建
+- 第二层：静态特征提取与规则研判
+- 第三层：基于五角色的深度 LLM 协同分析
+- 第四层：基于 adb 与模拟器的动态沙箱分析
+- 第五层：统一评分、风险分级与 HTML/Markdown/JSON 报告导出
+
+
+二、整体框架
+-----------
+APK 分析相关核心模块如下：
+
+1. `SentinelGuard/parsers/input_parser.py`
+   - 负责识别用户输入是否为 APK。
+   - 构建统一的中间表示 `TargetIR`，其中 APK 部分使用 `APKIR` 承载。
+
+2. `SentinelGuard/analyzers/apk_analyzer.py`
+   - 负责 APK 静态分析。
+   - 优先使用 `androguard` 解析 APK 元数据；若不可用，则使用 ZIP 方式回退提取。
+   - 提取包名、版本号、权限、组件、签名、DEX 字符串、关键文件等。
+   - 生成静态证据 `DetectionFinding` 与 `apk_summary`。
+
+3. `SentinelGuard/analyzers/apk_deep_analyzer.py`
+   - 负责 APK 静态证据的深度协同研判。
+   - 采用五个角色：主持人、静态分析员、行为分析员、情报分析员、处置建议员。
+   - 每个角色可绑定独立 API Key、Base URL、模型名。
+   - 输入为静态报告，输出为结构化 JSON 的深度结论、补充发现和模型映射。
+
+4. `SentinelGuard/analyzers/apk_dynamic_analyzer.py`
+   - 负责 APK 动态沙箱分析。
+   - 基于 Android Studio 模拟器与 `adb` 完成安装、启动、logcat 采集、权限/文件/服务探测。
+   - 将动态线索整理为 `dynamic_sandbox`，再交给五角色模型做动态研判。
+
+5. `SentinelGuard/judgement.py`
+   - 负责编排整个检测流程。
+   - 根据输入类型调用静态分析、深度分析或动态分析。
+   - 最终聚合分数、风险等级、专家意见，并保存报告。
+
+6. `SentinelGuard/scoring.py`
+   - 负责分数归一化、风险级别映射、证据分合并。
+
+7. `SentinelGuard/report.py`
+   - 负责生成 HTML / Markdown 报告，并写入磁盘。
+
+8. `SentinelGuard/state.py`
+   - 定义所有核心数据结构：`AnalysisRuntimeConfig`、`APKIR`、`TargetIR`、`DetectionFinding`、`DetectionReport`。
+
+
+三、APK 静态分析框架
+------------------
+静态分析由 `analyze_apk(target_ir)` 完成，核心目标是把 APK 原始文件转化为可解释的证据集合。
+
+1. 输入校验
+   - 仅当 `target_ir.target_type == "apk"` 且 `target_ir.apk` 存在时才继续。
+   - 否则直接返回空结果。
+
+2. APK 信息补全
+   - 先读取文件大小、SHA256。
+   - 若 `androguard` 可用，则优先使用它获取：
+     - 包名
+     - 版本名 / 版本号
+     - 权限列表
+     - Activity / Service / Receiver / Provider
+     - 证书主体、颁发者、证书摘要
+     - DEX 字符串
+   - 若 `androguard` 不可用，则退化为 ZIP 解析：
+     - 读取 Manifest
+     - 提取权限、组件、签名文件、资源文件、文本字符串
+
+3. 静态规则分析
+   规则主要覆盖以下方向：
+   - 关键文件存在性：Manifest、签名文件、DEX、资源、配置文件
+   - 包名缺失或不完整
+   - 包体积异常偏大
+   - 敏感权限请求：短信、通讯录、录音、摄像头、安装未知应用、辅助功能、设备管理等
+   - 签名证书线索异常
+   - 可疑字符串：URL、shell、su、chmod、wget、curl、DexClassLoader、Runtime.getRuntime 等
+   - 高风险组件：BootReceiver、AdminReceiver、AccessibilityService、DeviceAdminReceiver、JobService 等
+
+4. 输出
+   - 输出静态发现列表 `findings`
+   - 输出 `apk_summary`，包括：文件名、包名、版本、哈希、大小、权限数、组件数、关键文件数等
+
+
+四、APK 深度协同研判框架
+----------------------
+APK 静态深度研判由 `APKDeepAnalyzer` 完成。
+
+1. 研判角色
+   - 主持人：最终裁决与结构化总结
+   - 静态分析员：关注 Manifest、权限、组件、签名、资源和字符串
+   - 行为分析员：关注自启动、后台驻留、下载/更新/持久化链路
+   - 情报分析员：说明离线分析边界，并结合来源、签名、分发渠道判断
+   - 处置建议员：输出可执行处置建议
+
+2. 输入内容
+   - 目标信息 `target`
+   - 静态报告 `static_report`
+   - APK 原始信息 `apk_ir`
+   - 关键文件与证据摘要 `key_files`、`evidence_summary`
+   - 当前模型配置 `expert_models`
+   - 代理配置状态 `proxy_enabled`
+
+3. 调用顺序
+   - 先调用四个子角色：静态分析员、行为分析员、情报分析员、处置建议员
+   - 每个子角色返回严格 JSON：
+     - `opinion`
+     - `risk_hint`
+     - `additional_findings`
+   - 再将四个子角色输出与静态证据一起交给主持人总结
+
+4. 结果归一化
+   - 解析 JSON
+   - 校验各角色是否有意见
+   - 将补充发现转成 `DetectionFinding`
+   - 由主持人给出最终 `risk_level`、`score`、`summary`、`expert_opinions`、`expert_models`、`additional_findings`
+
+5. 降级机制
+   - 若某个角色调用失败，会生成 fallback 输出
+   - 若主持人失败，则返回降级结果，保留已成功收集的意见与发现
+   - 这样可以保证结果可用，而不是因单个模型异常导致整条链路失败
+
+
+五、APK 动态沙箱分析框架
+----------------------
+动态分析由 `APKDynamicAnalyzer` 完成，是对静态分析的补充验证。
+
+1. 前置条件
+   - 需要本机具备 `adb`
+   - 需要连接 Android 模拟器
+   - 需要可以在模拟器中安装 APK
+
+2. 动态采集流程
+   - 解析静态报告中的 APK 信息
+   - 获取或推断包名
+   - 清空 `logcat`
+   - 使用 `adb install -r` 安装 APK
+   - 使用 `monkey` 启动应用
+   - 在限定时间窗口内采集 `logcat`
+   - 采集包信息：
+     - `dumpsys package`
+     - `resolve-activity`
+     - `pidof`
+     - `appops get`
+   - 收集动态线索：
+     - 崩溃 / FATAL EXCEPTION
+     - ANR / Application Not Responding
+     - 网络地址、域名、IP
+     - 运行时授予的高危权限
+     - 可疑落地文件（dex/jar/apk/so/zip）
+     - 无障碍 / 设备管理 / 通知监听等持久化服务
+
+3. 动态证据整理
+   - 动态线索会被封装到 `dynamic_context`
+   - 生成 `apk_dynamic_summary` 与 `apk_dynamic_artifacts`
+   - 额外输出 JSON 证据包，便于留档和复核
+
+4. 动态深度研判
+   - 动态分析阶段会复用 APK 深度协同分析框架
+   - 但会额外注入 `dynamic_sandbox`
+   - 主持人要求最终结论必须主要依据动态线索
+
+
+六、主运行流程
+------------
+APK 检测的实际运行顺序如下：
+
+1. 用户提交 APK 文件或 APK 路径
+2. `parse_target()` 将输入解析为 `TargetIR`
+3. `judgement.py` 调用 `build_static_report()`
+4. `apk_analyzer.py` 执行静态特征提取与规则检测
+5. 生成静态 `DetectionReport`
+6. 根据运行模式选择后续流程：
+   - 仅静态：直接输出报告
+   - 深度研判：进入 `deep_analyze_apk()`
+   - 动态沙箱：进入 `dynamic_analyze_apk()`
+7. 对静态发现、深度发现、动态发现去重合并
+8. 使用 `scoring.py` 计算证据分、深度分与最终总分
+9. 使用 `risk_level_from_score()` 映射风险等级
+10. 通过 `report.py` 生成 HTML / Markdown 报告，并落盘保存
+
+
+七、运行时数据流
+----------------
+数据在系统中主要以以下结构流转：
+
+`原始输入` → `TargetIR` → `APKIR` → `DetectionFinding[]` → `DetectionReport` → `HTML/Markdown/JSON`
+
+更具体地说：
+
+- `TargetIR`
+  - 负责描述目标类型、原始输入、解析状态
+- `APKIR`
+  - 负责保存 APK 元数据、权限、组件、签名、字符串、关键文件、证据摘要
+- `DetectionFinding`
+  - 负责保存一条规则命中的证据、描述、建议
+- `DetectionReport`
+  - 负责保存完整检测结果，包括风险等级、分数、专家意见、深度摘要和报告路径
+
+
+八、评分与风险分级
+----------------
+评分逻辑由 `scoring.py` 统一管理：
+
+- `score_from_findings(findings)`：根据证据强度汇总证据分
+- `normalize_score(value)`：规范化模型返回分值
+- `combine_scores(evidence_score, deep_score)`：合并证据分与深度分
+- `risk_level_from_score(score)`：把分数映射为 low / medium / high / critical
+
+因此，最终结论不是单纯依赖规则命中数，而是综合：
+- 静态证据强度
+- 深度模型评分
+- 动态沙箱线索
+- 各角色一致性
+
+
+九、报告输出内容
+----------------
+检测完成后，`report.py` 会生成：
+
+- HTML 报告
+- Markdown 报告
+- APK 动态分析 JSON 证据包
+
+报告一般包含：
+- 检测对象摘要
+- 风险等级与风险分数
+- APK 静态证据
+- 动态沙箱线索
+- 多角色协同结论
+- 模型映射信息
+- 处置建议
+
+
+十、总结
+------
+SentinelGuard 的 APK 恶意软件分析模型，本质上是一个“证据驱动 + 多角色 LLM 协同 + 可选动态沙箱验证”的复合式分析框架。
+
+其优势是：
+- 静态分析可快速初筛
+- 深度研判可提高解释性和处置建议质量
+- 动态沙箱可验证真实行为
+- 报告层可直接用于留档与复核
+
+其运行闭环是：
+`输入 APK` → `静态分析` → `深度/动态研判` → `评分合并` → `报告输出`

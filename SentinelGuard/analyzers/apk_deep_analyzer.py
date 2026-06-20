@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 from typing import Any, Dict, List
 
 import httpx
 from openai import OpenAI
 
 from config import settings
-from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_from_score, score_from_findings
+from SentinelGuard.arbitrator import Arbitrator
+from SentinelGuard.robustness_validator import RobustnessValidator
+from SentinelGuard.scoring import combine_apk_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
@@ -40,10 +43,14 @@ ROLE_SYSTEM_PROMPTS = {
 2. 若证据不足，必须明确说明当前仅基于离线静态证据。
 3. summary 要体现最终结论，不能只是简单复述。
 4. expert_opinions 必须保留五个角色的原始意见或整理后的摘要。
-5. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_models、expert_opinions、additional_findings。
+5. 你将同时收到仲裁器输出（consistent score、discrepancies、suspected_compromised）与鲁棒性验证输出（adversarial techniques、robustness score），必须纳入最终总结。
+6. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_models、expert_opinions、additional_findings、arbitration_result、robustness_result。
+7. summary 必须使用中文，不要输出英文总结。
 """,
     "静态分析员": """你是 APK 恶意软件深度研判中的静态分析员。
 关注 Manifest、权限、组件、签名、资源配置、DEX/Smali/脚本文件、可疑字符串和关键文件证据。
+
+如果输入中包含 dynamic_sandbox / dynamic_artifacts / dynamic_output_dir，请将其视为已接入的动态沙箱补充证据，仅用于交叉印证静态结论，不要输出“未执行动态沙箱”或“未接入”之类的旧状态描述。
 
 请输出严格 JSON：
 {
@@ -55,7 +62,9 @@ ROLE_SYSTEM_PROMPTS = {
 }
 """,
     "行为分析员": """你是 APK 恶意软件深度研判中的行为分析员。
-关注自启动、后台驻留、敏感权限组合、服务/Receiver/Provider 设计、下载/安装/更新链路和持久化行为线索。
+关注自启动、后台驻留、敏感权限组合、服务/Receiver/Provider 设计、下载/安装/更新链路、持久化行为线索，以及动态沙箱中采集到的运行日志、落地文件、网络命中、权限与系统服务痕迹。
+
+如果输入中包含 dynamic_sandbox / dynamic_artifacts / dynamic_output_dir，请明确基于这些动态证据输出行为结论；不要再说“动态沙箱尚未执行”“未接入”或类似内容。
 
 请输出严格 JSON：
 {
@@ -99,9 +108,11 @@ class APKDeepAnalyzer:
         self.role_models = self._resolve_role_models()
         self.proxy_map = _build_proxy_map(self.runtime_config)
         self.role_clients = {role: self._build_client(role) for role in DEEP_ROLE_ORDER}
+        self.arbitrator = Arbitrator()
+        self.robustness_validator = RobustnessValidator()
 
     def analyze(self, static_report: DetectionReport, progress_callback=None) -> Dict[str, Any]:
-        payload = self._build_payload(static_report)
+        base_payload = self._build_payload(static_report)
 
         role_outputs: Dict[str, Dict[str, Any]] = {}
         if progress_callback:
@@ -110,7 +121,8 @@ class APKDeepAnalyzer:
             if progress_callback:
                 progress_callback(f"deep_{self._role_stage(role)}", f"正在进行{role}分析", self._role_progress(role))
             try:
-                role_result = self._call_role_model(role, payload)
+                role_payload = self._build_role_payload(role, static_report, base_payload)
+                role_result = self._call_role_model(role, role_payload)
                 if not role_result.get("success"):
                     role_outputs[role] = self._build_fallback_role_output(role, static_report, role_result.get("error"))
                     continue
@@ -118,16 +130,37 @@ class APKDeepAnalyzer:
             except Exception as exc:
                 role_outputs[role] = self._build_fallback_role_output(role, static_report, exc)
 
+        role_scores = self._extract_role_scores(role_outputs, static_report)
+        apk_ir = static_report.target_ir.apk
+        graph_data = apk_ir.graph_data if apk_ir else None
+        arbitration_result = None
+        robustness_result = None
+        if apk_ir is not None:
+            arbitration_result = self.arbitrator.arbitrate(
+                static_score=role_scores.get("静态分析员", static_report.score),
+                behavior_score=role_scores.get("行为分析员", static_report.score),
+                intelligence_score=role_scores.get("情报分析员", static_report.score),
+                static_findings=_coerce_findings(role_outputs.get("静态分析员", {}).get("additional_findings")),
+                behavior_findings=_coerce_findings(role_outputs.get("行为分析员", {}).get("additional_findings")),
+                intelligence_findings=_coerce_findings(role_outputs.get("情报分析员", {}).get("additional_findings")),
+            )
+            robustness_result = self.robustness_validator.validate(static_report, apk_ir, graph_data)
+            apk_ir.arbitration_result = arbitration_result
+            apk_ir.robustness = robustness_result
+
         if progress_callback:
             progress_callback("deep_host", "正在进行主持人总结", 90)
         host_payload = self._build_host_payload(static_report, role_outputs)
+        host_payload["role_scores"] = role_scores
+        host_payload["arbitration_result"] = arbitration_result.to_dict() if arbitration_result else None
+        host_payload["robustness_result"] = robustness_result.to_dict() if robustness_result else None
         host_result = self._call_role_model("主持人", host_payload)
         if not host_result.get("success"):
             return self._build_degraded_result(static_report, role_outputs, host_result.get("error"))
         try:
             if progress_callback:
                 progress_callback("deep_done", "APK 深度研判已完成", 96)
-            return self._normalize_result(host_result, static_report, role_outputs)
+            return self._normalize_result(host_result, static_report, role_outputs, arbitration_result, robustness_result, role_scores)
         except Exception as exc:
             return self._build_degraded_result(static_report, role_outputs, exc)
 
@@ -209,6 +242,24 @@ class APKDeepAnalyzer:
             "proxy_enabled": bool(self.runtime_config.proxy_dict()),
         }
 
+    def _build_role_payload(self, role: str, static_report: DetectionReport, base_payload: Dict[str, Any]) -> Dict[str, Any]:
+        payload = dict(base_payload)
+        if role in {"静态分析员", "行为分析员"} and static_report.analysis_mode == "dynamic":
+            dynamic_summary = dict(static_report.apk_dynamic_summary or {})
+            dynamic_artifacts = dict(static_report.apk_dynamic_artifacts or {})
+            payload["dynamic_sandbox"] = {
+                "summary": dynamic_summary,
+                "artifacts": dynamic_artifacts,
+                "output_dir": str(dynamic_artifacts.get("dynamic_output_dir") or ""),
+                "dynamic_json_path": dynamic_artifacts.get("dynamic_json_path", ""),
+                "dynamic_summary_path": dynamic_artifacts.get("dynamic_summary_path", ""),
+                "dynamic_logcat_path": dynamic_artifacts.get("dynamic_logcat_path", ""),
+            }
+            payload["dynamic_summary"] = dynamic_summary
+            payload["dynamic_artifacts"] = dynamic_artifacts
+            payload["dynamic_output_dir"] = str(dynamic_artifacts.get("dynamic_output_dir") or "")
+        return payload
+
     @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -241,6 +292,9 @@ class APKDeepAnalyzer:
             },
             "expert_models": self.role_models,
             "role_outputs": self._serialize_role_outputs(role_outputs),
+            "role_scores": {},
+            "arbitration_result": None,
+            "robustness_result": None,
             "proxy_enabled": False,
         }
 
@@ -330,7 +384,15 @@ class APKDeepAnalyzer:
             "additional_findings": findings,
         }
 
-    def _normalize_result(self, result: Dict[str, Any], static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    def _normalize_result(
+        self,
+        result: Dict[str, Any],
+        static_report: DetectionReport,
+        role_outputs: Dict[str, Dict[str, Any]],
+        arbitration_result: Any = None,
+        robustness_result: Any = None,
+        role_scores: Dict[str, int] | None = None,
+    ) -> Dict[str, Any]:
         if not result.get("success"):
             raise ValueError(result.get("error") or "模型深度检查失败")
 
@@ -365,10 +427,19 @@ class APKDeepAnalyzer:
 
         host_score = normalize_score(data.get("score"), static_report.score)
         evidence_score = score_from_findings(static_report.findings + additional_findings)
-        score = combine_scores(evidence_score, host_score)
+        score = combine_apk_scores(evidence_score, host_score, data.get("arbitration_result"), data.get("robustness_result"))
         risk_level = risk_level_from_score(score)
-        summary = str(data.get("summary") or f"模型基于 APK 静态证据进行了五角色深度研判，综合风险等级为 {risk_level}。")
-        normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
+        summary = self._normalize_host_summary(
+            data.get("summary"),
+            static_report,
+            normalized_opinions,
+            risk_level,
+            score,
+        )
+        normalized_opinions["主持人"] = summary
+
+        arbitration_payload = _coerce_mapping(data.get("arbitration_result")) or (arbitration_result.to_dict() if arbitration_result else {})
+        robustness_payload = _coerce_mapping(data.get("robustness_result")) or (robustness_result.to_dict() if robustness_result else {})
 
         return {
             "risk_level": risk_level,
@@ -379,7 +450,36 @@ class APKDeepAnalyzer:
             "expert_models": normalized_models,
             "deep_summary": summary,
             "additional_findings": additional_findings,
+            "role_scores": role_scores or self._extract_role_scores(role_outputs, static_report),
+            "arbitration_result": arbitration_payload,
+            "robustness_result": robustness_payload,
         }
+
+    def _normalize_host_summary(
+        self,
+        raw_summary: Any,
+        static_report: DetectionReport,
+        expert_opinions: Dict[str, str],
+        risk_level: str,
+        score: int,
+    ) -> str:
+        summary = str(raw_summary or "").strip()
+        if summary and _contains_cjk(summary):
+            return summary
+
+        role_count = sum(1 for role in DEEP_ROLE_ORDER if str(expert_opinions.get(role, "")).strip())
+        finding_count = len(static_report.findings)
+        if not summary:
+            summary = (
+                f"综合静态证据、仲裁结果与鲁棒性验证，当前样本的综合风险等级为{risk_level}，"
+                f"风险分数为{score}分。已汇总{role_count}个角色意见和{finding_count}条证据。"
+            )
+        else:
+            summary = (
+                f"综合研判结论：当前样本综合风险等级为{risk_level}，风险分数为{score}分。"
+                f"原始总结内容：{summary}"
+            )
+        return summary
 
     @staticmethod
     def _role_stage(role: str) -> str:
@@ -398,11 +498,80 @@ class APKDeepAnalyzer:
             "情报分析员": 87,
             "处置建议员": 92,
         }.get(role, 80)
+
+    def _extract_role_scores(self, role_outputs: Dict[str, Dict[str, Any]], static_report: DetectionReport) -> Dict[str, int]:
+        scores: Dict[str, int] = {
+            "静态分析员": self._extract_score_from_role_output(role_outputs.get("静态分析员", {}), static_report.score),
+            "行为分析员": self._extract_score_from_role_output(role_outputs.get("行为分析员", {}), static_report.score),
+            "情报分析员": self._extract_score_from_role_output(role_outputs.get("情报分析员", {}), static_report.score),
+            "处置建议员": self._extract_score_from_role_output(role_outputs.get("处置建议员", {}), static_report.score),
+        }
+        return scores
+
+    def _extract_score_from_role_output(self, role_output: Dict[str, Any], default_score: int) -> int:
+        hint = str(role_output.get("risk_hint") or "").lower()
+        opinion = str(role_output.get("opinion") or role_output.get("summary") or "")
+
+        hint_score = {
+            "critical": 90,
+            "high": 75,
+            "medium": 50,
+            "low": 20,
+        }.get(hint)
+        if hint_score is not None:
+            return hint_score
+
+        score_match = re.search(r"(?<!\d)(100|[1-9]?\d)(?:\s*/\s*100|\s*分)?", opinion)
+        if score_match:
+            try:
+                return max(0, min(100, int(score_match.group(1))))
+            except ValueError:
+                pass
+
+        lowered = opinion.lower()
+        if any(token in lowered for token in ["critical", "严重", "高危"]):
+            return 90
+        if any(token in lowered for token in ["high", "较高", "高风险"]):
+            return 75
+        if any(token in lowered for token in ["medium", "中危", "中等"]):
+            return 50
+        if any(token in lowered for token in ["low", "低危", "较低"]):
+            return 20
+        return default_score
 def _normalize_severity(value: Any) -> str:
     severity = str(value or "medium").lower()
     if severity not in {"low", "medium", "high", "critical"}:
         return "medium"
     return severity
+
+
+def _normalize_risk_level(value: Any, fallback: str = "medium", fallback_score: int = 50) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"low", "medium", "high", "critical"}:
+        return text
+
+    # 兼容中文描述与常见近义表达
+    if text in {"低", "低危", "较低"}:
+        return "low"
+    if text in {"中", "中危", "中等", "一般"}:
+        return "medium"
+    if text in {"高", "高危", "较高", "高风险"}:
+        return "high"
+    if text in {"严重", "极高", "危急", "critical"}:
+        return "critical"
+
+    try:
+        score = int(fallback_score)
+    except (TypeError, ValueError):
+        score = 50
+
+    if score >= 80:
+        return "critical"
+    if score >= 60:
+        return "high"
+    if score >= 30:
+        return "medium"
+    return "low" if fallback not in {"", None} else "medium"
 
 
 def _coerce_mapping(value: Any) -> Dict[str, Any]:
@@ -435,6 +604,10 @@ def _coerce_findings(value: Any) -> List[DetectionFinding]:
                 recommendation="检查模型输出格式或提示词约束。",
             ))
     return findings
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
 
 
 def _coerce_additional_findings(

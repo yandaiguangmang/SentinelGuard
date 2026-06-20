@@ -70,7 +70,7 @@
   <div class="wrap">
     <div class="card">
       <h1>SentinelGuard 安全检测</h1>
-      <p>支持 URL 和 APK 两类对象。APK 默认只做静态分析；勾选“深度研判”后，会进入论坛式多角色深度分析。若你填写了 LLM 的 API Key / Base URL，它只会用于本次检测任务；代理/VPN 仅用于网页抓取，不会影响大模型调用。</p>
+      <p>支持 URL 和 APK 两类对象。APK 默认只做静态分析；勾选“深度研判”后，会进入论坛式多角色深度分析。若你填写了 LLM 的 API Key / Base URL，它只会用于本次检测任务；URL 检测可按需配置代理/VPN 节点以访问外网。</p>
 
       {% if error %}
         <div class="alert error">{{ error }}</div>
@@ -103,26 +103,6 @@
           </div>
         </div>
 
-        <div class="row">
-          <div>
-            <label for="proxy_http">HTTP 代理 / VPN 节点</label>
-            <input id="proxy_http" name="proxy_http" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_http }}">
-          </div>
-          <div>
-            <label for="proxy_https">HTTPS 代理 / VPN 节点</label>
-            <input id="proxy_https" name="proxy_https" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_https }}">
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label for="proxy_all">ALL_PROXY 备用节点</label>
-            <input id="proxy_all" name="proxy_all" type="text" placeholder="socks5://127.0.0.1:1080" value="{{ defaults.proxy_all }}">
-          </div>
-          <div>
-            <div class="hint" style="margin-top: 32px;">如果不填写代理信息，网页会直接使用原网络访问目标网址；若你只做离线静态分析，也可以留空。</div>
-          </div>
-        </div>
-
         <div class="tabs">
           <button class="tab-btn active" type="button" data-tab="url">URL 检测</button>
           <button class="tab-btn" type="button" data-tab="apk">APK 检测</button>
@@ -132,6 +112,26 @@
           <label for="target">待检测 URL</label>
           <input id="target" name="target" type="text" placeholder="https://example.com" value="{{ defaults.target }}">
           <div class="hint">输入网址后直接开始检测。</div>
+
+          <div class="row" style="margin-top: 10px;">
+            <div>
+              <label for="proxy_http">HTTP 代理 / VPN 节点</label>
+              <input id="proxy_http" name="proxy_http" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_http }}">
+            </div>
+            <div>
+              <label for="proxy_https">HTTPS 代理 / VPN 节点</label>
+              <input id="proxy_https" name="proxy_https" type="text" placeholder="http://127.0.0.1:7890" value="{{ defaults.proxy_https }}">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="proxy_all">ALL_PROXY 备用节点</label>
+              <input id="proxy_all" name="proxy_all" type="text" placeholder="socks5://127.0.0.1:1080" value="{{ defaults.proxy_all }}">
+            </div>
+            <div>
+              <div class="hint" style="margin-top: 32px;">如果不填写代理信息，网页会直接使用原网络访问目标网址；APK 检测不需要这些输入项。</div>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane" data-pane="apk">
