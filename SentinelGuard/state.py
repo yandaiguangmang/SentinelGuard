@@ -19,11 +19,12 @@ def _safe_to_dict(value: Any) -> Any:
 
 @dataclass
 class AnalysisRuntimeConfig:
-    llm_api_key: str = ""
-    llm_base_url: str = ""
-    proxy_http: str = ""
-    proxy_https: str = ""
-    proxy_all: str = ""
+    llm_api_key: str = "sk-hFs40fFuY5B9HkA76sD8R9P60uxYUQIuI7LEYfjxz0tMwG1N"
+    llm_base_url: str = "https://api.chatanywhere.tech"
+    proxy_http: str = "http://127.0.0.1:7897"
+    proxy_https: str = "http://127.0.0.1:7897"
+    proxy_all: str = "http://127.0.0.1:7897"
+    enable_screenshot: Optional[bool] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -198,6 +199,7 @@ class DetectionReport:
     apk_dynamic_summary: Dict[str, Any] = field(default_factory=dict)
     apk_dynamic_artifacts: Dict[str, Any] = field(default_factory=dict)
     placeholders: Dict[str, str] = field(default_factory=dict)
+    screenshots: List[Dict[str, Any]] = field(default_factory=list)
     analysis_mode: str = "static"
     deep_analysis_used: bool = False
     parent_html_report_path: str = ""
@@ -207,6 +209,7 @@ class DetectionReport:
     evidence_score: int = 0
     deep_score: Optional[int] = None
     arbitration_result: Optional[ArbitrationResult] = None
+    stats: Optional[Dict[str, Any]] = None  # 新增：深度研判性能统计
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -225,12 +228,14 @@ class DetectionReport:
             "apk_dynamic_summary": self.apk_dynamic_summary,
             "apk_dynamic_artifacts": self.apk_dynamic_artifacts,
             "placeholders": self.placeholders,
+            "screenshots": self.screenshots,
             "analysis_mode": self.analysis_mode,
             "deep_analysis_used": self.deep_analysis_used,
             "parent_html_report_path": self.parent_html_report_path,
             "parent_markdown_report_path": self.parent_markdown_report_path,
             "html_report_path": self.html_report_path,
             "markdown_report_path": self.markdown_report_path,
+            "stats": self.stats, 
             "arbitration_result": _safe_to_dict(self.arbitration_result),
         }
 

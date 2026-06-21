@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from openai import OpenAI
 
@@ -17,6 +17,21 @@ from SentinelGuard.parsers.input_parser import parse_target
 from SentinelGuard.report import save_detection_report
 from SentinelGuard.scoring import combine_apk_scores, combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
+
+
+SEVERITY_WEIGHTS = {
+    "low": 1,
+    "medium": 3,
+    "high": 6,
+    "critical": 8,
+}
+
+SEVERITY_BASE_SCORES = {
+    "low": 5,
+    "medium": 25,
+    "high": 60,
+    "critical": 75,
+}
 
 PLACEHOLDERS = {
     "web": "当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。",
@@ -148,6 +163,7 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
         expert_opinions=_build_expert_opinions(risk_level, findings),
         redirect_chain=analysis["redirect_chain"],
         page_summary=analysis["page_summary"],
+        screenshots=analysis.get("screenshots", []),
         placeholders=PLACEHOLDERS,
         analysis_mode="static",
     )
@@ -177,6 +193,7 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         deep_summary=deep_result.get("deep_summary", ""),
         redirect_chain=static_report.redirect_chain,
         page_summary=static_report.page_summary,
+        screenshots=static_report.screenshots,
         apk_summary=static_report.apk_summary,
         placeholders=static_report.placeholders,
         analysis_mode="deep",
@@ -184,116 +201,46 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
     )
-    report.arbitration_result = Arbitrator().arbitrate(
-        static_score=static_report.score,
-        behavior_score=score_from_findings(merged_findings),
-        intelligence_score=deep_score,
-        static_findings=static_report.findings,
-        behavior_findings=deep_result.get("additional_findings", []),
-        intelligence_findings=deep_result.get("additional_findings", []),
-    )
-    if report.arbitration_result:
-        report.score = report.arbitration_result.weighted_confidence
-        report.risk_level = risk_level_from_score(report.score)
     if persist_report:
         save_detection_report(report)
     return report
 
 
 def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
-    try:
-        dynamic_result = dynamic_analyze_apk(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
-    except TypeError:
-        dynamic_result = dynamic_analyze_apk(static_report)
-    except Exception as exc:
-        fallback_arbitration = Arbitrator().arbitrate(
-            static_score=static_report.score,
-            behavior_score=static_report.score,
-            intelligence_score=static_report.score,
-            static_findings=static_report.findings,
-            behavior_findings=static_report.findings,
-            intelligence_findings=static_report.findings,
-        )
-        report = DetectionReport(
-            target_ir=static_report.target_ir,
-            risk_level=risk_level_from_score(fallback_arbitration.weighted_confidence),
-            score=fallback_arbitration.weighted_confidence,
-            evidence_score=static_report.evidence_score or score_from_findings(static_report.findings),
-            deep_score=static_report.score,
-            findings=_deduplicate_findings(static_report.findings),
-            expert_opinions=static_report.expert_opinions,
-            expert_models=_build_expert_model_map(),
-            deep_summary=f"动态深度分析失败，已降级到仲裁置信度评分。原因：{exc}",
-            redirect_chain=static_report.redirect_chain,
-            page_summary=static_report.page_summary,
-            apk_summary=static_report.apk_summary,
-            apk_dynamic_summary=static_report.apk_dynamic_summary,
-            apk_dynamic_artifacts=static_report.apk_dynamic_artifacts,
-            placeholders=static_report.placeholders,
-            analysis_mode="dynamic",
-            deep_analysis_used=True,
-            parent_html_report_path=static_report.html_report_path,
-            parent_markdown_report_path=static_report.markdown_report_path,
-        )
-        report.arbitration_result = fallback_arbitration
-        if static_report.target_ir.apk is not None:
-            static_report.target_ir.apk.arbitration_result = fallback_arbitration
-        if persist_report:
-            save_detection_report(report)
-        return report
-    dynamic_findings = dynamic_result.get("findings", [])
-    merged_findings = _deduplicate_findings(static_report.findings + dynamic_findings)
-    merged_findings.extend(_arb_result_findings(dynamic_result.get("arbitration_result")))
-    merged_findings.extend(_robustness_result_findings(dynamic_result.get("robustness_result")))
-    merged_findings = _deduplicate_findings(merged_findings)
-
-    evidence_score = score_from_findings(merged_findings)
-    deep_score = normalize_score(dynamic_result.get("deep_score"), evidence_score) if dynamic_result.get("deep_score") is not None else None
-    score = combine_scores(evidence_score, deep_score)
-    risk_level = risk_level_from_score(score)
-    report = DetectionReport(
-        target_ir=static_report.target_ir,
-        risk_level=risk_level,
-        score=score,
-        evidence_score=evidence_score,
-        deep_score=deep_score,
-        findings=merged_findings,
-        expert_opinions=dynamic_result.get("expert_opinions", static_report.expert_opinions),
-        expert_models=dynamic_result.get("expert_models", _build_expert_model_map()),
-        deep_summary=dynamic_result.get("deep_summary", ""),
-        redirect_chain=static_report.redirect_chain,
-        page_summary=static_report.page_summary,
-        apk_summary=static_report.apk_summary,
-        apk_dynamic_summary=dynamic_result.get("apk_dynamic_summary", {}),
-        apk_dynamic_artifacts=dynamic_result.get("apk_dynamic_artifacts", {}),
-        placeholders=static_report.placeholders,
+    return _build_apk_deep_report(
+        static_report,
+        dynamic_analyze_apk,
+        persist_report=persist_report,
+        runtime_config=runtime_config,
+        progress_callback=progress_callback,
         analysis_mode="dynamic",
-        deep_analysis_used=True,
-        parent_html_report_path=static_report.html_report_path,
-        parent_markdown_report_path=static_report.markdown_report_path,
     )
-    report.arbitration_result = dynamic_result.get("arbitration_result")
-    if static_report.target_ir.apk is not None:
-        static_report.target_ir.apk.arbitration_result = report.arbitration_result
-        if dynamic_result.get("robustness_result") is not None:
-            static_report.target_ir.apk.robustness = _coerce_robustness_result(dynamic_result.get("robustness_result")) or static_report.target_ir.apk.robustness
-    report.score = combine_apk_scores(
-        evidence_score,
-        deep_score,
-        report.arbitration_result,
-        dynamic_result.get("robustness_result"),
-    )
-    report.risk_level = risk_level_from_score(report.score)
-    if persist_report:
-        save_detection_report(report)
-    return report
 
 
 def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
+    return _build_apk_deep_report(
+        static_report,
+        deep_analyze_apk,
+        persist_report=persist_report,
+        runtime_config=runtime_config,
+        progress_callback=progress_callback,
+        analysis_mode="deep",
+    )
+
+
+def _build_apk_deep_report(
+    static_report: DetectionReport,
+    analyzer_func: Callable[..., Dict[str, Any]],
+    persist_report: bool = True,
+    runtime_config: Optional[AnalysisRuntimeConfig] = None,
+    progress_callback=None,
+    analysis_mode: str = "deep",
+) -> DetectionReport:
+    """内部辅助函数：执行 APK 深度分析并构建报告。"""
     try:
-        deep_result = deep_analyze_apk(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+        result = analyzer_func(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
     except TypeError:
-        deep_result = deep_analyze_apk(static_report)
+        result = analyzer_func(static_report)
     except Exception as exc:
         fallback_arbitration = Arbitrator().arbitrate(
             static_score=static_report.score,
@@ -316,8 +263,10 @@ def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_r
             redirect_chain=static_report.redirect_chain,
             page_summary=static_report.page_summary,
             apk_summary=static_report.apk_summary,
+            apk_dynamic_summary=static_report.apk_dynamic_summary,
+            apk_dynamic_artifacts=static_report.apk_dynamic_artifacts,
             placeholders=static_report.placeholders,
-            analysis_mode="deep",
+            analysis_mode=analysis_mode,
             deep_analysis_used=True,
             parent_html_report_path=static_report.html_report_path,
             parent_markdown_report_path=static_report.markdown_report_path,
@@ -329,12 +278,16 @@ def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_r
             save_detection_report(report)
         return report
 
-    merged_findings = _deduplicate_findings(static_report.findings + deep_result.get("additional_findings", []))
-    merged_findings.extend(_arb_result_findings(deep_result.get("arbitration_result")))
-    merged_findings.extend(_robustness_result_findings(deep_result.get("robustness_result")))
+    findings = result.get("findings", [])
+    if not findings:
+        findings = result.get("additional_findings", [])
+    merged_findings = _deduplicate_findings(static_report.findings + findings)
+    merged_findings.extend(_arb_result_findings(result.get("arbitration_result")))
+    merged_findings.extend(_robustness_result_findings(result.get("robustness_result")))
     merged_findings = _deduplicate_findings(merged_findings)
+
     evidence_score = score_from_findings(merged_findings)
-    deep_score = normalize_score(deep_result.get("deep_score"), deep_result.get("score", evidence_score))
+    deep_score = normalize_score(result.get("deep_score"), evidence_score) if result.get("deep_score") is not None else None
     score = combine_scores(evidence_score, deep_score)
     risk_level = risk_level_from_score(score)
 
@@ -345,28 +298,31 @@ def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_r
         evidence_score=evidence_score,
         deep_score=deep_score,
         findings=merged_findings,
-        expert_opinions=deep_result.get("expert_opinions", static_report.expert_opinions),
-        expert_models=deep_result.get("expert_models", _build_expert_model_map()),
-        deep_summary=deep_result.get("deep_summary", ""),
+        expert_opinions=result.get("expert_opinions", static_report.expert_opinions),
+        expert_models=result.get("expert_models", _build_expert_model_map()),
+        deep_summary=result.get("deep_summary", ""),
         redirect_chain=static_report.redirect_chain,
         page_summary=static_report.page_summary,
+        screenshots=static_report.screenshots,
         apk_summary=static_report.apk_summary,
+        apk_dynamic_summary=result.get("apk_dynamic_summary", {}),
+        apk_dynamic_artifacts=result.get("apk_dynamic_artifacts", {}),
         placeholders=static_report.placeholders,
-        analysis_mode="deep",
+        analysis_mode=analysis_mode,
         deep_analysis_used=True,
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
     )
-    report.arbitration_result = deep_result.get("arbitration_result")
+    report.arbitration_result = result.get("arbitration_result")
     if static_report.target_ir.apk is not None:
         static_report.target_ir.apk.arbitration_result = report.arbitration_result
-        if deep_result.get("robustness_result") is not None:
-            static_report.target_ir.apk.robustness = _coerce_robustness_result(deep_result.get("robustness_result")) or static_report.target_ir.apk.robustness
+        if result.get("robustness_result") is not None:
+            static_report.target_ir.apk.robustness = _coerce_robustness_result(result.get("robustness_result")) or static_report.target_ir.apk.robustness
     report.score = combine_apk_scores(
         evidence_score,
         deep_score,
         report.arbitration_result,
-        deep_result.get("robustness_result"),
+        result.get("robustness_result"),
     )
     report.risk_level = risk_level_from_score(report.score)
     if persist_report:

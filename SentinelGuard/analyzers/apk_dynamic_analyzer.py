@@ -877,14 +877,19 @@ class APKDynamicAnalyzer:
 
     def _collect_suspicious_files(self, device_id: str, package_name: str) -> List[str]:
         roots = [f"/data/data/{package_name}/", f"/sdcard/Android/data/{package_name}/", "/data/local/tmp/"]
-        result = self._run_adb(["-s", device_id, "shell", "sh", "-c", "ls -laR " + " ".join(roots) + " 2>/dev/null"], check=False)
         hits: List[str] = []
-        for line in (result.stdout or "").splitlines():
-            if re.search(r"\.(dex|jar|apk|so|zip)$", line, re.I):
-                if line not in hits:
-                    hits.append(line[:500])
-                if len(hits) >= 20:
-                    break
+        for root in roots:
+            result = self._run_adb([
+                "-s", device_id, "shell", "sh", "-c",
+                f"find '{root}' -type f 2>/dev/null | grep -E '\\.(dex|jar|apk|so|zip)$'"
+            ], check=False)
+            if result.stdout:
+                for line in result.stdout.splitlines():
+                    line = line.strip()
+                    if line and line not in hits:
+                        hits.append(line[:500])
+                        if len(hits) >= 20:
+                            return hits
         return hits
 
     def _collect_persistent_services(self, device_id: str, package_name: str) -> Dict[str, List[str]]:

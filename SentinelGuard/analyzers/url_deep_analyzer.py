@@ -9,12 +9,12 @@ from typing import Any, Dict, List
 
 import httpx
 from openai import OpenAI
-
+import time
 from config import settings
 from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
-from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
-
+from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
 
@@ -30,63 +30,89 @@ ROLE_DEFAULT_MODELS = {
     "主持人": "qwen3.5-plus",
     "静态分析员": "deepseek-reasoner",
     "行为分析员": "gemini-2.5-pro",
-    "情报分析员": "gpt-5",
+    "情报分析员": "gpt-4o-mini",
     "处置建议员": "gemini-2.5-flash",
 }
 
+
 ROLE_SYSTEM_PROMPTS = {
-    "主持人": """你是网络恶意网页深度研判的主持人。
-你的职责是综合四位专家意见，给出最终裁决式总结，并把各方结论整理成可直接写入报告的结构化 JSON。
+    "主持人": """You are the moderator for in-depth malicious webpage analysis.
+Your responsibility is to synthesize the opinions of four experts, deliver a final conclusive summary, and organize all conclusions into a structured JSON that can be directly inserted into a report.
 
-要求：
-1. 你必须基于静态检测结果、浏览器证据包（browser_evidence）与各专家意见进行总结，不要脱离证据链。
-2. 若外部情报不足，必须明确说明当前仅基于离线证据。
-3. 你的 summary 要体现最终结论，不能只是简单复述。
-4. expert_opinions 必须保留五个角色的原始意见或整理后的摘要。
-5. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_models、expert_opinions、additional_findings。
+**All output text (including summary, opinions, descriptions, evidence, recommendations) must be in Simplified Chinese. Only field names and enum values should remain in English.**
+
+Requirements:
+1. You must base your summary on the static detection results, the browser evidence package (browser_evidence), and the opinions of each expert. Do not deviate from the evidence chain.
+2. If external intelligence is insufficient, you must explicitly state that the current conclusion relies solely on offline evidence.
+3. You must explicitly verify whether the claims and confidence levels of the four experts are consistent: if there are directional conflicts (e.g., some experts judge malicious_lean while others judge benign_lean), or if the risk_hint spans more than two levels, you must clearly point out this disagreement in the summary, explain which side you ultimately adopt and on what grounds — do not quietly average conflicting opinions into a compromise score. If the input contains precomputed_claim_conflict as true, you must include at least one explanation in conflicting_signals; you cannot return an empty array.
+4. expert_opinions must retain the original opinions or summarized excerpts of all five roles.
+5. The output must be strict JSON, containing the fields risk_level, score, summary, consensus_check, expert_models, expert_opinions, additional_findings. The consensus_check must include agreement_level (high|partial|conflicting) and conflicting_signals (a list of conflict points; an empty array if there are no conflicts).
 """,
-    "静态分析员": """你是网络恶意网页深度研判中的静态分析员。
-关注域名结构、URL 参数、可疑关键词、编码混淆、跳转参数、主机特征，以及浏览器证据包中的页面摘要、HTML 摘要、可见文本快照与表单/下载/脚本线索。
+    "静态分析员": """You are the static analyst in the in-depth malicious webpage analysis.
+Focus on domain structure, URL parameters, suspicious keywords, encoding obfuscation, redirect parameters, host characteristics, as well as the page summary, HTML summary, visible text snapshot, and form/download/script clues from the browser evidence package.
+Do not repeat the areas already covered by the behavior analyst and intelligence analyst (redirect chain behavior, brand/external intelligence attribution); concentrate on whether the static structure alone can support a conclusion.
+If the evidence is insufficient to make a clear judgment, honestly mark claim as uncertain. Do not over-infer just to produce a conclusion.
 
-请输出严格 JSON：
+**All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values like claim, risk_hint, severity should remain in English.**
+
+Output strict JSON:
 {
-  "opinion": "静态证据分析结论",
+  "opinion": "静态证据分析结论（中文）",
+  "claim": "malicious_lean|benign_lean|uncertain",
+  "confidence": 0.0-1.0,
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
     {"rule_id":"DEEP_STATIC_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
-    "行为分析员": """你是网络恶意网页深度研判中的行为分析员。
-关注跳转链、自动跳转、表单提交、脚本加载、下载落点、浏览器证据包中的页面线索、HTML 摘要与行为诱导。
+    "行为分析员": """You are the behavior analyst in the in-depth malicious webpage analysis.
+Focus on redirect chains, automatic redirects, form submissions, script loading, download targets, page clues from the browser evidence package, HTML summary, and behavioral inducements.
+Do not repeat the static URL/HTML characteristics already covered by the static analyst; concentrate on whether the behavior chain alone can support a conclusion.
+If the evidence is insufficient to make a clear judgment, honestly mark claim as uncertain.
 
-请输出严格 JSON：
+**All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values should remain in English.**
+
+Output strict JSON:
 {
-  "opinion": "行为链分析结论",
+  "opinion": "行为链分析结论（中文）",
+  "claim": "malicious_lean|benign_lean|uncertain",
+  "confidence": 0.0-1.0,
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
     {"rule_id":"DEEP_BEHAVIOR_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
-    "情报分析员": """你是网络恶意网页深度研判中的情报分析员。
-你的职责是说明该目标若需要外网/VPN 节点才能访问，应如何理解这种环境差异；同时说明当前离线证据与浏览器证据包的边界。
+    "情报分析员": """You are the intelligence analyst in the in-depth malicious webpage analysis.
+Your duty is to perform attribution and correlation analysis based on externally known information, not to repeat the structural and behavioral evidence already covered by the static and behavior analysts:
+1. Target and brand intelligence: Is the page/domain impersonating a specific identifiable brand or organization? If no clear impersonation target can be identified, state this explicitly — it is a valuable conclusion in itself.
+2. Infrastructure and external reputation intelligence: Combine available external data such as domain registration time, certificate information, hosting/ASN reputation, and blacklist hits for attribution; if the intelligence sources do not cover the target, state this clearly rather than avoiding it.
+3. Evidence coverage boundary: Explain whether there are content differences caused by geographic location or network environment (e.g., suspected cloaking), as well as differences between offline evidence and browser-rendered evidence, and point out the impact on the confidence of the current judgment.
 
-请输出严格 JSON：
+**All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values should remain in English.**
+
+Output strict JSON:
 {
-  "opinion": "情报分析与局限说明",
+  "opinion": "情报归因与边界说明（中文）",
+  "claim": "malicious_lean|benign_lean|uncertain",
+  "confidence": 0.0-1.0,
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
-    {"rule_id":"DEEP_INTEL_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
+    {"rule_id":"INTEL_BRAND_*|INTEL_INFRA_*|INTEL_COVERAGE_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
   ]
 }
 """,
-    "处置建议员": """你是网络恶意网页深度研判中的处置建议员。
-你的任务是把前面所有证据落成可执行建议，包括是否拦截、是否隔离、是否沙箱复核、是否留痕；请结合浏览器证据包中的页面行为、HTML 摘要、可见文本快照给出建议。
+    "处置建议员": """You are the remediation advisor in the in-depth malicious webpage analysis.
+Your task is to convert all preceding evidence into actionable recommendations, including whether to block, isolate, perform sandbox review, or keep logs. Base your suggestions on the page behavior, HTML summary, and visible text snapshot from the browser evidence package.
+Judge comprehensively based on the claims and confidence levels provided by the other roles, not solely on risk_hint.
 
-请输出严格 JSON：
+**All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values should remain in English.**
+
+Output strict JSON:
 {
-  "opinion": "处置建议",
+  "opinion": "处置建议（中文）",
+  "recommended_action": "block|sandbox_review|monitor|allow",
   "risk_hint": "low|medium|high|critical",
   "additional_findings": [
     {"rule_id":"DEEP_ADVICE_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
@@ -94,6 +120,7 @@ ROLE_SYSTEM_PROMPTS = {
 }
 """,
 }
+
 
 
 class URLDeepAnalyzer:
@@ -105,28 +132,73 @@ class URLDeepAnalyzer:
 
     def analyze(self, static_report: DetectionReport, progress_callback=None) -> Dict[str, Any]:
         payload = self._build_payload(static_report)
-
+        overall_start = time.perf_counter()
         role_outputs: Dict[str, Dict[str, Any]] = {}
+        role_stats: Dict[str, Dict[str, Any]] = {} 
         if progress_callback:
             progress_callback("deep_prepare", "正在准备网址深度研判", 72)
 
-        for role in DEEP_ROLE_ORDER[1:]:
-            if progress_callback:
-                progress_callback(f"deep_{self._role_stage(role)}", f"正在进行{role}分析", self._role_progress(role))
-            try:
-                role_result = self._call_role_model(role, payload)
+        # 第一批：静态、行为、情报三员并行
+        first_batch_roles = ["静态分析员", "行为分析员", "情报分析员"]
+        if progress_callback:
+            progress_callback("deep_parallel_batch1", "正在进行静态/行为/情报并行分析", 78)
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_role = {
+                executor.submit(self._call_role_model, role, payload): role
+                for role in first_batch_roles
+            }
+            for future in as_completed(future_to_role):
+                role = future_to_role[future]
+                try:
+                    role_result = future.result()
+                except Exception as exc:
+                    role_result = {"success": False, "error": str(exc)}
+                
+                role_stats[role] = {
+                    "elapsed": role_result.get("elapsed", 0.0),
+                    "usage": role_result.get("usage")
+                }
+                
                 if not role_result.get("success"):
                     role_outputs[role] = self._build_fallback_role_output(role, static_report, role_result.get("error"))
-                    continue
-                role_outputs[role] = self._normalize_role_output(role, role_result)
-            except Exception as exc:
-                role_outputs[role] = self._build_fallback_role_output(role, static_report, exc)
+                else:
+                    try:
+                        role_outputs[role] = self._normalize_role_output(role, role_result)
+                    except Exception as exc:
+                        role_outputs[role] = self._build_fallback_role_output(role, static_report, exc)
 
+        # 第二批：处置建议员串行（待前三者完成）
+        if progress_callback:
+            progress_callback("deep_advice", "正在进行处置建议分析", 85)
+        advice_role = "处置建议员"
+        advice_payload = dict(payload)
+        advice_payload["role_outputs"] = self._serialize_role_outputs(role_outputs)
+        try:
+            advice_result = self._call_role_model(advice_role, advice_payload)
+        except Exception as exc:
+            advice_result = {"success": False, "error": str(exc), "elapsed": 0.0, "usage": None}
+        role_stats[advice_role] = {
+            "elapsed": advice_result.get("elapsed", 0.0),
+            "usage": advice_result.get("usage")
+        }
+        if not advice_result.get("success"):
+            role_outputs[advice_role] = self._build_fallback_role_output(advice_role, static_report, advice_result.get("error"))
+        else:
+            try:
+                role_outputs[advice_role] = self._normalize_role_output(advice_role, advice_result)
+            except Exception as exc:
+                role_outputs[advice_role] = self._build_fallback_role_output(advice_role, static_report, exc)
+        # 主持人总结（依赖所有四个专家的结果）
         if progress_callback:
             progress_callback("deep_host", "正在进行主持人总结", 90)
 
         host_payload = self._build_host_payload(static_report, role_outputs)
         host_result = self._call_role_model("主持人", host_payload)
+        role_stats["主持人"] = {
+            "elapsed": host_result.get("elapsed", 0.0),
+            "usage": host_result.get("usage")
+        }
         if not host_result.get("success"):
             if progress_callback:
                 progress_callback("deep_done", "网址深度研判已完成", 96)
@@ -135,9 +207,23 @@ class URLDeepAnalyzer:
         try:
             if progress_callback:
                 progress_callback("deep_done", "网址深度研判已完成", 96)
-            return self._normalize_result(host_result, static_report, role_outputs)
+            result = self._normalize_result(host_result, static_report, role_outputs)
+            # 添加统计信息
+            total_elapsed = time.perf_counter() - overall_start
+            result["stats"] = {
+                "total_elapsed": total_elapsed,
+                "roles": role_stats
+            }
+            return result
         except Exception as exc:
-            return self._build_degraded_result(static_report, role_outputs, exc)
+            degraded = self._build_degraded_result(static_report, role_outputs, exc)
+            total_elapsed = time.perf_counter() - overall_start
+            degraded["stats"] = {
+                "total_elapsed": total_elapsed,
+                "roles": role_stats
+            }
+            return degraded
+        
 
     def _resolve_role_models(self) -> Dict[str, str]:
         role_models: Dict[str, str] = {}
@@ -216,8 +302,12 @@ class URLDeepAnalyzer:
             "proxy_enabled": False,
         }
 
-    @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
+    @with_graceful_retry(
+        SEARCH_API_RETRY_CONFIG,
+        default_return={"success": False, "error": "模型服务暂时不可用", "elapsed": 0.0, "usage": None}
+    )
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        start = time.perf_counter()
         try:
             messages = self._build_messages(role, payload)
             response = self._get_client(role).chat.completions.create(
@@ -227,12 +317,25 @@ class URLDeepAnalyzer:
                 top_p=0.9,
                 response_format={"type": "json_object"},
             )
+            elapsed = time.perf_counter() - start
             content = response.choices[0].message.content if response.choices else ""
+
+            # 提取 token 用量
+            usage = None
+            if hasattr(response, 'usage') and response.usage:
+                usage = {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens,
+                }
+
             if not content:
-                return {"success": False, "error": "模型未返回内容"}
-            return {"success": True, "content": content}
+                return {"success": False, "error": "模型未返回内容", "elapsed": elapsed, "usage": usage}
+            return {"success": True, "content": content, "elapsed": elapsed, "usage": usage}
         except Exception as exc:
-            return {"success": False, "error": f"模型调用异常: {exc}"}
+            elapsed = time.perf_counter() - start
+            return {"success": False, "error": f"模型调用异常: {exc}", "elapsed": elapsed, "usage": None}
+        
 
     def _build_messages(self, role: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         text_content = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -240,6 +343,14 @@ class URLDeepAnalyzer:
             {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
             {"role": "user", "content": text_content},
         ]
+
+    def _detect_claim_conflict(self, role_outputs: Dict[str, Dict[str, Any]]) -> bool:
+        claims = {
+            role: output.get("claim")
+            for role, output in role_outputs.items()
+            if output.get("claim") in {"malicious_lean", "benign_lean"}
+        }
+        return len(set(claims.values())) > 1
 
     def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         browser_evidence = _build_browser_evidence(static_report)
@@ -257,6 +368,7 @@ class URLDeepAnalyzer:
             "expert_models": self.role_models,
             "role_outputs": self._serialize_role_outputs(role_outputs),
             "proxy_enabled": False,
+             "precomputed_claim_conflict": self._detect_claim_conflict(role_outputs),
         }
 
     def _build_fallback_role_output(self, role: str, static_report: DetectionReport, error: Any) -> Dict[str, Any]:
@@ -272,30 +384,43 @@ class URLDeepAnalyzer:
             default_evidence=str(error) if error else static_report.target_ir.original_input,
             default_recommendation="检查代理、模型服务地址和 API Key 后重试。",
         )
-        return {
+
+        fallback_output: Dict[str, Any] = {
             "opinion": base_opinion,
             "risk_hint": static_report.risk_level,
             "additional_findings": fallback_findings,
             "fallback": True,
             "error": str(error) if error else "",
+            "claim": "uncertain",
+            "confidence": 0.0,
         }
+        if role == "处置建议员":
+            fallback_output["recommended_action"] = "sandbox_review"
+        return fallback_output
 
-    def _build_degraded_result(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]], error: Any) -> Dict[str, Any]:
-        fallback_findings: List[DetectionFinding] = []
+    def _build_degraded_result(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]], error: Any, raw_content: str = "") -> Dict[str, Any]:
+        # 收集所有已产出的发现
+        fallback_findings: List[DetectionFinding] = list(static_report.findings)  # 静态发现
         for role_output in role_outputs.values():
             fallback_findings.extend(_coerce_findings(role_output.get("additional_findings")))
+
+        # 基于汇总发现重新计算分数
+        evidence_score = _score_from_findings(fallback_findings)
+        score = evidence_score  # 降级情况下直接用证据分，不融合模型分
+        risk_level = _risk_level_from_score(score)
 
         fallback_opinions = {
             role: str(role_outputs.get(role, {}).get("opinion") or static_report.expert_opinions.get(role) or "")
             for role in DEEP_ROLE_ORDER
         }
         fallback_opinions["主持人"] = (
-            f"深度研判服务部分失败，已降级为静态结论。{fallback_opinions['主持人']}"
+            f"深度研判服务部分失败，已基于已收集的证据重新评估。{fallback_opinions['主持人']}"
         ).strip()
 
-        score = static_report.score
-        risk_level = static_report.risk_level
-        summary = f"深度研判未能完整执行，已返回静态结果并保留已收集的专家意见。原因：{error}"
+        summary = f"深度研判主持人阶段失败，已根据静态检测与四名专家的发现重新计算风险。原因：{error}"
+        if raw_content:
+            summary = f"{summary}\n\n主持人原始返回内容（解析失败）:\n{raw_content[:2000]}"
+            fallback_opinions["主持人"] = summary
         return {
             "risk_level": risk_level,
             "score": score,
@@ -303,6 +428,7 @@ class URLDeepAnalyzer:
             "expert_models": self.role_models,
             "deep_summary": summary,
             "additional_findings": fallback_findings,
+            "consensus_check": {"agreement_level": "unknown", "conflicting_signals": []},
         }
 
     def _serialize_role_outputs(self, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -321,14 +447,46 @@ class URLDeepAnalyzer:
         if not result.get("success"):
             raise ValueError(f"{role} 模型调用失败: {result.get('error') or '未知错误'}")
 
+        raw_content = result.get("content", "")
+
         try:
-            data = _load_json_payload(result["content"])
+            data = _load_json_payload(raw_content)
         except ValueError as exc:
-            raise ValueError(f"{role} 模型返回的 JSON 无法解析: {exc}") from exc
+            LOGGER.warning(f"{role} 模型返回的 JSON 无法解析，将使用原始内容降级。错误: {exc}")
+            fallback_findings = _coerce_additional_findings(
+                [],
+                default_role=role,
+                default_rule_prefix=f"DEEP_{role.upper()}_PARSE_ERROR",
+                default_description=f"{role} 模型返回了非标准JSON，已降级使用原始文本。",
+                default_evidence=raw_content[:500],
+                default_recommendation="检查模型输出格式是否符合预期。",
+            )
+            return {
+                "opinion": f"模型返回原始内容（非标准JSON）: {raw_content[:1000]}",
+                "risk_hint": "medium",
+                "additional_findings": fallback_findings,
+                "claim": "uncertain",
+                "confidence": 0.0,
+            }
 
         opinion = str(data.get("opinion") or data.get("summary") or "").strip()
         if not opinion:
-            raise ValueError(f"{role} 模型输出缺少 opinion")
+            LOGGER.warning(f"{role} 模型输出缺少 opinion 字段，将使用原始内容降级。")
+            fallback_findings = _coerce_additional_findings(
+                [],
+                default_role=role,
+                default_rule_prefix=f"DEEP_{role.upper()}_MISSING_OPINION",
+                default_description=f"{role} 模型输出缺少'opinion'字段，已降级使用原始内容。",
+                default_evidence=raw_content[:500],
+                default_recommendation="检查模型输出格式，确保包含'opinion'字段。",
+            )
+            return {
+                "opinion": f"模型返回内容（缺少opinion字段）: {raw_content[:1000]}",
+                "risk_hint": "medium",
+                "additional_findings": fallback_findings,
+                "claim": "uncertain",
+                "confidence": 0.0,
+            }
 
         findings = _coerce_additional_findings(
             data.get("additional_findings"),
@@ -339,27 +497,50 @@ class URLDeepAnalyzer:
             default_recommendation="结合静态报告进一步复核。",
         )
 
-        return {
+        normalized: Dict[str, Any] = {
             "opinion": opinion,
             "risk_hint": _normalize_risk_level(data.get("risk_hint"), "medium", 50),
             "additional_findings": findings,
         }
 
+        claim = str(data.get("claim") or "").strip().lower()
+        normalized["claim"] = claim if claim in {"malicious_lean", "benign_lean", "uncertain"} else "uncertain"
+
+        confidence = data.get("confidence")
+        normalized["confidence"] = max(0.0, min(1.0, float(confidence))) if isinstance(confidence, (int, float)) else 0.0
+
+        recommended_action = str(data.get("recommended_action") or "").strip().lower()
+        if recommended_action in {"block", "sandbox_review", "monitor", "allow"}:
+            normalized["recommended_action"] = recommended_action
+
+        return normalized
+
     def _normalize_result(self, result: Dict[str, Any], static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         if not result.get("success"):
             raise ValueError(result.get("error") or "模型深度检查失败")
 
+        raw_content = result.get("content", "")
         try:
-            data = _load_json_payload(result["content"])
+            data = _load_json_payload(raw_content)
         except ValueError as exc:
-            raise ValueError(f"模型返回的 JSON 无法解析: {exc}") from exc
+            LOGGER.warning(f"主持人模型返回的JSON无法解析，将使用原始内容降级。错误: {exc}")
+            return self._build_degraded_result(static_report, role_outputs, f"主持人JSON解析失败: {exc}", raw_content=raw_content)
 
         expert_opinions = _coerce_mapping(data.get("expert_opinions"))
         normalized_opinions = {role: str(expert_opinions.get(role) or "") for role in DEEP_ROLE_ORDER}
         for role, role_output in role_outputs.items():
             if not normalized_opinions.get(role):
                 normalized_opinions[role] = str(role_output.get("opinion") or "")
-        missing_roles = [role for role, opinion in normalized_opinions.items() if not opinion.strip()]
+
+        # 如果主持人意见仍为空，用 summary 替代
+        if not normalized_opinions.get("主持人", "").strip():
+            summary = str(data.get("summary") or "")
+            if summary:
+                normalized_opinions["主持人"] = summary
+            else:
+                normalized_opinions["主持人"] = self._build_host_fallback_summary(static_report, role_outputs, static_report.score, static_report.risk_level, "主持人输出缺少总结")
+
+        missing_roles = [role for role in DEEP_ROLE_ORDER if role != "主持人" and not normalized_opinions.get(role, "").strip()]
         if missing_roles:
             raise ValueError(f"模型输出缺少角色意见: {', '.join(missing_roles)}")
 
@@ -384,6 +565,18 @@ class URLDeepAnalyzer:
         risk_level = risk_level_from_score(score)
         summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
+        
+        consensus_raw = _coerce_mapping(data.get("consensus_check"))
+        agreement_level = str(consensus_raw.get("agreement_level") or "").strip().lower()
+        if agreement_level not in {"high", "partial", "conflicting"}:
+            agreement_level = "unknown"
+        conflicting_signals = consensus_raw.get("conflicting_signals")
+        if not isinstance(conflicting_signals, list):
+            conflicting_signals = []
+        consensus_check = {
+            "agreement_level": agreement_level,
+            "conflicting_signals": [str(x) for x in conflicting_signals]
+        }
 
         return {
             "risk_level": risk_level,
@@ -394,6 +587,7 @@ class URLDeepAnalyzer:
             "expert_models": normalized_models,
             "deep_summary": summary,
             "additional_findings": additional_findings,
+            "consensus_check": consensus_check, 
         }
 
     @staticmethod
@@ -420,6 +614,76 @@ def _normalize_severity(value: Any) -> str:
     if severity not in {"low", "medium", "high", "critical"}:
         return "medium"
     return severity
+
+
+def _normalize_score(value: Any, fallback: int) -> int:
+    try:
+        score = int(value)
+    except (TypeError, ValueError):
+        score = int(fallback)
+    return max(0, min(100, score))
+
+
+def _normalize_risk_level(value: Any, fallback: str, score: int) -> str:
+    risk_level = str(value or "").lower()
+    if risk_level in {"low", "medium", "high", "critical"}:
+        return risk_level
+    if score >= 80:
+        return "critical"
+    if score >= 60:
+        return "high"
+    if score >= 25:
+        return "medium"
+    return fallback if fallback in {"low", "medium", "high", "critical"} else "low"
+
+
+def _risk_level_from_score(score: int) -> str:
+    if score >= 80:
+        return "critical"
+    if score >= 60:
+        return "high"
+    if score >= 25:
+        return "medium"
+    return "low"
+
+
+def _score_from_findings(findings: List[DetectionFinding]) -> int:
+    if not findings:
+        return 0
+
+    severity_weights = {
+        "low": 1,
+        "medium": 3,
+        "high": 6,
+        "critical": 8,
+    }
+    severity_base_scores = {
+        "low": 5,
+        "medium": 25,
+        "high": 60,
+        "critical": 75,
+    }
+
+    severity_counts: Dict[str, int] = {}
+    for finding in findings:
+        severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
+
+    base_score = max(severity_base_scores.get(finding.severity, 0) for finding in findings)
+    bonus_score = sum(severity_counts.get(severity, 0) * weight for severity, weight in severity_weights.items())
+    return min(100, base_score + min(20, bonus_score))
+
+
+def _blend_score(evidence_score: int, model_score: int, model_risk_level: str) -> int:
+    risk_profile = {
+        "low": {"evidence_weight": 0.35, "model_weight": 0.65, "model_ceiling": 35},
+        "medium": {"evidence_weight": 0.50, "model_weight": 0.50, "model_ceiling": 60},
+        "high": {"evidence_weight": 0.65, "model_weight": 0.35, "model_ceiling": 85},
+        "critical": {"evidence_weight": 0.80, "model_weight": 0.20, "model_ceiling": 100},
+    }.get(model_risk_level, {"evidence_weight": 0.50, "model_weight": 0.50, "model_ceiling": 60})
+
+    capped_model_score = min(model_score, risk_profile["model_ceiling"])
+    blended = round(evidence_score * risk_profile["evidence_weight"] + capped_model_score * risk_profile["model_weight"])
+    return max(0, min(100, blended))
 
 
 def _coerce_mapping(value: Any) -> Dict[str, Any]:
@@ -582,6 +846,19 @@ def _first_non_empty(*values: Any) -> str:
 def _build_browser_evidence(static_report: DetectionReport) -> Dict[str, Any]:
     page_summary = static_report.page_summary or {}
     redirect_chain = static_report.redirect_chain or []
+    screenshots = static_report.screenshots or []
+
+    screenshot_metadata = []
+    for idx, screenshot in enumerate(screenshots[:3]):
+        if isinstance(screenshot, dict):
+            screenshot_metadata.append({
+                "index": idx + 1,
+                "final_url": screenshot.get("final_url", ""),
+                "page_title": screenshot.get("page_title", ""),
+                "captured_at": screenshot.get("captured_at", ""),
+                "width": screenshot.get("width"),
+                "height": screenshot.get("height"),
+            })
 
     evidence = {
         "has_page_fetch": bool(page_summary),
@@ -591,6 +868,8 @@ def _build_browser_evidence(static_report: DetectionReport) -> Dict[str, Any]:
         "status_code": page_summary.get("status_code"),
         "content_type": page_summary.get("content_type", ""),
         "redirect_chain": redirect_chain,
+        "screenshots_count": len(screenshots),
+        "screenshot_metadata": screenshot_metadata,
         "page_signals": {
             "title": page_summary.get("title", ""),
             "visible_text_excerpt": page_summary.get("visible_text_excerpt", ""),

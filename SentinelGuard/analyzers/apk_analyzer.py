@@ -343,7 +343,7 @@ def _attach_graph_data(apk_ir: APKIR, apk: Any) -> None:
         graph_result = extractor.extract_all(apk, {
             "file_name": apk_ir.file_name,
             "package_name": apk_ir.package_name,
-            "dex_file_count": len(list(apk.get_all_dex())) if hasattr(apk, "get_all_dex") else 0,
+            "api_file_count": len(list(apk.get_all_dex() or [])) if hasattr(apk, "get_all_dex") else 0,
         })
         apk_ir.graph_data = graph_result
     except Exception as exc:

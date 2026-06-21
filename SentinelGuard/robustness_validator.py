@@ -34,7 +34,50 @@ class RobustnessValidator:
     def validate(self, static_report: DetectionReport, apk_ir: APKIR, graph_data: Any) -> RobustnessResult:
         graph = self._normalize_graph_data(graph_data)
         findings = list(static_report.findings or [])
-        evidence_texts = [finding.evidence for finding in findings] + list(apk_ir.extracted_strings or [])
+
+        evidence_texts: List[str] = []
+
+        def _append_texts(values: Sequence[Any], limit: int | None = None) -> None:
+            if not values:
+                return
+            for item in values[:limit] if limit is not None else values:
+                if len(evidence_texts) >= 200:
+                    return
+                text = str(item or "").strip()
+                if text:
+                    evidence_texts.append(text)
+
+        # 1) 从 findings 中提取证据（限制 50 条）
+        _append_texts([finding.evidence for finding in findings if finding.evidence], limit=50)
+
+        # 2) 从 APK IR 对象中提取尽可能多的文本线索，但总量不超过 200 条
+        if apk_ir:
+            _append_texts(apk_ir.extracted_strings or [], limit=60)
+            _append_texts(apk_ir.permissions or [], limit=30)
+            _append_texts(apk_ir.activities or [], limit=10)
+            _append_texts(apk_ir.services or [], limit=10)
+            _append_texts(apk_ir.receivers or [], limit=10)
+            _append_texts(apk_ir.providers or [], limit=10)
+            _append_texts([apk_ir.certificate_subject, apk_ir.certificate_issuer])
+            _append_texts(apk_ir.key_files or [], limit=20)
+
+        # 3) 从静态报告的 apk_summary 中提取信息（限制 30 条键值项）
+        apk_summary = static_report.apk_summary or {}
+        if isinstance(apk_summary, dict):
+            for key, value in list(apk_summary.items())[:30]:
+                if len(evidence_texts) >= 200:
+                    break
+                _append_texts([key])
+                if isinstance(value, str):
+                    _append_texts([value])
+                elif isinstance(value, list):
+                    _append_texts(value[:10])
+                elif isinstance(value, dict):
+                    _append_texts([f"{k}={v}" for k, v in list(value.items())[:10]])
+                elif value is not None:
+                    _append_texts([value])
+
+        evidence_texts = evidence_texts[:200]
 
         adversarial_techniques: List[str] = []
         anti_emulator_detected = self._match_keywords(evidence_texts, self.anti_emulator_keywords)

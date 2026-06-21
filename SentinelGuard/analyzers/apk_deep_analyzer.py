@@ -14,7 +14,7 @@ from SentinelGuard.arbitrator import Arbitrator
 from SentinelGuard.robustness_validator import RobustnessValidator
 from SentinelGuard.scoring import combine_apk_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
-from utils.retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
+from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
@@ -671,6 +671,7 @@ class APKDeepAnalyzer:
         robustness_result: Any = None,
         role_scores: Dict[str, int] | None = None,
         error: Any = None,
+        raw_content: str = "",
     ) -> Dict[str, Any]:
         fallback_findings: List[DetectionFinding] = []
         for role_output in role_outputs.values():
@@ -686,6 +687,8 @@ class APKDeepAnalyzer:
         )
         risk_level = risk_level_from_score(host_score)
         summary = self._build_host_fallback_summary(static_report, role_outputs, host_score, risk_level, error)
+        if raw_content:
+            summary = f"{summary}\n\n主持人原始返回内容（解析失败）:\n{raw_content[:2000]}"
         expert_opinions = {
             role: str(role_outputs.get(role, {}).get("opinion") or static_report.expert_opinions.get(role) or "")
             for role in DEEP_ROLE_ORDER
@@ -759,14 +762,46 @@ class APKDeepAnalyzer:
         if not result.get("success"):
             raise ValueError(f"{role} 模型调用失败: {result.get('error') or '未知错误'}")
 
+        raw_content = result.get("content", "")
+
         try:
-            data = json.loads(result["content"])
+            data = json.loads(raw_content)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"{role} 模型返回的 JSON 无法解析: {exc}") from exc
+            LOGGER.warning(f"{role} 模型返回的 JSON 无法解析，将使用原始内容降级。错误: {exc}")
+            fallback_findings = _coerce_additional_findings(
+                [],
+                default_role=role,
+                default_rule_prefix=f"DEEP_{role.upper()}_PARSE_ERROR",
+                default_description=f"{role} 模型返回了非标准JSON，已降级使用原始文本。",
+                default_evidence=raw_content[:500],
+                default_recommendation="检查模型输出格式是否符合预期。",
+            )
+            return {
+                "opinion": f"模型返回原始内容（非标准JSON）: {raw_content[:1000]}",
+                "risk_hint": "medium",
+                "additional_findings": fallback_findings,
+                "claim": "uncertain",
+                "confidence": 0.0,
+            }
 
         opinion = str(data.get("opinion") or data.get("summary") or "").strip()
         if not opinion:
-            raise ValueError(f"{role} 模型输出缺少 opinion")
+            LOGGER.warning(f"{role} 模型输出缺少 opinion 字段，将使用原始内容降级。")
+            fallback_findings = _coerce_additional_findings(
+                [],
+                default_role=role,
+                default_rule_prefix=f"DEEP_{role.upper()}_MISSING_OPINION",
+                default_description=f"{role} 模型输出缺少'opinion'字段，已降级使用原始内容。",
+                default_evidence=raw_content[:500],
+                default_recommendation="检查模型输出格式，确保包含'opinion'字段。",
+            )
+            return {
+                "opinion": f"模型返回内容（缺少opinion字段）: {raw_content[:1000]}",
+                "risk_hint": "medium",
+                "additional_findings": fallback_findings,
+                "claim": "uncertain",
+                "confidence": 0.0,
+            }
 
         findings = _coerce_additional_findings(
             data.get("additional_findings"),
@@ -795,10 +830,20 @@ class APKDeepAnalyzer:
         if not result.get("success"):
             raise ValueError(result.get("error") or "模型深度检查失败")
 
+        raw_content = result.get("content", "")
         try:
-            data = json.loads(result["content"])
+            data = json.loads(raw_content)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"模型返回的 JSON 无法解析: {exc}") from exc
+            LOGGER.warning(f"主持人模型返回的JSON无法解析，将使用原始内容降级。错误: {exc}")
+            return self._build_host_fallback_result(
+                static_report,
+                role_outputs,
+                arbitration_result,
+                robustness_result,
+                role_scores,
+                error=f"主持人JSON解析失败: {exc}",
+                raw_content=raw_content,
+            )
 
         expert_opinions = _coerce_mapping(data.get("expert_opinions"))
         normalized_opinions = {role: str(expert_opinions.get(role) or "") for role in DEEP_ROLE_ORDER}

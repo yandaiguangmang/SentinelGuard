@@ -138,7 +138,7 @@ class RetryableError(Exception):
     """自定义的可重试异常"""
     pass
 
-def with_graceful_retry(config: RetryConfig = None, default_return=None):
+def with_graceful_retry(config: RetryConfig = None, default_return=None, raise_on_unretryable: bool = False):
     """
     优雅重试装饰器 - 用于非关键API调用
     失败后不会抛出异常，而是返回默认值，保证系统继续运行
@@ -146,6 +146,7 @@ def with_graceful_retry(config: RetryConfig = None, default_return=None):
     Args:
         config: 重试配置，如果不提供则使用默认配置
         default_return: 所有重试失败后返回的默认值
+        raise_on_unretryable: 是否在遇到不可重试异常时直接抛出
     
     Returns:
         装饰器函数
@@ -187,7 +188,10 @@ def with_graceful_retry(config: RetryConfig = None, default_return=None):
                     time.sleep(delay)
                 
                 except Exception as e:
-                    # 不在重试列表中的异常，返回默认值
+                    # 不在重试列表中的异常
+                    if raise_on_unretryable:
+                        logger.error(f"非关键API {func.__name__} 遇到不可重试的异常: {str(e)}")
+                        raise e
                     logger.warning(f"非关键API {func.__name__} 遇到不可重试的异常: {str(e)}")
                     logger.info(f"返回默认值以保证系统继续运行: {default_return}")
                     return default_return

@@ -6,6 +6,7 @@ import html
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+from string import Template
 from typing import Iterable, Sequence
 
 from SentinelGuard.state import DetectionFinding, DetectionReport
@@ -34,11 +35,16 @@ def save_detection_report(report: DetectionReport, output_dir: Path | str = REPO
 
 
 def render_html_report(report: DetectionReport) -> str:
+    if report.target_ir.target_type == "apk":
+        return _render_apk_html_report(report)
+    return _render_url_html_report(report)
+
+
+def _render_url_html_report(report: DetectionReport) -> str:
     ir = report.target_ir
     url = ir.url
     apk = ir.apk
     stats = _build_report_stats(report)
-    evidence_tags = _build_evidence_tags(report.findings)
     summary_cards = _render_summary_cards(report, stats)
     result_panel = _render_result_panel(report)
     artifact_panel = _render_artifact_panel(report, ir, url, apk)
@@ -51,271 +57,94 @@ def render_html_report(report: DetectionReport) -> str:
     parent_report_block = _render_parent_report_block(report)
     browser_evidence_block = _render_browser_evidence_block(report)
     apk_dynamic_block = _render_apk_dynamic_block(report)
+    arbitration_block = _render_arbitration_block(report)
+    screenshot_block = _render_screenshot_block(report)
+    stats_block = _render_stats_block(report)
+    discussion_title = '模型深度研判' if report.analysis_mode == 'deep' else '协同研判'
+    template_path = Path(__file__).resolve().parent.parent / 'templates' / 'report_template.html'
+    template = Template(template_path.read_text(encoding='utf-8'))
+    return template.substitute(
+        analysis_mode_chip='深度研判' if report.analysis_mode == 'deep' else '动态研判' if report.analysis_mode == 'dynamic' else '静态研判',
+        finding_count=len(report.findings),
+        risk_chip_class='danger' if report.risk_level in {'high', 'critical'} else 'warning' if report.risk_level == 'medium' else 'success',
+        risk_level_upper=html.escape(report.risk_level.upper()),
+        risk_color=_risk_color(report.risk_level),
+        summary_cards=summary_cards,
+        result_panel=result_panel,
+        artifact_panel=artifact_panel,
+        chain_panel=chain_panel,
+        findings_panel=findings_panel,
+        discussion_panel=discussion_panel,
+        model_panel=model_panel,
+        placeholders_panel=placeholders_panel,
+        analysis_mode_label=analysis_mode_label,
+        analysis_mode_label_escaped=html.escape(analysis_mode_label),
+        parent_report_block=parent_report_block,
+        browser_evidence_block=browser_evidence_block,
+        apk_dynamic_block=apk_dynamic_block,
+        apk_graph_block="",
+        apk_consistency_block="",
+        apk_robustness_block="",
+        arbitration_block=arbitration_block,
+        role_limitations_block="",
+        discussion_title=discussion_title,
+        screenshot_block=screenshot_block,
+        stats_block=stats_block,
+    )
+
+
+def _render_apk_html_report(report: DetectionReport) -> str:
+    ir = report.target_ir
+    apk = ir.apk
+    stats = _build_report_stats(report)
+    summary_cards = _render_summary_cards(report, stats)
+    result_panel = _render_result_panel(report)
+    artifact_panel = _render_artifact_panel(report, ir, ir.url, apk)
+    chain_panel = _render_chain_panel(report)
+    findings_panel = _render_findings_panel(report)
+    discussion_panel = _render_discussion_panel(report)
+    model_panel = _render_model_panel(report)
+    placeholders_panel = _render_placeholders_panel(report)
+    analysis_mode_label = _analysis_mode_label(report)
+    parent_report_block = _render_parent_report_block(report)
+    apk_dynamic_block = _render_apk_dynamic_block(report)
     apk_graph_block = _render_apk_graph_block(report)
     apk_consistency_block = _render_apk_consistency_block(report)
     apk_robustness_block = _render_apk_robustness_block(report)
     arbitration_block = _render_arbitration_block(report)
     role_limitations_block = _render_role_limitations_block(report)
-
-    return f"""<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SentinelGuard 哨塔检测报告</title>
-<style>
-:root {{
-  --bg: #0b1220;
-  --bg-soft: #0f172a;
-  --panel: rgba(15, 23, 42, .72);
-  --panel-light: #ffffff;
-  --text: #e5eefb;
-  --text-muted: #94a3b8;
-  --accent: #60a5fa;
-  --accent-2: #22c55e;
-  --warn: #f59e0b;
-  --danger: #ef4444;
-  --line: rgba(148, 163, 184, .2);
-  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
-}}
-
-* {{ box-sizing: border-box; }}
-html {{ scroll-behavior: smooth; }}
-body {{
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
-  color: var(--text);
-}}
-a {{ color: #bfdbfe; }}
-code {{ background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }}
-header {{
-  position: sticky; top: 0; z-index: 20;
-  backdrop-filter: blur(18px);
-  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
-}}
-.hero {{ max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }}
-.hero h1 {{ margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }}
-.hero p {{ margin: 4px 0; color: #dbeafe; }}
-.nav {{ display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }}
-.nav a {{
-  text-decoration: none; color: #dbeafe;
-  border: 1px solid rgba(219, 234, 254, .18);
-  padding: 7px 12px; border-radius: 999px;
-  background: rgba(15, 23, 42, .28);
-}}
-.nav a:hover {{ background: rgba(96, 165, 250, .18); }}
-.container {{ max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }}
-.grid {{ display: grid; gap: 18px; }}
-.summary-grid {{ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }}
-.two-col {{ grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }}
-.panel {{
-  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
-  border: 1px solid rgba(148, 163, 184, .18);
-  border-radius: 22px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}}
-.panel-inner {{ padding: 22px; }}
-.section-title {{
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  margin: 0 0 16px; font-size: 20px;
-}}
-.section-title small {{ color: var(--text-muted); font-weight: 500; }}
-.badge {{
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 14px; border-radius: 999px; color: white;
-  font-size: 14px; font-weight: 800; letter-spacing: .04em;
-  background: {_risk_color(report.risk_level)};
-  box-shadow: 0 12px 24px rgba(0,0,0,.18);
-}}
-.metric {{ padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }}
-.metric .label {{ color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }}
-.metric .value {{ font-size: 30px; font-weight: 800; line-height: 1.1; }}
-.metric .hint {{ margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }}
-.metric.risk {{ border-color: rgba(239, 68, 68, .26); }}
-.metric.score {{ border-color: rgba(34, 197, 94, .24); }}
-.metric.mode {{ border-color: rgba(96, 165, 250, .22); }}
-.metric.target {{ border-color: rgba(245, 158, 11, .22); }}
-.pill-row {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }}
-.pill {{
-  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
-  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
-}}
-.pill.muted {{ background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }}
-.pill.high {{ background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }}
-.pill.medium {{ background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }}
-.pill.low {{ background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }}
-.panel h3, .panel h4 {{ margin-top: 0; }}
-.panel p {{ line-height: 1.75; color: #dbe4f3; }}
-.subtle {{ color: var(--text-muted); }}
-.scroll-box {{ max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }}
-    .scroll-box.wide {{ max-height: 420px; }}
-    .scroll-box.slim {{ max-height: 240px; }}
-    .scroll-box.tall {{ max-height: 680px; }}
-.scroll-box::-webkit-scrollbar {{ width: 10px; height: 10px; }}
-.scroll-box::-webkit-scrollbar-thumb {{ background: rgba(148, 163, 184, .42); border-radius: 999px; }}
-.scroll-box::-webkit-scrollbar-track {{ background: rgba(15, 23, 42, .16); }}
-.hscroll {{ overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }}
-.hscroll .table {{ min-width: 880px; }}
-.hscroll td, .hscroll th {{ white-space: nowrap; }}
-.text-scroll {{ overflow-x: auto; overflow-y: hidden; white-space: nowrap; }}
-.text-scroll code, .text-scroll span {{ white-space: nowrap; }}
-.grid-list {{ display: grid; gap: 12px; }}
-.finding {{
-  border-radius: 16px; padding: 14px 16px; margin: 0;
-  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
-  border-left: 5px solid rgba(148, 163, 184, .48);
-}}
-.finding.low {{ border-left-color: #22c55e; }}
-.finding.medium {{ border-left-color: #f59e0b; }}
-.finding.high, .finding.critical {{ border-left-color: #ef4444; }}
-.finding h4 {{ margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }}
-.finding .meta {{ color: var(--text-muted); font-size: 13px; }}
-.finding p {{ margin: 8px 0 0; }}
-.finding .kv {{ display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }}
-.finding .kv b {{ color: #bfdbfe; }}
-.expert-grid {{ display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }}
-.expert-card {{
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
-  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
-  min-height: 160px; overflow: auto; max-height: 250px;
-}}
-.expert-card h4 {{ margin: 0 0 8px; }}
-.expert-card p {{ margin: 0; }}
-.timeline {{ display: grid; gap: 12px; }}
-.timeline-item {{ position: relative; padding-left: 18px; }}
-.timeline-item::before {{
-  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
-}}
-.timeline-item:last-child::before {{ display: none; }}
-.timeline-dot {{
-  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
-  background: {_risk_color(report.risk_level)}; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
-}}
-.timeline-item h4 {{ margin: 0 0 6px; }}
-.timeline-item p {{ margin: 0; color: #dbe4f3; }}
-.table {{ width: 100%; border-collapse: collapse; }}
-.table td, .table th {{ border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }}
-.table th {{ color: #bfdbfe; width: 180px; }}
-.footer-note {{ color: var(--text-muted); font-size: 13px; line-height: 1.7; }}
-.section-anchor {{ scroll-margin-top: 110px; }}
-.hero-mini {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
-.chip {{ padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }}
-.chip.warning {{ background: rgba(245, 158, 11, .12); }}
-.chip.success {{ background: rgba(34, 197, 94, .12); }}
-.chip.danger {{ background: rgba(239, 68, 68, .12); }}
-@media (max-width: 980px) {{
-  .two-col {{ grid-template-columns: 1fr; }}
-  header {{ position: static; }}
-}}
-</style>
-</head>
-<body>
-<header>
-  <div class="hero">
-    <h1>SentinelGuard 哨塔检测报告</h1>
-    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
-    <div class="nav">
-      <a href="#result">总览</a>
-      <a href="#ir">统一 IR</a>
-      <a href="#chain">跳转链</a>
-      <a href="#evidence">风险证据</a>
-      <a href="#discussion">协同研判</a>
-      <a href="#appendix">扩展信息</a>
-    </div>
-    <div class="hero-mini">
-      <span class="chip warning">{'深度研判' if report.analysis_mode == 'deep' else '静态研判'}</span>
-      <span class="chip">证据数 {len(report.findings)}</span>
-      <span class="chip {'danger' if report.risk_level in {'high', 'critical'} else 'warning' if report.risk_level == 'medium' else 'success'}">风险 {html.escape(report.risk_level.upper())}</span>
-    </div>
-  </div>
-</header>
-
-<main class="container">
-  <div class="grid summary-grid">
-    {summary_cards}
-  </div>
-
-  <div class="grid two-col" style="margin-top: 18px;">
-    <section class="panel section-anchor" id="result">
-      <div class="panel-inner">
-        <div class="section-title">
-          <h3>检测总览</h3>
-          <small>{html.escape(analysis_mode_label)}</small>
-        </div>
-        {result_panel}
-        {parent_report_block}
-        {browser_evidence_block}
-        {apk_dynamic_block}
-        {apk_graph_block}
-        {apk_consistency_block}
-        {apk_robustness_block}
-        {arbitration_block}
-        {role_limitations_block}
-      </div>
-    </section>
-
-    <section class="panel section-anchor" id="ir">
-      <div class="panel-inner">
-        <div class="section-title">
-          <h3>统一 IR 摘要</h3>
-          <small>{html.escape(analysis_mode_label)} · URL 采用 0.5×证据分数 + 0.5×深度研判分数，APK 采用 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</small>
-        </div>
-        {artifact_panel}
-      </div>
-    </section>
-  </div>
-
-  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>跳转链与页面线索</h3>
-        <small>支持滑动查看完整页面摘要</small>
-      </div>
-      {chain_panel}
-    </div>
-  </section>
-
-      <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>风险证据</h3>
-        <small>按严重度与规则优先级呈现</small>
-      </div>
-      {findings_panel}
-    </div>
-  </section>
-
-  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>{'模型深度研判' if report.analysis_mode == 'deep' else 'APK 动态协同研判' if report.analysis_mode == 'dynamic' else '协同研判'}</h3>
-        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
-      </div>
-      {discussion_panel}
-      {model_panel}
-        {role_limitations_block}
-    </div>
-  </section>
-
-  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>扩展信息</h3>
-        <small>便于后续扩展更多对象类型</small>
-      </div>
-      {placeholders_panel}
-    </div>
-  </section>
-</main>
-</body>
-</html>
-"""
-
-
+    screenshot_block = _render_screenshot_block(report)
+    stats_block = _render_stats_block(report)
+    discussion_title = 'APK 动态协同研判' if report.analysis_mode == 'dynamic' else 'APK 协同研判'
+    template_path = Path(__file__).resolve().parent.parent / 'templates' / 'apk_report_template.html'
+    template = Template(template_path.read_text(encoding='utf-8'))
+    return template.substitute(
+        analysis_mode_chip='动态研判' if report.analysis_mode == 'dynamic' else 'APK 研判',
+        finding_count=len(report.findings),
+        risk_chip_class='danger' if report.risk_level in {'high', 'critical'} else 'warning' if report.risk_level == 'medium' else 'success',
+        risk_level_upper=html.escape(report.risk_level.upper()),
+        risk_color=_risk_color(report.risk_level),
+        summary_cards=summary_cards,
+        result_panel=result_panel,
+        artifact_panel=artifact_panel,
+        chain_panel=chain_panel,
+        findings_panel=findings_panel,
+        discussion_panel=discussion_panel,
+        model_panel=model_panel,
+        placeholders_panel=placeholders_panel,
+        analysis_mode_label=analysis_mode_label,
+        analysis_mode_label_escaped=html.escape(analysis_mode_label),
+        parent_report_block=parent_report_block,
+        apk_dynamic_block=apk_dynamic_block,
+        apk_graph_block=apk_graph_block,
+        apk_consistency_block=apk_consistency_block,
+        apk_robustness_block=apk_robustness_block,
+        arbitration_block=arbitration_block,
+        role_limitations_block=role_limitations_block,
+        discussion_title=discussion_title,
+        screenshot_block=screenshot_block,
+        stats_block=stats_block,
+    )
 def render_markdown_report(report: DetectionReport) -> str:
     ir = report.target_ir
     analysis_mode_label = _analysis_mode_label(report)
@@ -326,7 +155,7 @@ def render_markdown_report(report: DetectionReport) -> str:
         f"> {analysis_mode_label} · 风险等级：**{report.risk_level.upper()}** · 风险分数：**{report.score}/100**",
         f"> 证据分数：**{report.evidence_score}/100** · 深度研判分数：**{report.deep_score if report.deep_score is not None else '-'} /100**",
         f"> 评分口径：URL 采用 `0.5 × 证据分数 + 0.5 × 深度研判分数`；APK 采用 `0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励`。",
-        "模型深度研判" if report.analysis_mode == "deep" else "",
+        "模型深度研判" if report.analysis_mode == "deep" and ir.target_type == "url" else "",
         "",
         "## 一、检测结论",
         f"- 原始输入：`{ir.original_input}`",
@@ -383,30 +212,35 @@ def render_markdown_report(report: DetectionReport) -> str:
 
     lines.extend(["", "## 四、页面线索"])
     lines.extend(_markdown_dict(report.page_summary))
-    lines.extend(["", "## 四点一、APK 动态沙箱摘要"])
-    if report.analysis_mode == "dynamic":
-        lines.extend(_markdown_dict(report.apk_dynamic_summary))
-        if report.apk_dynamic_artifacts:
-            lines.extend([f"- {key}：`{value}`" for key, value in report.apk_dynamic_artifacts.items()])
+    if ir.target_type == "apk":
+        lines.extend(["", "## 四点一、APK 动态沙箱摘要"])
+        if report.analysis_mode == "dynamic":
+            lines.extend(_markdown_dict(report.apk_dynamic_summary))
+            if report.apk_dynamic_artifacts:
+                lines.extend([f"- {key}：`{value}`" for key, value in report.apk_dynamic_artifacts.items()])
+
+        apk_graph_lines = _markdown_apk_graph_block(report)
+        if apk_graph_lines:
+            lines.extend(["", "## 四点二、图结构分析"])
+            lines.extend(apk_graph_lines)
+
+        consistency_lines = _markdown_apk_consistency_block(report)
+        if consistency_lines:
+            lines.extend(["", "## 四点三、一致性验证"])
+            lines.extend(consistency_lines)
+
+        robustness_lines = _markdown_apk_robustness_block(report)
+        if robustness_lines:
+            lines.extend(["", "## 四点四、鲁棒性分析"])
+            lines.extend(robustness_lines)
     else:
+        lines.extend(["", "## 四点一、页面线索"])
         lines.extend(_markdown_browser_evidence(report))
 
-    apk_graph_lines = _markdown_apk_graph_block(report)
-    if apk_graph_lines:
-        lines.extend(["", "## 四点二、图结构分析"])
-        lines.extend(apk_graph_lines)
+    lines.extend(["", "## 五、截图证据"])
+    lines.extend(_markdown_screenshots(report))
 
-    consistency_lines = _markdown_apk_consistency_block(report)
-    if consistency_lines:
-        lines.extend(["", "## 四点三、一致性验证"])
-        lines.extend(consistency_lines)
-
-    robustness_lines = _markdown_apk_robustness_block(report)
-    if robustness_lines:
-        lines.extend(["", "## 四点四、鲁棒性分析"])
-        lines.extend(robustness_lines)
-
-    lines.extend(["", "## 五、风险证据"])
+    lines.extend(["", "## 六、风险证据"])
     if report.findings:
         for index, finding in enumerate(report.findings, start=1):
             lines.extend([
@@ -421,7 +255,7 @@ def render_markdown_report(report: DetectionReport) -> str:
     else:
         lines.append("- 未发现明显风险项。")
 
-    lines.extend(["", "## 六、论坛式协同研判"])
+    lines.extend(["", "## 七、论坛式协同研判"])
     for role in ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]:
         opinion = report.expert_opinions.get(role, "")
         if opinion:
@@ -432,12 +266,12 @@ def render_markdown_report(report: DetectionReport) -> str:
         lines.extend(["", "### 主持人最终总结", report.deep_summary, ""])
 
     role_limitations_lines = _markdown_role_limitations(report)
-    if role_limitations_lines:
+    if ir.target_type == "apk" and role_limitations_lines:
         lines.extend(["", "## 六点一、角色结果说明"])
         lines.extend(role_limitations_lines)
 
     arbitration_lines = _markdown_arbitration_block(report)
-    if arbitration_lines:
+    if ir.target_type == "apk" and arbitration_lines:
         lines.extend(["", "## 七、仲裁结果"])
         lines.extend(arbitration_lines)
 
@@ -447,13 +281,31 @@ def render_markdown_report(report: DetectionReport) -> str:
             model_name = report.expert_models.get(role, "unknown")
             lines.append(f"- {role}：`{model_name}`")
 
-    lines.extend(["", "## 七、扩展信息"])
+    lines.extend(["", "## 八、扩展信息"])
     if report.placeholders:
         lines.extend([f"- **{key}**：{value}" for key, value in report.placeholders.items()])
     else:
         lines.append("- 当前无扩展项。")
 
     lines.append("")
+
+        # 性能统计（深度研判）
+    if report.stats and report.stats.get("roles"):
+        lines.extend(["", "## 九、分析性能统计", ""])
+        total = report.stats.get("total_elapsed", 0)
+        lines.append(f"- 总耗时：{total:.2f} 秒")
+        lines.append("")
+        lines.append("| 角色 | 耗时 (秒) | 输入 Token | 输出 Token | 总 Token |")
+        lines.append("|------|-----------|------------|------------|----------|")
+        for role, info in report.stats["roles"].items():
+            elapsed = info.get("elapsed", 0)
+            usage = info.get("usage") or {}
+            prom = usage.get("prompt_tokens", "N/A")
+            comp = usage.get("completion_tokens", "N/A")
+            tot = usage.get("total_tokens", "N/A")
+            lines.append(f"| {role} | {elapsed:.2f} | {prom} | {comp} | {tot} |")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -581,11 +433,12 @@ def _build_evidence_tags(findings: Sequence[DetectionFinding]) -> list[str]:
 
 
 def _render_summary_cards(report: DetectionReport, stats: dict[str, int]) -> str:
+    formula_hint = _risk_formula_hint(report)
     cards = [
         _summary_card("风险等级", report.risk_level.upper(), f"{stats['high_count']} 条高危 / {stats['medium_count']} 条中危证据", "risk"),
         _summary_card("证据分数", f"{report.evidence_score}/100", "基于已采集证据统一计算", "score"),
         _summary_card("深度研判分数", f"{report.deep_score if report.deep_score is not None else '-'} /100", "主持人总结后的单独评分", "mode"),
-        _summary_card("最终风险分数", f"{report.score}/100", "APK：0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励", "target"),
+        _summary_card("最终风险分数", f"{report.score}/100", formula_hint, "target"),
         _summary_card("分析模式", _analysis_mode_label(report), "静态检测结果可继续叠加深度研判", "mode"),
         _summary_card("输入对象", report.target_ir.target_type, report.target_ir.original_input, "target"),
     ]
@@ -609,16 +462,33 @@ def _render_result_panel(report: DetectionReport) -> str:
         for tag in tags
     )
     deep_score_text = str(report.deep_score) if report.deep_score is not None else "-"
+    formula_hint = _risk_formula_hint(report)
     return f"""
       <p><span class="badge">{html.escape(report.risk_level.upper())}</span></p>
       <p>证据分数：<strong>{report.evidence_score}/100</strong></p>
       <p>深度研判分数：<strong>{html.escape(deep_score_text)}/100</strong></p>
       <p>最终风险分数：<strong>{report.score}/100</strong></p>
-      <p class="subtle">APK 组合公式：<code>0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励</code></p>
+      <p class="subtle">{html.escape(formula_hint)}：<code>{html.escape(_risk_formula_expression(report))}</code></p>
       <p>原始输入：<code>{html.escape(report.target_ir.original_input)}</code></p>
       <p>报告类型：<strong>{html.escape(_analysis_mode_label(report))}</strong></p>
       <div class="pill-row">{tag_html}</div>
     """
+
+
+def _risk_formula_hint(report: DetectionReport) -> str:
+    if report.target_ir.target_type == "apk":
+        return "APK 风险分数公式"
+    if report.target_ir.target_type == "url":
+        return "URL 风险分数公式"
+    return "风险分数公式"
+
+
+def _risk_formula_expression(report: DetectionReport) -> str:
+    if report.target_ir.target_type == "apk":
+        return "0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励"
+    if report.target_ir.target_type == "url":
+        return "0.5 × 证据分数 + 0.5 × 深度研判分数"
+    return "根据对象类型使用对应评分口径"
 
 
 def _render_url_panel(ir, url) -> str:
@@ -679,14 +549,16 @@ def _render_chain_panel(report: DetectionReport) -> str:
     page_summary = _dict_table(report.page_summary)
     tags = _build_evidence_tags(report.findings)
     tag_html = "".join(f"<span class='pill muted'>{html.escape(tag)}</span>" for tag in tags)
+    apk_trace_block = ""
+    if report.target_ir.target_type == "apk":
+        apk_trace_block = f"<div style='height:12px'></div>{_render_apk_ui_trace_block(report, compact=True)}"
     return f"""
       <div class="scroll-box">
         <h4>跳转链</h4>
         <ol>{redirect_chain}</ol>
         <h4>页面线索</h4>
         {page_summary}
-        <div style='height:12px'></div>
-        {_render_apk_ui_trace_block(report, compact=True)}
+        {apk_trace_block}
       </div>
       <div class="pill-row">{tag_html}</div>
     """
@@ -772,6 +644,50 @@ def _render_model_panel(report: DetectionReport) -> str:
     """
 
 
+def _render_stats_block(report: DetectionReport) -> str:
+    if not report.stats or not report.stats.get("roles"):
+        return ""
+
+    total = report.stats.get("total_elapsed", 0)
+    roles = report.stats.get("roles", {})
+
+    rows = ""
+    for role, info in roles.items():
+        elapsed = info.get("elapsed", 0)
+        usage = info.get("usage") or {}
+        prompt_tokens = usage.get("prompt_tokens", "N/A")
+        completion_tokens = usage.get("completion_tokens", "N/A")
+        total_tokens = usage.get("total_tokens", "N/A")
+        rows += f"""
+        <tr>
+            <td>{html.escape(role)}</td>
+            <td>{elapsed:.2f} 秒</td>
+            <td>{prompt_tokens}</td>
+            <td>{completion_tokens}</td>
+            <td>{total_tokens}</td>
+        </tr>
+        """
+
+    return f"""
+    <div style="margin-top: 18px;" class="panel">
+        <div class="panel-inner">
+            <div class="section-title">
+                <h3>分析性能统计</h3>
+                <small>深度研判耗时与 Token 消耗</small>
+            </div>
+            <p>总耗时：<strong>{total:.2f} 秒</strong></p>
+            <div class="scroll-box slim">
+                <table class="table">
+                    <thead><tr>
+                        <th>角色</th><th>耗时</th><th>输入 Token</th><th>输出 Token</th><th>总 Token</th>
+                    </tr></thead>
+                    <tbody>{rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    """
+
 def _render_placeholders_panel(report: DetectionReport) -> str:
     if not report.placeholders:
         return "<p class='footer-note'>当前暂无扩展能力占位。</p>"
@@ -815,6 +731,135 @@ def _render_browser_evidence_block(report: DetectionReport) -> str:
     """
 
 
+def _render_screenshot_block(report: DetectionReport) -> str:
+    screenshots = report.screenshots if isinstance(report.screenshots, list) else []
+
+    def _render_card(index: int, image_b64: str, mime_type: str, title: str, meta_parts: list[str]) -> str:
+        return f"""
+          <article class='screenshot-card'>
+            <h4>截图 {index} · {html.escape(title or f'截图 {index}')}</h4>
+            <div class='screenshot-preview'>
+              <img src='data:{html.escape(mime_type)};base64,{image_b64}' alt='截图 {index}'>
+            </div>
+            <div class='subtle screenshot-meta'>{' · '.join(meta_parts) if meta_parts else '截图证据'}</div>
+          </article>
+        """
+
+    cards: list[str] = []
+
+    for index, item in enumerate(screenshots[:4], start=1):
+        if not isinstance(item, dict):
+            continue
+        image_b64 = str(item.get("base64") or "").strip()
+        if not image_b64:
+            continue
+        mime_type = str(item.get("mime_type") or "image/png").strip() or "image/png"
+        final_url = str(item.get("final_url") or item.get("url") or "").strip()
+        page_title = str(item.get("page_title") or "").strip()
+        captured_at = str(item.get("captured_at") or "").strip()
+        size_bytes = item.get("size_bytes")
+        viewport = item.get("viewport") or {}
+        viewport_text = ""
+        if isinstance(viewport, dict):
+            width = viewport.get("width")
+            height = viewport.get("height")
+            if width and height:
+                viewport_text = f"{width}×{height}"
+
+        meta_parts = []
+        if page_title:
+            meta_parts.append(f"标题：{html.escape(page_title)}")
+        if final_url:
+            meta_parts.append(f"落点：{html.escape(final_url)}")
+        if captured_at:
+            meta_parts.append(f"时间：{html.escape(captured_at)}")
+        if viewport_text:
+            meta_parts.append(f"视窗：{html.escape(viewport_text)}")
+        if size_bytes is not None:
+            meta_parts.append(f"大小：{html.escape(str(size_bytes))} 字节")
+
+        cards.append(_render_card(index, image_b64, mime_type, page_title or final_url or f"截图 {index}", meta_parts))
+
+    # APK 动态分析的 UI 轨迹截图，若没有显式的 screenshots，则尝试从动态产物目录读取。
+    if report.target_ir.target_type == "apk":
+        cards.extend(_render_apk_screenshot_cards(report))
+
+    if not cards:
+        return "<p class='subtle'>当前未采集到可渲染的截图证据。</p>"
+
+    return f"""
+      <div class='screenshot-grid'>
+        {''.join(cards)}
+      </div>
+    """
+
+
+def _render_apk_screenshot_cards(report: DetectionReport) -> list[str]:
+    trace_paths: list[str] = []
+    artifacts = getattr(report, "apk_dynamic_artifacts", None)
+    if isinstance(artifacts, dict):
+        trace_paths.extend([str(item) for item in artifacts.get("ui_trace_paths", []) or [] if str(item).strip()])
+        trace_dir = str(artifacts.get("ui_trace_dir") or "").strip()
+        if trace_dir:
+            trace_dir_path = Path(trace_dir)
+            if trace_dir_path.exists():
+                trace_paths.extend(
+                    str(path.as_posix())
+                    for path in sorted(trace_dir_path.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+                )
+
+    if not trace_paths:
+        trace_paths.extend(_find_latest_apk_screenshots())
+
+    cards: list[str] = []
+    seen = set()
+    for index, raw_path in enumerate(trace_paths[:4], start=1):
+        if raw_path in seen:
+            continue
+        seen.add(raw_path)
+        encoded = _encode_image_data_uri(Path(raw_path))
+        if not encoded:
+            continue
+        file_name = Path(raw_path).name or f"APK 截图 {index}"
+        cards.append(f"""
+          <article class='screenshot-card'>
+            <h4>APK 截图 {index} · {html.escape(file_name)}</h4>
+            <div class='screenshot-preview'>
+              <img src='{encoded}' alt='APK 截图 {index}'>
+            </div>
+            <div class='subtle screenshot-meta'>路径：{html.escape(raw_path)}</div>
+          </article>
+        """)
+    return cards
+
+
+def _markdown_screenshots(report: DetectionReport) -> list[str]:
+    screenshots = report.screenshots if isinstance(report.screenshots, list) else []
+    if not screenshots:
+        return ["- 当前未采集到页面截图。"]
+
+    lines: list[str] = []
+    for index, item in enumerate(screenshots[:4], start=1):
+        if not isinstance(item, dict):
+            continue
+        final_url = str(item.get("final_url") or item.get("url") or "").strip()
+        page_title = str(item.get("page_title") or "").strip()
+        captured_at = str(item.get("captured_at") or "").strip()
+        size_bytes = item.get("size_bytes")
+        lines.append(f"### 截图 {index}")
+        if page_title:
+            lines.append(f"- 标题：`{page_title}`")
+        if final_url:
+            lines.append(f"- 落点：`{final_url}`")
+        if captured_at:
+            lines.append(f"- 时间：`{captured_at}`")
+        if size_bytes is not None:
+            lines.append(f"- 大小：`{size_bytes}` 字节")
+        lines.append("")
+
+    return lines or ["- 截图数据存在，但无法渲染。"]
+
+
 def _render_page_summary(report: DetectionReport) -> str:
     evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
     return _dict_table(evidence)
@@ -847,10 +892,13 @@ def _render_apk_ui_trace_block(report: DetectionReport, compact: bool = False) -
         if not encoded:
             continue
         image_blocks.append(f"""
-          <figure style='margin:14px 0 0;'>
-            <img src='{encoded}' alt='APK 动态截图' style='max-width:100%; border-radius:16px; border:1px solid rgba(148,163,184,.18); display:block;'>
-            <figcaption class='subtle' style='margin-top:8px; word-break:break-all;'>{html.escape(raw_path)}</figcaption>
-          </figure>
+          <article class='screenshot-card'>
+            <h4>APK 动态截图</h4>
+            <div class='screenshot-preview'>
+              <img src='{encoded}' alt='APK 动态截图'>
+            </div>
+            <div class='subtle screenshot-meta'>{html.escape(raw_path)}</div>
+          </article>
         """)
         if len(image_blocks) >= 4:
             break
@@ -861,10 +909,10 @@ def _render_apk_ui_trace_block(report: DetectionReport, compact: bool = False) -
     content = f"""
       <h4 style='margin-top:0;'>APK 动态截图</h4>
       <p class='subtle'>自动展示当次分析生成的 UI 轨迹截图，优先读取 information 目录下最近的 PNG 产物。</p>
-      <div class='grid-list'>{''.join(image_blocks)}</div>
+      <div class='screenshot-grid'>{''.join(image_blocks)}</div>
     """
     if compact:
-        return f"<div class='grid-list'>{''.join(image_blocks)}</div>"
+        return f"<div class='screenshot-grid'>{''.join(image_blocks)}</div>"
     return f"""
       <div style='height:14px'></div>
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>

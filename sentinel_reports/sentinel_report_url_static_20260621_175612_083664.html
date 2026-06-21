@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .74);
+  --panel-2: rgba(255, 255, 255, .04);
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .18);
+  --shadow: 0 18px 50px rgba(2, 6, 23, .3);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #172554 0, #0b1220 34%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code {
+  background: rgba(148, 163, 184, .16);
+  padding: 2px 6px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .94), rgba(30, 64, 175, .84));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
+}
+.hero {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 22px 22px 18px;
+}
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none;
+  color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .8), rgba(15, 23, 42, .56));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #16a34a;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric {
+  padding: 18px 18px 20px;
+  background: rgba(255,255,255,.04);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, .16);
+}
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box.wide { max-height: 420px; }
+.scroll-box.tall { max-height: 680px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.screenshot-grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
+.screenshot-card { background: rgba(255,255,255,.04); border-radius: 16px; padding: 16px; border: 1px solid rgba(148,163,184,.16); }
+.screenshot-card h4 { margin: 0 0 10px; }
+.screenshot-preview { overflow: auto; border-radius: 14px; background: #0f172a; padding: 10px; }
+.screenshot-card img { max-width: 100%; border-radius: 12px; border: 1px solid rgba(148,163,184,.18); display: block; }
+.screenshot-meta { margin-top: 8px; word-break: break-all; }
+.hscroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
+.hscroll .table { min-width: 880px; }
+.hscroll td, .hscroll th { white-space: nowrap; }
+.text-scroll { overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+.text-scroll code, .text-scroll span { white-space: nowrap; }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  min-height: 160px;
+  overflow: auto;
+  max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 10px;
+  bottom: -10px;
+  width: 2px;
+  background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#screenshots">页面截图</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">静态研判</span>
+      <span class="chip">证据数 1</span>
+      <span class="chip success">风险 LOW</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">LOW</div>
+      <div class="hint">0 条高危 / 1 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">证据分数</div>
+      <div class="value">17/100</div>
+      <div class="hint">基于已采集证据统一计算</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">深度研判分数</div>
+      <div class="value">- /100</div>
+      <div class="hint">主持人总结后的单独评分</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">最终风险分数</div>
+      <div class="value">17/100</div>
+      <div class="hint">URL 风险分数公式</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">静态检测报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://www.google.com</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>静态检测报告</small>
+        </div>
+        
+      <p><span class="badge">LOW</span></p>
+      <p>证据分数：<strong>17/100</strong></p>
+      <p>深度研判分数：<strong>-/100</strong></p>
+      <p>最终风险分数：<strong>17/100</strong></p>
+      <p class="subtle">URL 风险分数公式：<code>0.5 × 证据分数 + 0.5 × 深度研判分数</code></p>
+      <p>原始输入：<code>https://www.google.com</code></p>
+      <p>报告类型：<strong>静态检测报告</strong></p>
+      <div class="pill-row"><span class='pill medium'>MEDIUM · 隐藏表单字段较多</span></div>
+    
+        
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          <p class='subtle'>抓取模式：proxy / 代理：是</p>
+          <table class='table'><tr><td>status_code</td><td>200</td></tr><tr><td>content_type</td><td>text/html; charset=GB2312</td></tr><tr><td>final_url</td><td>https://www.google.com/</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>proxy</td></tr><tr><td>proxy_used</td><td>True</td></tr><tr><td>proxy_config</td><td>{&#x27;http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;https&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_https&#x27;: &#x27;http://10.250.167.176:7890&#x27;}</td></tr><tr><td>title</td><td>Google</td></tr><tr><td>visible_text_excerpt</td><td>Google (function(){var _g={kEI:&#x27;OLU3apPMJ-ql2roPrYL32AY&#x27;,kEXPI:&#x27;0,1304203,3030760,344796,5532800,36811568,25228681,152380,65168,37675,100671,37803,93598,21764,33385,51821,3705,42634,32561,16179,42780,4,1514,3355,6010,2,5999,16,14291,2,875,2230,5089,19,3008,12,783,36623,5337,845,2047,8529,5276,3,14448,5,1113,8613,298,9253,16493,2,6335,14087,242,3,4980,10,814,2,3768,2,1636,544,4,6292,5,461,6293,2363,5,711,5747,4,2421,5,6865,4,448,2299,4,2110,4,438,5772,4,4878,4,2699,2701,4,4703,508,1776,1517,2,7,4,1024,10,3355,3822,3449,4,480,3293,2,1357,21012719,4,2960,3,10051,3,11875,6097,3,5578,4,2615,6500256,3741,6,5602,2,2628,70,1407,3,37,3126,853,12,142,821,1768,3,1729,88965,46,3515864,210217,13111814,2,988077,8,163396,3,322628,2269498,5,3687,31,585,4,453,2,3564,5,4928,7,7,7,865,126,9012,1172,15,1742,4</td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>7</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>无</td></tr><tr><td>form_actions</td><td>/search</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&lt;!doctype html&gt;&lt;html itemscope=&quot;&quot; itemtype=&quot;http://schema.org/WebPage&quot; lang=&quot;zh-CN&quot;&gt;&lt;head&gt;&lt;meta content=&quot;text/html; charset=UTF-8&quot; http-equiv=&quot;Content-Type&quot;&gt;&lt;meta content=&quot;/images/branding/googleg/1x/googleg_standard_color_128dp.png&quot; itemprop=&quot;image&quot;&gt;&lt;title&gt;Google&lt;/title&gt;&lt;script nonce=&quot;mM4IBA1NG0iBLDPZnCgzdQ&quot;&gt;(function(){var _g={kEI:\&#x27;OLU3apPMJ-ql2roPrYL32AY\&#x27;,kEXPI:\&#x27;0,1304203,3030760,344796,5532800,36811568,25228681,152380,65168,37675,100671,37803,93598,21764,33385,51821,3705,42634,32561,16179,42780,4,1514,3355,6010,2,5999,16,14291,2,875,2230,5089,19,3008,12,783,36623,5337,845,2047,8529,5276,3,14448,5,1113,8613,298,9253,16493,2,6335,14087,242,3,4980,10,814,2,3768,2,1636,544,4,6292,5,461,6293,2363,5,711,5747,4,2421,5,6865,4,448,2299,4,2110,4,438,5772,4,4878,4,2699,2701,4,4703,508,1776,1517,2,7,4,1024,10,3355,3822,3449,4,480,3293,2,1357,21012719,4,2960,3,10051,3,11875,6097,3,5578,4,2615,6500256,3741,6,5602,2,2628,70,1407,3,37,3126,853,12,142,821,1768,3,1729,88965,46,3515864,210217,13111814,2,988077,8,163396,3,322628,2269498,5,3687,31,585,4,453,2,3564,5,4928,7,7,7,865,126,9012,1172,15,1742,4,3909,10,1237,582,4,523,1948,1973,5,2,10,957,2042,3888,4388,5,14,4,1097,4,327,257,2555,1139,2436&#x27;, &#x27;text_excerpt&#x27;: &quot;Google (function(){var _g={kEI:&#x27;OLU3apPMJ-ql2roPrYL32AY&#x27;,kEXPI:&#x27;0,1304203,3030760,344796,5532800,36811568,25228681,152380,65168,37675,100671,37803,93598,21764,33385,51821,3705,42634,32561,16179,42780,4,1514,3355,6010,2,5999,16,14291,2,875,2230,5089,19,3008,12,783,36623,5337,845,2047,8529,5276,3,14448,5,1113,8613,298,9253,16493,2,6335,14087,242,3,4980,10,814,2,3768,2,1636,544,4,6292,5,461,6293,2363,5,711,5747,4,2421,5,6865,4,448,2299,4,2110,4,438,5772,4,4878,4,2699,2701,4,4703,508,1776,1517,2,7,4,1024,10,3355,3822,3449,4,480,3293,2,1357,21012719,4,2960,3,10051,3,11875,6097,3,5578,4,2615,6500256,3741,6,5602,2,2628,70,1407,3,37,3126,853,12,142,821,1768,3,1729,88965,46,3515864,210217,13111814,2,988077,8,163396,3,322628,2269498,5,3687,31,585,4,453,2,3564,5,4928,7,7,7,865,126,9012,1172,15,1742,4&quot;}</td></tr></table>
+        </div>
+      </div>
+    
+        
+        
+        
+        
+        
+        
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>静态检测报告 · URL 采用 0.5×证据分数 + 0.5×深度研判分数，APK 采用 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</small>
+        </div>
+        <div class='hscroll'><table class='table'><tr><th>规范化 URL</th><td>https://www.google.com/</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>www.google.com</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://www.google.com/</li></ol>
+        <h4>页面线索</h4>
+        <table class='table'><tr><td>status_code</td><td>200</td></tr><tr><td>content_type</td><td>text/html; charset=GB2312</td></tr><tr><td>final_url</td><td>https://www.google.com/</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>proxy</td></tr><tr><td>proxy_used</td><td>True</td></tr><tr><td>proxy_config</td><td>{&#x27;http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;https&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_https&#x27;: &#x27;http://10.250.167.176:7890&#x27;}</td></tr><tr><td>title</td><td>Google</td></tr><tr><td>visible_text_excerpt</td><td>Google (function(){var _g={kEI:&#x27;OLU3apPMJ-ql2roPrYL32AY&#x27;,kEXPI:&#x27;0,1304203,3030760,344796,5532800,36811568,25228681,152380,65168,37675,100671,37803,93598,21764,33385,51821,3705,42634,32561,16179,42780,4,1514,3355,6010,2,5999,16,14291,2,875,2230,5089,19,3008,12,783,36623,5337,845,2047,8529,5276,3,14448,5,1113,8613,298,9253,16493,2,6335,14087,242,3,4980,10,814,2,3768,2,1636,544,4,6292,5,461,6293,2363,5,711,5747,4,2421,5,6865,4,448,2299,4,2110,4,438,5772,4,4878,4,2699,2701,4,4703,508,1776,1517,2,7,4,1024,10,3355,3822,3449,4,480,3293,2,1357,21012719,4,2960,3,10051,3,11875,6097,3,5578,4,2615,6500256,3741,6,5602,2,2628,70,1407,3,37,3126,853,12,142,821,1768,3,1729,88965,46,3515864,210217,13111814,2,988077,8,163396,3,322628,2269498,5,3687,31,585,4,453,2,3564,5,4928,7,7,7,865,126,9012,1172,15,1742,4</td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>7</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>无</td></tr><tr><td>form_actions</td><td>/search</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&lt;!doctype html&gt;&lt;html itemscope=&quot;&quot; itemtype=&quot;http://schema.org/WebPage&quot; lang=&quot;zh-CN&quot;&gt;&lt;head&gt;&lt;meta content=&quot;text/html; charset=UTF-8&quot; http-equiv=&quot;Content-Type&quot;&gt;&lt;meta content=&quot;/images/branding/googleg/1x/googleg_standard_color_128dp.png&quot; itemprop=&quot;image&quot;&gt;&lt;title&gt;Google&lt;/title&gt;&lt;script nonce=&quot;mM4IBA1NG0iBLDPZnCgzdQ&quot;&gt;(function(){var _g={kEI:\&#x27;OLU3apPMJ-ql2roPrYL32AY\&#x27;,kEXPI:\&#x27;0,1304203,3030760,344796,5532800,36811568,25228681,152380,65168,37675,100671,37803,93598,21764,33385,51821,3705,42634,32561,16179,42780,4,1514,3355,6010,2,5999,16,14291,2,875,2230,5089,19,3008,12,783,36623,5337,845,2047,8529,5276,3,14448,5,1113,8613,298,9253,16493,2,6335,14087,242,3,4980,10,814,2,3768,2,1636,544,4,6292,5,461,6293,2363,5,711,5747,4,2421,5,6865,4,448,2299,4,2110,4,438,5772,4,4878,4,2699,2701,4,4703,508,1776,1517,2,7,4,1024,10,3355,3822,3449,4,480,3293,2,1357,21012719,4,2960,3,10051,3,11875,6097,3,5578,4,2615,6500256,3741,6,5602,2,2628,70,1407,3,37,3126,853,12,142,821,1768,3,1729,88965,46,3515864,210217,13111814,2,988077,8,163396,3,322628,2269498,5,3687,31,585,4,453,2,3564,5,4928,7,7,7,865,126,9012,1172,15,1742,4,3909,10,1237,582,4,523,1948,1973,5,2,10,957,2042,3888,4388,5,14,4,1097,4,327,257,2555,1139,2436&#x27;, &#x27;text_excerpt&#x27;: &quot;Google (function(){var _g={kEI:&#x27;OLU3apPMJ-ql2roPrYL32AY&#x27;,kEXPI:&#x27;0,1304203,3030760,344796,5532800,36811568,25228681,152380,65168,37675,100671,37803,93598,21764,33385,51821,3705,42634,32561,16179,42780,4,1514,3355,6010,2,5999,16,14291,2,875,2230,5089,19,3008,12,783,36623,5337,845,2047,8529,5276,3,14448,5,1113,8613,298,9253,16493,2,6335,14087,242,3,4980,10,814,2,3768,2,1636,544,4,6292,5,461,6293,2363,5,711,5747,4,2421,5,6865,4,448,2299,4,2110,4,438,5772,4,4878,4,2699,2701,4,4703,508,1776,1517,2,7,4,1024,10,3355,3822,3449,4,480,3293,2,1357,21012719,4,2960,3,10051,3,11875,6097,3,5578,4,2615,6500256,3741,6,5602,2,2628,70,1407,3,37,3126,853,12,142,821,1768,3,1729,88965,46,3515864,210217,13111814,2,988077,8,163396,3,322628,2269498,5,3687,31,585,4,453,2,3564,5,4928,7,7,7,865,126,9012,1172,15,1742,4&quot;}</td></tr></table>
+        
+      </div>
+      <div class="pill-row"><span class='pill muted'>MEDIUM · 隐藏表单字段较多</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class="scroll-box tall"><h4>MEDIUM（1）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>隐藏表单字段较多 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：PAGE_MANY_HIDDEN_INPUTS</div>
+      <p>页面包含较多隐藏字段，可能用于追踪、表单伪造或复杂登录流程。</p>
+      <div class="kv">
+        <b>证据</b><span><code>隐藏字段数量: 7</code></span>
+        <b>建议</b><span>结合表单提交地址核验页面真实性。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="screenshots" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>页面截图证据</h3>
+        <small>仅在高风险 URL 上自动采集</small>
+      </div>
+      <p class='subtle'>当前未采集到可渲染的截图证据。</p>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>协同研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">unknown</span></h4>
+          <p>综合 1 条证据，当前风险等级为 low。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">unknown</span></h4>
+          <p>URL 结构层面关注：隐藏表单字段较多。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">unknown</span></h4>
+          <p>页面行为与跳转层面关注：隐藏表单字段较多。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">unknown</span></h4>
+          <p>当前版本采用离线规则研判；若用于实战，建议补充域名信誉、证书透明度和黑名单情报。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">unknown</span></h4>
+          <p>可低风险访问，但仍需确认链接来源可信。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">综合 1 条证据，当前风险等级为 low。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">URL 结构层面关注：隐藏表单字段较多。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">页面行为与跳转层面关注：隐藏表单字段较多。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">当前版本采用离线规则研判；若用于实战，建议补充域名信誉、证书透明度和黑名单情报。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">可低风险访问，但仍需确认链接来源可信。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+      
+      <p class="footer-note">后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

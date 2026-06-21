@@ -27,7 +27,7 @@ logging.basicConfig(
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "SentinelGuard-URL-Security-Web"
-app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = getattr(settings, "MAX_UPLOAD_SIZE", 500 * 1024 * 1024)
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 app.logger.setLevel(logging.ERROR)
@@ -39,6 +39,7 @@ def index():
         "target": "",
         "target_type": "auto",
         "fetch_page": True,
+        "enable_screenshot": getattr(settings, "DETECTION_ENABLE_SCREENSHOT", True),
         "deep": False,
         "apk_mode": "static",
         "llm_api_key": "",
@@ -59,6 +60,7 @@ def analyze():
     fetch_page = request.form.get("fetch_page") == "on"
     deep = request.form.get("deep") == "on"
     apk_mode = (request.form.get("apk_mode") or "static").strip()
+    enable_screenshot = request.form.get("enable_screenshot") == "on"
     runtime_config = _build_runtime_config(request.form)
 
     if target and apk_mode == "dynamic" and not deep:
@@ -123,6 +125,7 @@ def analyze():
         "target": target,
         "target_type": target_type,
         "fetch_page": fetch_page,
+            "enable_screenshot": getattr(settings, "DETECTION_ENABLE_SCREENSHOT", True),
         "deep": deep,
         "apk_mode": apk_mode,
         **runtime_config.to_dict(),
@@ -151,6 +154,7 @@ def _start_analysis_task_from_request(req):
     target = (payload.get("target") or "").strip()
     target_type = (payload.get("target_type") or "auto").strip()
     fetch_page = str(payload.get("fetch_page") or "") in {"on", "true", "1", "yes"}
+    enable_screenshot = str(payload.get("enable_screenshot") or "") in {"on", "true", "1", "yes"}
     deep = str(payload.get("deep") or "") in {"on", "true", "1", "yes"}
     apk_mode = str(payload.get("apk_mode") or "static").strip()
     runtime_config = _build_runtime_config(payload)
@@ -242,6 +246,7 @@ def _build_runtime_config(payload: Dict[str, Any]) -> AnalysisRuntimeConfig:
         proxy_http=str(payload.get("proxy_http") or "").strip(),
         proxy_https=str(payload.get("proxy_https") or "").strip(),
         proxy_all=str(payload.get("proxy_all") or "").strip(),
+        enable_screenshot=str(payload.get("enable_screenshot") or "") in {"on", "true", "1", "yes"},
     )
 
 
