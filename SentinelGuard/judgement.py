@@ -24,6 +24,16 @@ PLACEHOLDERS = {
 }
 
 
+def _safe_to_dict(value):
+    if value is None:
+        return None
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    if isinstance(value, dict):
+        return dict(value)
+    return value
+
+
 ROLE_MODEL_PRESETS = {
     "主持人": {
         "api_key": lambda: settings.DETECTION_HOST_API_KEY or settings.FORUM_HOST_API_KEY,
@@ -118,7 +128,7 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
             target_ir.apk.arbitration_result = None
             report.apk_summary = {
                 **report.apk_summary,
-                "robustness_summary": robustness_result.to_dict(),
+                "robustness_summary": _safe_to_dict(robustness_result),
                 "graph_data_available": bool(target_ir.apk.graph_data),
             }
         return report
@@ -262,21 +272,18 @@ def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persis
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
     )
-    report.arbitration_result = Arbitrator().arbitrate(
-        static_score=static_report.score,
-        behavior_score=score_from_findings(dynamic_findings),
-        intelligence_score=normalize_score(dynamic_result.get("deep_score"), dynamic_result.get("score", evidence_score)) if dynamic_result.get("deep_score") is not None else score,
-        static_findings=static_report.findings,
-        behavior_findings=dynamic_findings,
-        intelligence_findings=dynamic_findings,
-    )
+    report.arbitration_result = dynamic_result.get("arbitration_result")
     if static_report.target_ir.apk is not None:
         static_report.target_ir.apk.arbitration_result = report.arbitration_result
         if dynamic_result.get("robustness_result") is not None:
             static_report.target_ir.apk.robustness = _coerce_robustness_result(dynamic_result.get("robustness_result")) or static_report.target_ir.apk.robustness
-    if report.arbitration_result:
-        report.score = report.arbitration_result.weighted_confidence
-        report.risk_level = risk_level_from_score(report.score)
+    report.score = combine_apk_scores(
+        evidence_score,
+        deep_score,
+        report.arbitration_result,
+        dynamic_result.get("robustness_result"),
+    )
+    report.risk_level = risk_level_from_score(report.score)
     if persist_report:
         save_detection_report(report)
     return report
@@ -350,21 +357,18 @@ def run_apk_deep_detection_from_static(static_report: DetectionReport, persist_r
         parent_html_report_path=static_report.html_report_path,
         parent_markdown_report_path=static_report.markdown_report_path,
     )
-    report.arbitration_result = Arbitrator().arbitrate(
-        static_score=static_report.score,
-        behavior_score=score_from_findings(deep_result.get("additional_findings", [])),
-        intelligence_score=deep_score,
-        static_findings=static_report.findings,
-        behavior_findings=deep_result.get("additional_findings", []),
-        intelligence_findings=deep_result.get("additional_findings", []),
-    )
+    report.arbitration_result = deep_result.get("arbitration_result")
     if static_report.target_ir.apk is not None:
-        static_report.target_ir.apk.arbitration_result = deep_result.get("arbitration_result") or report.arbitration_result
+        static_report.target_ir.apk.arbitration_result = report.arbitration_result
         if deep_result.get("robustness_result") is not None:
             static_report.target_ir.apk.robustness = _coerce_robustness_result(deep_result.get("robustness_result")) or static_report.target_ir.apk.robustness
-    if report.arbitration_result:
-        report.score = report.arbitration_result.weighted_confidence
-        report.risk_level = risk_level_from_score(report.score)
+    report.score = combine_apk_scores(
+        evidence_score,
+        deep_score,
+        report.arbitration_result,
+        deep_result.get("robustness_result"),
+    )
+    report.risk_level = risk_level_from_score(report.score)
     if persist_report:
         save_detection_report(report)
     return report
@@ -460,10 +464,10 @@ def _robustness_result_findings(robustness_result) -> List[DetectionFinding]:
         findings.append(DetectionFinding(
             rule_id="APK_ROBUSTNESS_SCORE",
             title="鲁棒性评分",
-            severity="low" if int(score) >= 60 else "medium",
+            severity="low" if int(score) < 30 else "medium" if int(score) < 70 else "high",
             description="鲁棒性验证得到的综合评分。",
             evidence=str(score),
-            recommendation="将鲁棒性评分纳入最终综合研判。",
+            recommendation="鲁棒性分数越低，通常表示越不容易被规避分析；分数越高，越需要重点关注。",
         ))
     return findings
 

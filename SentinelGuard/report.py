@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import mimetypes
 import html
 from collections import Counter
 from datetime import datetime
@@ -39,7 +41,7 @@ def render_html_report(report: DetectionReport) -> str:
     evidence_tags = _build_evidence_tags(report.findings)
     summary_cards = _render_summary_cards(report, stats)
     result_panel = _render_result_panel(report)
-    artifact_panel = _render_artifact_panel(ir, url, apk)
+    artifact_panel = _render_artifact_panel(report, ir, url, apk)
     chain_panel = _render_chain_panel(report)
     findings_panel = _render_findings_panel(report)
     discussion_panel = _render_discussion_panel(report)
@@ -150,10 +152,17 @@ header {{
 .panel p {{ line-height: 1.75; color: #dbe4f3; }}
 .subtle {{ color: var(--text-muted); }}
 .scroll-box {{ max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }}
-.scroll-box.slim {{ max-height: 240px; }}
+    .scroll-box.wide {{ max-height: 420px; }}
+    .scroll-box.slim {{ max-height: 240px; }}
+    .scroll-box.tall {{ max-height: 680px; }}
 .scroll-box::-webkit-scrollbar {{ width: 10px; height: 10px; }}
 .scroll-box::-webkit-scrollbar-thumb {{ background: rgba(148, 163, 184, .42); border-radius: 999px; }}
 .scroll-box::-webkit-scrollbar-track {{ background: rgba(15, 23, 42, .16); }}
+.hscroll {{ overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }}
+.hscroll .table {{ min-width: 880px; }}
+.hscroll td, .hscroll th {{ white-space: nowrap; }}
+.text-scroll {{ overflow-x: auto; overflow-y: hidden; white-space: nowrap; }}
+.text-scroll code, .text-scroll span {{ white-space: nowrap; }}
 .grid-list {{ display: grid; gap: 12px; }}
 .finding {{
   border-radius: 16px; padding: 14px 16px; margin: 0;
@@ -270,7 +279,7 @@ header {{
     </div>
   </section>
 
-  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+      <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
     <div class="panel-inner">
       <div class="section-title">
         <h3>风险证据</h3>
@@ -632,9 +641,9 @@ def _render_url_panel(ir, url) -> str:
     return f"<table class='table'>{items}</table>"
 
 
-def _render_artifact_panel(ir, url, apk) -> str:
+def _render_artifact_panel(report: DetectionReport, ir, url, apk) -> str:
     if url:
-        return _render_url_panel(ir, url)
+        return f"<div class='hscroll'>{_render_url_panel(ir, url)}</div>"
     if apk:
         rows = [
             ("APK 文件", apk.file_name),
@@ -660,7 +669,8 @@ def _render_artifact_panel(ir, url, apk) -> str:
                 ("动态加载", str(apk.robustness.dynamic_loading_detected)),
             ])
         items = "".join(f"<tr><th>{html.escape(k)}</th><td>{html.escape(v)}</td></tr>" for k, v in rows)
-        return f"<table class='table'>{items}</table>"
+        artifact_html = f"<table class='table'>{items}</table>"
+        return f"<div class='hscroll'>{artifact_html}</div>"
     return f"<p>{html.escape(ir.message or '当前对象尚未实现专用摘要。')}</p>"
 
 
@@ -675,6 +685,8 @@ def _render_chain_panel(report: DetectionReport) -> str:
         <ol>{redirect_chain}</ol>
         <h4>页面线索</h4>
         {page_summary}
+        <div style='height:12px'></div>
+        {_render_apk_ui_trace_block(report, compact=True)}
       </div>
       <div class="pill-row">{tag_html}</div>
     """
@@ -691,7 +703,7 @@ def _render_findings_panel(report: DetectionReport) -> str:
             continue
         cards = "".join(_finding_card(finding) for finding in items)
         blocks.append(f"<h4>{severity.upper()}（{len(items)}）</h4><div class='grid-list'>{cards}</div>")
-    return f"<div class='scroll-box slim'>{''.join(blocks)}</div>"
+    return f"<div class=\"scroll-box tall\">{''.join(blocks)}</div>"
 
 
 def _render_discussion_panel(report: DetectionReport) -> str:
@@ -785,12 +797,11 @@ def _render_parent_report_block(report: DetectionReport) -> str:
 
 def _render_browser_evidence_block(report: DetectionReport) -> str:
     evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
-    if not evidence:
-        return ""
-
     proxy_info = ""
     if evidence.get("fetch_mode"):
         proxy_info = f"<p class='subtle'>抓取模式：{html.escape(str(evidence.get('fetch_mode')))} / 代理：{'是' if evidence.get('proxy_used') else '否'}</p>"
+
+    summary_html = _render_page_summary(report) if evidence else "<p class='subtle'>未获取页面内容线索。</p>"
 
     return f"""
       <div style='height:14px'></div>
@@ -798,9 +809,87 @@ def _render_browser_evidence_block(report: DetectionReport) -> str:
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>页面观察线索</h4>
           {proxy_info}
+          {summary_html}
         </div>
       </div>
     """
+
+
+def _render_page_summary(report: DetectionReport) -> str:
+    evidence = report.page_summary if isinstance(report.page_summary, dict) else {}
+    return _dict_table(evidence)
+
+
+def _render_apk_ui_trace_block(report: DetectionReport, compact: bool = False) -> str:
+    trace_paths = []
+    artifacts = getattr(report, "apk_dynamic_artifacts", None)
+    if isinstance(artifacts, dict):
+        trace_paths.extend([str(item) for item in artifacts.get("ui_trace_paths", []) or [] if str(item).strip()])
+        trace_dir = str(artifacts.get("ui_trace_dir") or "").strip()
+        if trace_dir:
+            trace_dir_path = Path(trace_dir)
+            if trace_dir_path.exists():
+                trace_paths.extend(str(path.as_posix()) for path in sorted(trace_dir_path.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True))
+
+    if not trace_paths:
+        trace_paths.extend(_find_latest_apk_screenshots())
+
+    if not trace_paths:
+        return "<p class='subtle'>未获取到动态截图。</p>"
+
+    image_blocks = []
+    seen = set()
+    for raw_path in trace_paths:
+        if raw_path in seen:
+            continue
+        seen.add(raw_path)
+        encoded = _encode_image_data_uri(Path(raw_path))
+        if not encoded:
+            continue
+        image_blocks.append(f"""
+          <figure style='margin:14px 0 0;'>
+            <img src='{encoded}' alt='APK 动态截图' style='max-width:100%; border-radius:16px; border:1px solid rgba(148,163,184,.18); display:block;'>
+            <figcaption class='subtle' style='margin-top:8px; word-break:break-all;'>{html.escape(raw_path)}</figcaption>
+          </figure>
+        """)
+        if len(image_blocks) >= 4:
+            break
+
+    if not image_blocks:
+        return "<p class='subtle'>截图文件存在，但无法读取为图片。</p>"
+
+    content = f"""
+      <h4 style='margin-top:0;'>APK 动态截图</h4>
+      <p class='subtle'>自动展示当次分析生成的 UI 轨迹截图，优先读取 information 目录下最近的 PNG 产物。</p>
+      <div class='grid-list'>{''.join(image_blocks)}</div>
+    """
+    if compact:
+        return f"<div class='grid-list'>{''.join(image_blocks)}</div>"
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          {content}
+        </div>
+      </div>
+    """
+
+
+def _find_latest_apk_screenshots(limit: int = 4) -> list[str]:
+    project_root = Path(__file__).resolve().parents[1]
+    info_dir = project_root / "information"
+    if not info_dir.exists():
+        return []
+
+    candidates: list[Path] = []
+    for path in info_dir.rglob("*.png"):
+        try:
+            if path.is_file():
+                candidates.append(path)
+        except OSError:
+            continue
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return [str(path.as_posix()) for path in candidates[:limit]]
 
 
 def _render_apk_dynamic_block(report: DetectionReport) -> str:
@@ -899,17 +988,31 @@ def _render_apk_graph_block(report: DetectionReport) -> str:
 
 
 def _render_apk_consistency_block(report: DetectionReport) -> str:
-    apk = report.target_ir.apk
-    arbitration = getattr(apk, "arbitration_result", None) if apk else None
+    arbitration = _coerce_arbitration_result(report.arbitration_result)
     if not arbitration:
-        arbitration = report.arbitration_result
+        apk = report.target_ir.apk
+        arbitration = _coerce_arbitration_result(getattr(apk, "arbitration_result", None)) if apk else None
     if not arbitration:
-        return ""
+        return """
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>一致性验证</h4>
+          <p class='subtle'>未获取一致性分析结果。可能原因：当前分析流程未启用仲裁器，或仲裁结果未返回；这不代表没有一致性分析，只是本次报告无法展示该结果。</p>
+          <table class='table'>
+            <tr><th>一致性分数</th><td>-</td></tr>
+            <tr><th>一致性等级</th><td>-</td></tr>
+            <tr><th>分歧点</th><td>未获取</td></tr>
+            <tr><th>被污染模块</th><td>未获取</td></tr>
+          </table>
+        </div>
+      </div>
+        """
 
-    consistency_score = getattr(arbitration, "consistency_score", None)
-    consistency_level = str(getattr(arbitration, "consistency_level", "-") or "-").lower()
-    discrepancies = list(getattr(arbitration, "discrepancies", []) or [])
-    suspected = list(getattr(arbitration, "suspected_compromised", []) or [])
+    consistency_score = arbitration.get("consistency_score")
+    consistency_level = str(arbitration.get("consistency_level", "-") or "-").lower()
+    discrepancies = list(arbitration.get("discrepancies", []) or [])
+    suspected = list(arbitration.get("suspected_compromised", []) or [])
     level_label, level_color = _consistency_level_style(consistency_level)
     discrepancy_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in discrepancies) or "<li>无</li>"
     suspected_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in suspected) or "<li>无</li>"
@@ -1016,18 +1119,24 @@ def _markdown_apk_graph_block(report: DetectionReport) -> list[str]:
 
 
 def _markdown_apk_consistency_block(report: DetectionReport) -> list[str]:
-    apk = report.target_ir.apk
-    arbitration = getattr(apk, "arbitration_result", None) if apk else None
+    arbitration = _coerce_arbitration_result(report.arbitration_result)
     if not arbitration:
-        arbitration = report.arbitration_result
+        apk = report.target_ir.apk
+        arbitration = _coerce_arbitration_result(getattr(apk, "arbitration_result", None)) if apk else None
     if not arbitration:
-        return []
+        return [
+            "- 一致性分析结果：未获取到仲裁/一致性结果，但本次报告已显式展示缺失原因。",
+            "- 一致性分数：`-`",
+            "- 一致性等级：`-`",
+            "- 分歧点：未获取",
+            "- 被污染模块：未获取",
+        ]
     lines = [
-        f"- 一致性分数：`{getattr(arbitration, 'consistency_score', '-')}`",
-        f"- 一致性等级：`{str(getattr(arbitration, 'consistency_level', '-') or '-').upper()}`",
+        f"- 一致性分数：`{arbitration.get('consistency_score', '-')}`",
+        f"- 一致性等级：`{str(arbitration.get('consistency_level', '-') or '-').upper()}`",
     ]
-    discrepancies = list(getattr(arbitration, "discrepancies", []) or [])
-    suspected = list(getattr(arbitration, "suspected_compromised", []) or [])
+    discrepancies = list(arbitration.get("discrepancies", []) or [])
+    suspected = list(arbitration.get("suspected_compromised", []) or [])
     lines.append(f"- 分歧点：{', '.join(discrepancies) if discrepancies else '无'}")
     lines.append(f"- 被污染模块：{', '.join(suspected) if suspected else '无'}")
     return lines
@@ -1048,20 +1157,20 @@ def _markdown_apk_robustness_block(report: DetectionReport) -> list[str]:
 
 
 def _render_arbitration_block(report: DetectionReport) -> str:
-    result = report.arbitration_result
+    result = _coerce_arbitration_result(report.arbitration_result)
     if not result:
         return ""
-    discrepancies = "<br>".join(html.escape(item) for item in result.discrepancies) or "无"
-    compromised = ", ".join(html.escape(item) for item in result.suspected_compromised) or "无"
+    discrepancies = "<br>".join(html.escape(item) for item in result.get("discrepancies", [])) or "无"
+    compromised = ", ".join(html.escape(item) for item in result.get("suspected_compromised", [])) or "无"
     return f"""
       <div style='height:14px'></div>
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>仲裁结果</h4>
           <table class='table'>
-            <tr><th>一致性分数</th><td>{result.consistency_score}</td></tr>
-            <tr><th>一致性等级</th><td>{html.escape(result.consistency_level)}</td></tr>
-            <tr><th>加权置信度</th><td>{result.weighted_confidence}</td></tr>
+            <tr><th>一致性分数</th><td>{result.get('consistency_score', '-')}</td></tr>
+            <tr><th>一致性等级</th><td>{html.escape(str(result.get('consistency_level', '-')))}</td></tr>
+            <tr><th>加权置信度</th><td>{result.get('weighted_confidence', '-')}</td></tr>
             <tr><th>疑似污染源</th><td>{compromised}</td></tr>
             <tr><th>分歧与模式</th><td>{discrepancies}</td></tr>
           </table>
@@ -1071,19 +1180,33 @@ def _render_arbitration_block(report: DetectionReport) -> str:
 
 
 def _markdown_arbitration_block(report: DetectionReport) -> list[str]:
-    result = report.arbitration_result
+    result = _coerce_arbitration_result(report.arbitration_result)
     if not result:
         return []
     lines = [
-        f"- 一致性分数：`{result.consistency_score}`",
-        f"- 一致性等级：`{result.consistency_level}`",
-        f"- 加权置信度：`{result.weighted_confidence}`",
-        f"- 疑似污染源：{', '.join(result.suspected_compromised) if result.suspected_compromised else '无'}",
+        f"- 一致性分数：`{result.get('consistency_score', '-')}`",
+        f"- 一致性等级：`{result.get('consistency_level', '-')}`",
+        f"- 加权置信度：`{result.get('weighted_confidence', '-')}`",
+        f"- 疑似污染源：{', '.join(result.get('suspected_compromised', [])) if result.get('suspected_compromised') else '无'}",
     ]
-    if result.discrepancies:
+    if result.get("discrepancies"):
         lines.append("- 分歧与模式：")
-        lines.extend([f"  - {item}" for item in result.discrepancies])
+        lines.extend([f"  - {item}" for item in result.get("discrepancies", [])])
     return lines
+
+
+def _coerce_arbitration_result(value) -> dict:
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        return value
+    return {
+        "consistency_score": getattr(value, "consistency_score", None),
+        "consistency_level": getattr(value, "consistency_level", None),
+        "discrepancies": list(getattr(value, "discrepancies", []) or []),
+        "suspected_compromised": list(getattr(value, "suspected_compromised", []) or []),
+        "weighted_confidence": getattr(value, "weighted_confidence", None),
+    }
 
 
 def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
@@ -1188,3 +1311,15 @@ def _risk_color(risk_level: str) -> str:
         "invalid": "#64748b",
         "not_implemented": "#64748b",
     }.get(risk_level, "#64748b")
+
+
+def _encode_image_data_uri(path: Path) -> str:
+    try:
+        if not path.exists() or not path.is_file():
+            return ""
+        mime_type, _ = mimetypes.guess_type(path.name)
+        if not mime_type or not mime_type.startswith("image/"):
+            return ""
+        return f"data:{mime_type};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
+    except Exception:
+        return ""

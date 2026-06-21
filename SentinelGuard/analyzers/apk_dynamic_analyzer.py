@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -53,6 +54,26 @@ class APKDynamicModelAnalyzer(APKDeepAnalyzer):
     def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         # 主持人只接收前四个角色的输出，避免把动态沙箱明细再次塞回去导致输入膨胀。
         return super()._build_host_payload(static_report, role_outputs)
+
+    @staticmethod
+    def _role_stage(role: str) -> str:
+        return {
+            "静态分析员": "dynamic_model_static",
+            "行为分析员": "dynamic_model_behavior",
+            "情报分析员": "dynamic_model_intel",
+            "处置建议员": "dynamic_model_advice",
+            "主持人": "dynamic_model_host",
+        }.get(role, "dynamic_model_analysis")
+
+    @staticmethod
+    def _role_progress(role: str) -> int:
+        return {
+            "静态分析员": 80,
+            "行为分析员": 84,
+            "情报分析员": 88,
+            "处置建议员": 92,
+            "主持人": 95,
+        }.get(role, 80)
 
 
 class APKDynamicAnalyzer:
@@ -109,7 +130,7 @@ class APKDynamicAnalyzer:
         events.append(self._event("launch", "adb", launch_result.returncode, launch_result.stdout, launch_result.stderr))
 
         if progress_callback:
-            progress_callback("deep_intel", "正在采集 logcat、权限、文件与持久化线索", 87)
+            progress_callback("dynamic_collect", "正在采集 logcat、权限、文件与持久化线索", 87)
         logcat_output = self._capture_logcat(device_id)
         events.extend(self._extract_events_from_logcat(logcat_output, package_name))
 
@@ -133,7 +154,7 @@ class APKDynamicAnalyzer:
             events.append(self._event("pidof", "dumpsys", 0, package_info.get("pidof", ""), ""))
 
         if progress_callback:
-            progress_callback("deep_advice", "正在整理动态证据", 92)
+            progress_callback("dynamic_evidence", "正在整理动态证据并抓取截图", 92)
         artifacts = self._write_dynamic_artifacts(
             static_report,
             device_id,
@@ -179,7 +200,7 @@ class APKDynamicAnalyzer:
             merged_findings.append(finding)
 
         if progress_callback:
-            progress_callback("deep_done", "APK 动态沙箱分析已完成", 96)
+            progress_callback("dynamic_done", "APK 动态沙箱分析已完成", 96)
 
         return {
             "findings": merged_findings,
@@ -188,6 +209,8 @@ class APKDynamicAnalyzer:
             "expert_opinions": model_result.get("expert_opinions", {}),
             "expert_models": model_result.get("expert_models", {}),
             "deep_summary": model_result.get("deep_summary", ""),
+            "arbitration_result": model_result.get("arbitration_result"),
+            "robustness_result": model_result.get("robustness_result"),
             "risk_level": model_result.get("risk_level", risk_level_from_score(combine_apk_scores(
                 score_from_findings(merged_findings),
                 model_result.get("deep_score"),
@@ -249,6 +272,31 @@ class APKDynamicAnalyzer:
             process.kill()
             stdout, stderr = process.communicate()
         return stdout or stderr or ""
+
+    def _capture_ui_screenshot(self, device_id: str, ui_trace_dir: Path, package_name: str, label: str) -> str:
+        ui_trace_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        safe_package_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", package_name or "unknown.package").strip("._-") or "unknown.package"
+        screenshot_path = ui_trace_dir / f"{safe_package_name}_{label}_{timestamp}.png"
+
+        try:
+            result = subprocess.run(
+                [self.adb_path, "-s", device_id, "exec-out", "screencap", "-p"],
+                capture_output=True,
+                check=False,
+            )
+        except Exception:
+            return ""
+
+        if result.returncode != 0 or not result.stdout:
+            return ""
+
+        raw_bytes = bytes(result.stdout)
+        if raw_bytes:
+            raw_bytes = raw_bytes.replace(b"\r\r\n", b"\n").replace(b"\r\n", b"\n")
+            screenshot_path.write_bytes(raw_bytes)
+            return str(screenshot_path.as_posix())
+        return ""
 
     def _resolve_package_name_from_apk(self, apk_path: str, fallback: str = "") -> str:
         candidate = (fallback or "").strip()
@@ -364,6 +412,13 @@ class APKDynamicAnalyzer:
         json_path = run_dir / "dynamic_artifacts.json"
         summary_path = run_dir / "dynamic_summary.json"
         logcat_path = run_dir / "logcat_excerpt.txt"
+        ui_trace_dir = run_dir / "ui_trace"
+        ui_trace_paths: List[str] = []
+        for label in ("launch", "evidence"):
+            screenshot_path = self._capture_ui_screenshot(device_id, ui_trace_dir, package_name, label)
+            if screenshot_path:
+                ui_trace_paths.append(screenshot_path)
+            time.sleep(0.4)
         payload = {
             "target": static_report.target_ir.to_dict(),
             "device_id": device_id,
@@ -376,6 +431,7 @@ class APKDynamicAnalyzer:
             "events": events,
             "network_hits": self._extract_network_hits(logcat_output),
             "logcat_excerpt": logcat_output[:20000],
+            "ui_trace_paths": ui_trace_paths,
         }
         json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         summary_path.write_text(json.dumps({
@@ -394,6 +450,8 @@ class APKDynamicAnalyzer:
             "dynamic_summary_path": str(summary_path.as_posix()),
             "dynamic_logcat_path": str(logcat_path.as_posix()),
             "dynamic_output_dir": str(run_dir.as_posix()),
+            "ui_trace_dir": str(ui_trace_dir.as_posix()),
+            "ui_trace_paths": ui_trace_paths,
         }
 
     def _build_findings(
@@ -578,7 +636,7 @@ class APKDynamicAnalyzer:
             return analyzer.analyze(static_report, progress_callback=progress_callback)
         finally:
             if progress_callback:
-                progress_callback("deep_done", "APK 动态深度研判已完成", 96)
+                progress_callback("dynamic_deep_done", "APK 动态深度研判已完成", 96)
 
     def _build_lightweight_target_context(self, target_ir) -> Dict[str, Any]:
         target = {

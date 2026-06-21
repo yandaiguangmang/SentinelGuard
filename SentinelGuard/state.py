@@ -7,6 +7,16 @@ from urllib.parse import urlparse, urlunparse
 from typing import Any, Dict, List, Optional
 
 
+def _safe_to_dict(value: Any) -> Any:
+    if value is None:
+        return None
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    if isinstance(value, dict):
+        return dict(value)
+    return asdict(value) if hasattr(value, "__dataclass_fields__") else value
+
+
 @dataclass
 class AnalysisRuntimeConfig:
     llm_api_key: str = ""
@@ -221,7 +231,7 @@ class DetectionReport:
             "parent_markdown_report_path": self.parent_markdown_report_path,
             "html_report_path": self.html_report_path,
             "markdown_report_path": self.markdown_report_path,
-            "arbitration_result": self.arbitration_result.to_dict() if self.arbitration_result else None,
+            "arbitration_result": _safe_to_dict(self.arbitration_result),
         }
 
 

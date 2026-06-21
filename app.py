@@ -189,7 +189,7 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
 
         task_manager.update(task_id, status="running", progress=10, stage="static", message="正在进行静态分析")
         report = run_detection(target, target_type=target_type, fetch_page=fetch_page, runtime_config=runtime_config)
-        task_manager.update(task_id, progress=65, stage="static_done", message="静态分析已完成，正在整理证据")
+        task_manager.update(task_id, progress=62, stage="static_done", message="静态分析已完成，正在整理证据")
 
         progress_callback = lambda stage, message, progress: task_manager.update(  # noqa: E731
             task_id,
@@ -206,7 +206,7 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
                     runtime_config=runtime_config,
                     progress_callback=progress_callback,
                 )
-                task_manager.update(task_id, progress=94, stage="deep_done", message="APK 动态研判已完成，正在生成报告")
+                task_manager.update(task_id, progress=94, stage="dynamic_done", message="APK 动态研判已完成，正在生成报告")
             elif deep:
                 report = run_apk_deep_detection_from_static(
                     report,

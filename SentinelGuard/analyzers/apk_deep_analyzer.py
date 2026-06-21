@@ -121,7 +121,7 @@ class APKDeepAnalyzer:
         for role in DEEP_ROLE_ORDER[1:]:
             LOGGER.info("APK 深度研判开始执行角色：%s", role)
             if progress_callback:
-                progress_callback(f"deep_{self._role_stage(role)}", f"正在进行{role}分析", self._role_progress(role))
+                progress_callback(self._role_stage(role), f"正在进行{role}分析", self._role_progress(role))
             try:
                 role_payload = self._build_role_payload(role, static_report, base_payload)
                 role_result = self._call_role_model(role, role_payload)

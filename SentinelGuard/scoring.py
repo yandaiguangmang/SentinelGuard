@@ -69,9 +69,9 @@ def calculate_arbitration_adjustment(arbitration_result: Any) -> int:
     if level == "high":
         return 0
     if level == "medium":
-        return -5
+        return 5
     if level == "low":
-        return -15
+        return 15
     return 0
 
 
