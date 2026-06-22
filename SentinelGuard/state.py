@@ -310,10 +310,16 @@ class GraphStructure:
 
 @dataclass
 class ArbitrationResult:
+    """仲裁器结果：用于衡量多角色分析结论的一致性。"""
+    # 0-100，越高表示三方结论越一致
     consistency_score: float = 0.0
+    # high / medium / low 一致性等级
     consistency_level: str = "low"
+    # 具体分歧点列表
     discrepancies: List[str] = field(default_factory=list)
+    # 被标记的可疑角色/模块
     suspected_compromised: List[str] = field(default_factory=list)
+    # 加权置信度，综合各方评分和一致性修正后的值
     weighted_confidence: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -322,7 +328,10 @@ class ArbitrationResult:
 
 @dataclass
 class RobustnessResult:
+    """鲁棒性验证结果：检测 APK 是否使用了对抗/规避分析的技术。"""
+    # 检测到的对抗技术列表
     adversarial_techniques: List[str] = field(default_factory=list)
+    # 0-100，越高表示对抗特征越多
     robustness_score: float = 0.0
     anti_emulator_detected: bool = False
     obfuscation_detected: bool = False

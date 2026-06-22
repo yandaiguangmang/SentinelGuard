@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import difflib
 import mimetypes
 import html
 from collections import Counter
@@ -13,6 +14,43 @@ from SentinelGuard.state import DetectionFinding, DetectionReport
 
 
 REPORT_DIR = Path("sentinel_reports")
+
+
+def _deduplicate_semantic_findings(findings: list[DetectionFinding], similarity_threshold: float = 0.75) -> list[DetectionFinding]:
+    """
+    基于 rule_id、标题与证据文本相似度对 findings 做语义去重。
+
+    当 rule_id 相同，或标题与前 100 字证据都高度相似时，只保留严重度更高的那条。
+    """
+    if not findings:
+        return []
+
+    unique: list[DetectionFinding] = []
+    severity_order = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
+
+    for current in findings:
+        should_skip = False
+        for existing in list(unique):
+            if current.rule_id == existing.rule_id:
+                if severity_order.get(current.severity, 0) <= severity_order.get(existing.severity, 0):
+                    should_skip = True
+                    break
+                unique.remove(existing)
+                break
+
+            title_sim = difflib.SequenceMatcher(None, current.title, existing.title).ratio()
+            evidence_sim = difflib.SequenceMatcher(None, current.evidence[:100], existing.evidence[:100]).ratio()
+            if title_sim > similarity_threshold and evidence_sim > similarity_threshold:
+                if severity_order.get(current.severity, 0) <= severity_order.get(existing.severity, 0):
+                    should_skip = True
+                    break
+                unique.remove(existing)
+                break
+
+        if not should_skip:
+            unique.append(current)
+
+    return unique
 
 
 def save_detection_report(report: DetectionReport, output_dir: Path | str = REPORT_DIR) -> DetectionReport:
@@ -1070,6 +1108,12 @@ def _render_apk_consistency_block(report: DetectionReport) -> str:
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>一致性验证</h4>
+          <div style='margin-bottom:12px;'>
+            <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #60a5fa;'>
+              <strong>🔍 一致性分析说明：</strong>仲裁器通过比较「静态分析员」「行为分析员」「情报分析员」三方的评分差异，
+              判断各角色结论是否一致。一致性越高，说明证据链越稳固；若一致性低或出现分歧，则需重点关注被标记为「疑似污染」的模块。
+            </p>
+          </div>
           <p class='subtle'>
             <span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>一致性 {html.escape(level_label)}</span>
             <span class='pill muted' style='margin-left:8px;'>一致性分数 {html.escape(str(consistency_score if consistency_score is not None else '-'))}</span>
@@ -1102,6 +1146,12 @@ def _render_apk_robustness_block(report: DetectionReport) -> str:
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>鲁棒性分析</h4>
+          <div style='margin-bottom:12px;'>
+            <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #f59e0b;'>
+              <strong>🛡️ 鲁棒性分析说明：</strong>鲁棒性验证器检测 APK 是否使用了<strong>防沙箱、混淆、反射、动态加载</strong>等对抗技术。
+              鲁棒性分数越高，说明样本越可能使用了规避分析的手段；分数越低，表示样本相对透明、更容易被静态分析覆盖。
+            </p>
+          </div>
           <p class='subtle'>
             <span class='pill' style='background:{warning_color}; border-color:{warning_color}; color:#fff;'>抗干扰能力：{html.escape(assessment)}</span>
             <span class='pill muted' style='margin-left:8px;'>鲁棒性分数 {html.escape(str(score if score is not None else '-'))}</span>
@@ -1173,6 +1223,9 @@ def _markdown_apk_consistency_block(report: DetectionReport) -> list[str]:
         arbitration = _coerce_arbitration_result(getattr(apk, "arbitration_result", None)) if apk else None
     if not arbitration:
         return [
+            "> **🔍 一致性分析说明**：仲裁器通过比较静态/行为/情报三方的评分差异判断结论一致性。",
+            "> 一致性越高，证据链越稳固；一致性低时需重点关注被标记的「疑似污染」模块。",
+            "",
             "- 一致性分析结果：未获取到仲裁/一致性结果，但本次报告已显式展示缺失原因。",
             "- 一致性分数：`-`",
             "- 一致性等级：`-`",
@@ -1180,6 +1233,9 @@ def _markdown_apk_consistency_block(report: DetectionReport) -> list[str]:
             "- 被污染模块：未获取",
         ]
     lines = [
+        "> **🔍 一致性分析说明**：仲裁器通过比较静态/行为/情报三方的评分差异判断结论一致性。",
+        "> 一致性越高，证据链越稳固；一致性低时需重点关注被标记的「疑似污染」模块。",
+        "",
         f"- 一致性分数：`{arbitration.get('consistency_score', '-')}`",
         f"- 一致性等级：`{str(arbitration.get('consistency_level', '-') or '-').upper()}`",
     ]
@@ -1198,6 +1254,9 @@ def _markdown_apk_robustness_block(report: DetectionReport) -> list[str]:
     techniques = list(getattr(robustness, "adversarial_techniques", []) or [])
     score = getattr(robustness, "robustness_score", '-')
     return [
+        "> **🛡️ 鲁棒性分析说明**：检测 APK 是否使用了防沙箱、混淆、反射、动态加载等对抗技术。",
+        "> 鲁棒性分数越高，说明样本越可能使用了规避分析的手段；分数越低，表示样本相对透明。",
+        "",
         f"- 对抗技术：{', '.join(techniques) if techniques else '无'}",
         f"- 鲁棒性分数：`{score}`",
         f"- 抗干扰能力评估：**{_robustness_assessment(score, techniques)}**",

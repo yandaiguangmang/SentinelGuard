@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Tuple
 
 from config import settings
 from SentinelGuard.analyzers.apk_deep_analyzer import APKDeepAnalyzer
+from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.scoring import combine_apk_scores, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 
@@ -190,14 +191,7 @@ class APKDynamicAnalyzer:
             persistent_services,
         )
         model_findings = model_result.get("additional_findings", [])
-        merged_findings: List[DetectionFinding] = []
-        seen = set()
-        for finding in [*sandbox_findings, *model_findings]:
-            key = (getattr(finding, "rule_id", ""), getattr(finding, "evidence", ""))
-            if key in seen:
-                continue
-            seen.add(key)
-            merged_findings.append(finding)
+        merged_findings = _deduplicate_semantic_findings([*sandbox_findings, *model_findings])
 
         if progress_callback:
             progress_callback("dynamic_done", "APK 动态沙箱分析已完成", 96)

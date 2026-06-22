@@ -12,6 +12,7 @@ from openai import OpenAI
 from config import settings
 from SentinelGuard.arbitrator import Arbitrator
 from SentinelGuard.robustness_validator import RobustnessValidator
+from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.scoring import combine_apk_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
@@ -874,9 +875,11 @@ class APKDeepAnalyzer:
             default_evidence=self._summarize_host_evidence_source(static_report),
             default_recommendation="结合静态报告进一步复核。",
         ))
+        deduped_additional_findings = _deduplicate_semantic_findings(additional_findings)
+        merged_findings_for_scoring = _deduplicate_semantic_findings(static_report.findings + deduped_additional_findings)
 
         host_score = normalize_score(data.get("score"), static_report.score)
-        evidence_score = score_from_findings(static_report.findings + additional_findings)
+        evidence_score = score_from_findings(merged_findings_for_scoring)
         score = combine_apk_scores(evidence_score, host_score, data.get("arbitration_result"), data.get("robustness_result"))
         risk_level = risk_level_from_score(score)
         summary = self._normalize_host_summary(
@@ -899,7 +902,7 @@ class APKDeepAnalyzer:
             "expert_opinions": normalized_opinions,
             "expert_models": normalized_models,
             "deep_summary": summary,
-            "additional_findings": additional_findings,
+            "additional_findings": deduped_additional_findings,
             "role_scores": role_scores or self._extract_role_scores(role_outputs, static_report),
             "arbitration_result": arbitration_payload,
             "robustness_result": robustness_payload,

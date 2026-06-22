@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from zipfile import BadZipFile, ZipFile
 
+from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.state import APKIR, DetectionFinding
 from .apk_graph_extractor import APKGraphExtractor
 
@@ -91,6 +92,7 @@ def analyze_apk(target_ir) -> Dict[str, Any]:
     findings = _analyze_apk_ir(apk_ir)
     summary = _build_apk_summary(apk_ir, findings)
 
+    findings = _deduplicate_semantic_findings(findings)
     target_ir.apk = apk_ir
     return {"findings": findings, "apk_summary": summary}
 

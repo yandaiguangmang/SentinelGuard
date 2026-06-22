@@ -14,7 +14,7 @@ from SentinelGuard.analyzers.url_deep_analyzer import deep_analyze_url
 from SentinelGuard.arbitrator import Arbitrator
 from SentinelGuard.robustness_validator import RobustnessValidator
 from SentinelGuard.parsers.input_parser import parse_target
-from SentinelGuard.report import save_detection_report
+from SentinelGuard.report import _deduplicate_semantic_findings, save_detection_report
 from SentinelGuard.scoring import combine_apk_scores, combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
 
@@ -121,7 +121,7 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
 
     if target_ir.target_type == "apk":
         analysis = analyze_apk(target_ir)
-        findings: List[DetectionFinding] = _deduplicate_findings(analysis["findings"])
+        findings: List[DetectionFinding] = _deduplicate_semantic_findings(analysis["findings"])
         evidence_score = score_from_findings(findings)
         report = DetectionReport(
             target_ir=target_ir,
@@ -149,7 +149,7 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
         return report
 
     analysis = analyze_url(target_ir, fetch_page=fetch_page, runtime_config=runtime_config)
-    findings: List[DetectionFinding] = _deduplicate_findings(analysis["findings"])
+    findings: List[DetectionFinding] = _deduplicate_semantic_findings(analysis["findings"])
     evidence_score = score_from_findings(findings)
     risk_level = risk_level_from_score(evidence_score)
 
@@ -174,7 +174,7 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         deep_result = deep_analyze_url(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
     except TypeError:
         deep_result = deep_analyze_url(static_report)
-    merged_findings = _deduplicate_findings(static_report.findings + deep_result["additional_findings"])
+    merged_findings = _deduplicate_semantic_findings(static_report.findings + deep_result["additional_findings"])
 
     expert_models = deep_result.get("expert_models") or _build_expert_model_map()
     evidence_score = score_from_findings(merged_findings)
@@ -256,7 +256,7 @@ def _build_apk_deep_report(
             score=fallback_arbitration.weighted_confidence,
             evidence_score=static_report.evidence_score or score_from_findings(static_report.findings),
             deep_score=static_report.score,
-            findings=_deduplicate_findings(static_report.findings),
+        findings=_deduplicate_semantic_findings(static_report.findings),
             expert_opinions=static_report.expert_opinions,
             expert_models=_build_expert_model_map(),
             deep_summary=f"APK 深度研判失败，已降级到仲裁置信度评分。原因：{exc}",
@@ -281,10 +281,10 @@ def _build_apk_deep_report(
     findings = result.get("findings", [])
     if not findings:
         findings = result.get("additional_findings", [])
-    merged_findings = _deduplicate_findings(static_report.findings + findings)
+    merged_findings = _deduplicate_semantic_findings(static_report.findings + findings)
     merged_findings.extend(_arb_result_findings(result.get("arbitration_result")))
     merged_findings.extend(_robustness_result_findings(result.get("robustness_result")))
-    merged_findings = _deduplicate_findings(merged_findings)
+    merged_findings = _deduplicate_semantic_findings(merged_findings)
 
     evidence_score = score_from_findings(merged_findings)
     deep_score = normalize_score(result.get("deep_score"), evidence_score) if result.get("deep_score") is not None else None
@@ -508,13 +508,4 @@ def _sentence(prefix: str, items: List[str]) -> str:
     return f"{prefix}：" + "、".join(items[:6]) + "。"
 
 
-def _deduplicate_findings(findings: List[DetectionFinding]) -> List[DetectionFinding]:
-    seen = set()
-    unique: List[DetectionFinding] = []
-    for finding in findings:
-        key = (finding.rule_id, finding.evidence)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(finding)
-    return unique
+
