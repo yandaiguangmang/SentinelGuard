@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections import defaultdict
 import re
 from collections import Counter
 from pathlib import Path
@@ -10,6 +11,16 @@ from zipfile import BadZipFile, ZipFile
 from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.state import APKIR, DetectionFinding
 from .apk_graph_extractor import APKGraphExtractor
+from .apk_rules import (
+    KEY_FILE_EXTENSIONS,
+    MANIFEST_CANDIDATES,
+    SENSITIVE_API_RULES,
+    SUSPICIOUS_COMPONENT_KEYWORDS,
+    SUSPICIOUS_PERMISSION_KEYWORDS,
+    SUSPICIOUS_STRING_KEYWORDS,
+    SIGNATURE_PREFIX,
+    sensitive_api_weight,
+)
 
 try:  # pragma: no cover - optional dependency fallback
     from androguard.core.apk import APK
@@ -20,68 +31,6 @@ except Exception:  # pragma: no cover - dependency fallback
     except Exception:  # pragma: no cover - dependency fallback
         APK = None
 
-
-SUSPICIOUS_PERMISSION_KEYWORDS = (
-    "READ_SMS",
-    "SEND_SMS",
-    "RECEIVE_SMS",
-    "READ_CONTACTS",
-    "WRITE_CONTACTS",
-    "READ_CALL_LOG",
-    "WRITE_CALL_LOG",
-    "RECORD_AUDIO",
-    "CAMERA",
-    "ACCESS_FINE_LOCATION",
-    "REQUEST_INSTALL_PACKAGES",
-    "SYSTEM_ALERT_WINDOW",
-    "BIND_ACCESSIBILITY_SERVICE",
-    "QUERY_ALL_PACKAGES",
-    "MANAGE_EXTERNAL_STORAGE",
-)
-
-SUSPICIOUS_STRING_KEYWORDS = (
-    "http://",
-    "https://",
-    "shell",
-    "su",
-    "chmod",
-    "wget",
-    "curl",
-    "dexClassLoader",
-    "Runtime.getRuntime",
-    "TelephonyManager",
-    "SmsManager",
-    "AccessibilityService",
-)
-
-SUSPICIOUS_COMPONENT_KEYWORDS = (
-    "BootReceiver",
-    "AdminReceiver",
-    "AccessibilityService",
-    "DeviceAdminReceiver",
-    "JobService",
-)
-
-KEY_FILE_EXTENSIONS = (
-    ".xml",
-    ".json",
-    ".txt",
-    ".ini",
-    ".cfg",
-    ".conf",
-    ".properties",
-    ".js",
-    ".html",
-    ".htm",
-    ".smali",
-)
-
-MANIFEST_CANDIDATES = (
-    "AndroidManifest.xml",
-    "manifest/AndroidManifest.xml",
-)
-
-SIGNATURE_PREFIX = "META-INF/"
 
 
 def analyze_apk(target_ir) -> Dict[str, Any]:
@@ -305,6 +254,7 @@ def _build_apk_summary(apk_ir: APKIR, findings: List[DetectionFinding]) -> Dict[
     graph_data = apk_ir.graph_data or {}
     graph_stats = graph_data.get("stats", {}) if isinstance(graph_data, dict) else {}
     api_graph = graph_data.get("api_graph", {}) if isinstance(graph_data, dict) else {}
+    function_heatmap_data = _build_apk_function_heatmap(apk_ir)
     return {
         "file_name": apk_ir.file_name,
         "package_name": apk_ir.package_name,
@@ -317,6 +267,7 @@ def _build_apk_summary(apk_ir: APKIR, findings: List[DetectionFinding]) -> Dict[
         "finding_count": len(findings),
         "key_file_count": len(apk_ir.key_files),
         "evidence_summary": apk_ir.evidence_summary,
+        "function_heatmap_data": function_heatmap_data,
         "graph_summary": {
             "cfg_node_count": graph_stats.get("cfg_node_count", 0),
             "cfg_edge_count": graph_stats.get("cfg_edge_count", 0),
@@ -334,6 +285,98 @@ def _build_apk_summary(apk_ir: APKIR, findings: List[DetectionFinding]) -> Dict[
         },
         "graph_warnings": (graph_data.get("warnings", []) if isinstance(graph_data, dict) else []),
     }
+
+
+def _build_apk_function_heatmap(apk_ir: APKIR) -> List[Dict[str, Any]]:
+    graph_data = apk_ir.graph_data or {}
+    if not isinstance(graph_data, dict):
+        return []
+
+    cfg = graph_data.get("cfg", {}) if isinstance(graph_data.get("cfg", {}), dict) else {}
+    api_graph = graph_data.get("api_graph", {}) if isinstance(graph_data.get("api_graph", {}), dict) else {}
+    cfg_nodes = cfg.get("nodes", []) or []
+    api_nodes = api_graph.get("nodes", []) or []
+    api_edges = api_graph.get("edges", []) or []
+
+    api_node_map: Dict[str, str] = {}
+    for node in api_nodes:
+        if not isinstance(node, dict):
+            continue
+        node_id = str(node.get("id") or "").strip()
+        node_name = str(node.get("name") or node_id or "").strip()
+        if node_id and node_name:
+            api_node_map[node_id] = node_name
+
+    method_api_hits: Dict[str, List[str]] = defaultdict(list)
+    for edge in api_edges:
+        if not isinstance(edge, dict):
+            continue
+        source = str(edge.get("source") or "").strip()
+        target = str(edge.get("target") or "").strip()
+        if not source or not target:
+            continue
+        api_name = api_node_map.get(target, target)
+        if api_name not in method_api_hits[source]:
+            method_api_hits[source].append(api_name)
+
+    heatmap_rows: List[Dict[str, Any]] = []
+    for node in cfg_nodes:
+        if not isinstance(node, dict):
+            continue
+        if node.get("parent"):
+            continue
+
+        raw_name = str(node.get("name") or node.get("id") or "").strip()
+        if not raw_name or raw_name == "unknown":
+            # 尝试从id中提取更友好的名称
+            raw_name = str(node.get("id") or "").strip()
+            if raw_name.startswith("m"):
+                raw_name = f"method_{raw_name[1:]}"
+            else:
+                raw_name = "unknown_method"
+        method_name = raw_name
+        method_id = str(node.get("id") or method_name).strip()
+        feature = node.get("feature", {}) if isinstance(node.get("feature", {}), dict) else {}
+        api_hits = method_api_hits.get(method_name) or method_api_hits.get(method_id) or []
+
+        call_count = int(feature.get("call_count") or 0)
+        jump_count = int(feature.get("jump_count") or 0)
+        field_count = int(feature.get("field_count") or 0)
+        string_count = int(feature.get("string_const_count") or 0)
+        number_count = int(feature.get("number_const_count") or 0)
+
+        api_weight = 0
+        api_details: List[Dict[str, Any]] = []
+        for api_name in api_hits:
+            weight = _api_heatmap_weight(api_name)
+            api_weight += weight
+            api_details.append({"name": api_name, "weight": weight})
+
+        feature_weight = (call_count // 2) + (jump_count // 2) + field_count + (string_count // 2) + (number_count // 2)
+        risk_score = min(100, 10 + api_weight * 8 + feature_weight * 3 + len(api_hits) * 4)
+
+        # 只要有API命中，或者特征复杂度达到一定阈值，就纳入热力图
+        if api_hits or call_count >= 10 or jump_count >= 5 or field_count >= 3:
+            heatmap_rows.append({
+                "name": method_name if method_name and method_name != "unknown" else f"method_{len(heatmap_rows)}",
+                "risk_score": min(100, risk_score),
+                "api_hit_count": len(api_hits),
+                "api_hits": api_details,
+                "feature": {
+                    "call_count": call_count,
+                    "jump_count": jump_count,
+                    "field_count": field_count,
+                    "string_const_count": string_count,
+                    "number_const_count": number_count,
+                },
+            })
+
+    heatmap_rows.sort(key=lambda item: (-int(item.get("risk_score", 0) or 0), -int(item.get("api_hit_count", 0) or 0), str(item.get("name", ""))))
+    return heatmap_rows[:30]
+
+
+def _api_heatmap_weight(api_name: str) -> int:
+    return sensitive_api_weight(api_name)
 
 
 def _attach_graph_data(apk_ir: APKIR, apk: Any) -> None:

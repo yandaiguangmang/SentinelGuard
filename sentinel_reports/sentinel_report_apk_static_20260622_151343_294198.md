@@ -6,14 +6,14 @@
 
 
 ## 一、检测结论
-- 原始输入：`C:\Users\lenovo\AppData\Local\Temp\tmp0i1o_x62.apk`
+- 原始输入：`C:\Users\lenovo\AppData\Local\Temp\tmpprpc8896.apk`
 - 对象类型：`apk`
 - 状态：`ready`
 - 证据条数：2 条
 - 高危证据：0 条
 
 ## 二、统一 IR 摘要
-- APK 文件：`tmp0i1o_x62.apk`
+- APK 文件：`tmpprpc8896.apk`
 - 包名：`com.malmstein.yahnac`
 - 版本名：`1.3.1`
 - 版本号：`27`
@@ -22,12 +22,12 @@
 - 关键文件数：`60`
 
 ### APK 鲁棒性验证
-- 鲁棒性分数：`0.0`
-- 检测到的对抗技术：无
+- 鲁棒性分数：`30.0`
+- 检测到的对抗技术：动态加载
 - 防沙箱：`False`
 - 混淆：`False`
 - 反射：`False`
-- 动态加载：`False`
+- 动态加载：`True`
 
 ### APK 图结构分析
 - 已检测到 APK 图结构数据，可在 HTML 报告中查看 CFG / FCG / API 调用图统计。
@@ -48,27 +48,35 @@
 - FCG 节点数：`37635`
 - FCG 边数：`85716`
 - FCG 密度：`0.0000`
-- API 调用图节点数：`14`
-- API 调用图边数：`288`
-- API 总调用数：`288`
-- 敏感 API 调用分布：Ljava/lang/reflect/Method;->invoke:81, Ljava/lang/reflect/Field;->get:74, Ljava/lang/reflect/Field;->set:33, Ljava/lang/Class;->forName:32, Landroid/net/Uri;->parse:23, Landroid/content/Intent;->setPackage:18, Ljava/lang/ClassLoader;->loadClass:11, Landroid/app/PendingIntent;->getActivity:5, Ljava/net/URL;->openConnection:3, Landroid/provider/Settings$Secure;->getString:2, Ljava/net/HttpURLConnection;->connect:2, Ljava/net/Socket;->connect:2
+- API 调用图节点数：`15`
+- API 调用图边数：`190570`
+- API 总调用数：`190570`
+- 敏感 API 调用分布：Ljava/lang/reflect/Method;->invoke:93048, Ljava/lang/reflect/Field;->get:62919, Ldalvik/system/DexClassLoader;-><init>:18396, Landroid/net/Uri;->parse:10669, Ljava/net/HttpURLConnection;->connect:3661, Ljava/lang/reflect/Field;->set:1002, Ljava/lang/Runtime;->exec:465, Landroid/provider/Settings$Secure;->getString:303, Landroid/app/PendingIntent;->getActivity:59, Landroid/content/Intent;->setPackage:26, Ljava/lang/ClassLoader;->loadClass:11, Landroid/location/LocationManager;->getLastKnownLocation:4
 - API 调用明细：
-  - `Ljava/lang/reflect/Method;->invoke`：81
-  - `Ljava/lang/reflect/Field;->get`：74
-  - `Ljava/lang/reflect/Field;->set`：33
-  - `Ljava/lang/Class;->forName`：32
-  - `Landroid/net/Uri;->parse`：23
-  - `Landroid/content/Intent;->setPackage`：18
+  - `Ljava/lang/reflect/Method;->invoke`：93048
+  - `Ljava/lang/reflect/Field;->get`：62919
+  - `Ldalvik/system/DexClassLoader;-><init>`：18396
+  - `Landroid/net/Uri;->parse`：10669
+  - `Ljava/net/HttpURLConnection;->connect`：3661
+  - `Ljava/lang/reflect/Field;->set`：1002
+  - `Ljava/lang/Runtime;->exec`：465
+  - `Landroid/provider/Settings$Secure;->getString`：303
+  - `Landroid/app/PendingIntent;->getActivity`：59
+  - `Landroid/content/Intent;->setPackage`：26
   - `Ljava/lang/ClassLoader;->loadClass`：11
-  - `Landroid/app/PendingIntent;->getActivity`：5
+  - `Landroid/location/LocationManager;->getLastKnownLocation`：4
   - `Ljava/net/URL;->openConnection`：3
-  - `Landroid/provider/Settings$Secure;->getString`：2
-  - `Ljava/net/HttpURLConnection;->connect`：2
-  - `Ljava/net/Socket;->connect`：2
-  - `Landroid/location/LocationManager;->getLastKnownLocation`：1
-  - `Lorg/apache/http/client/HttpClient;->execute`：1
+  - `Landroid/telephony/TelephonyManager;->getDeviceId`：2
+  - `Lokhttp3/OkHttpClient;->newCall`：2
 
-## 四点三、一致性验证
+## 四点三、函数风险热力图
+> **🧯 函数风险热力图说明**：通过静态图结构与指令特征自动定位可疑函数密集区，分数越高表示越值得优先复核。
+
+- 热力图函数数：`30`
+- 最高风险函数：`Landroid/support/v7/widget/ActivityChooserView;->showPopupUnchecked(I)V`（100）
+- 热力图说明：HTML 报告中将以 ECharts 条形热力图展示函数风险排序。
+
+## 四点四、一致性验证
 > **🔍 一致性分析说明**：仲裁器通过比较静态/行为/情报三方的评分差异判断结论一致性。
 > 一致性越高，证据链越稳固；一致性低时需重点关注被标记的「疑似污染」模块。
 
@@ -78,13 +86,13 @@
 - 分歧点：未获取
 - 被污染模块：未获取
 
-## 四点四、鲁棒性分析
+## 四点五、鲁棒性分析
 > **🛡️ 鲁棒性分析说明**：检测 APK 是否使用了防沙箱、混淆、反射、动态加载等对抗技术。
 > 鲁棒性分数越高，说明样本越可能使用了规避分析的手段；分数越低，表示样本相对透明。
 
-- 对抗技术：无
-- 鲁棒性分数：`0.0`
-- 抗干扰能力评估：**弱**
+- 对抗技术：动态加载
+- 鲁棒性分数：`30.0`
+- 抗干扰能力评估：**中**
 
 ## 五、截图证据
 - 当前未采集到页面截图。
@@ -101,7 +109,7 @@
 - 规则：`APK_SIGNING_INFO`
 - 严重级别：`low`
 - 说明：签名主体与颁发者信息不完全一致，建议结合来源进一步核验。
-- 证据：`Subject=<asn1crypto.x509.Name 2089465565776 b'0\x81\x941\x0b0\t\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x13\nCalifornia1\x160\x14\x06\x03U\x04\x07\x13\rMountain View1\x100\x0e\x06\x03U\x04\n\x13\x07Android1\x100\x0e\x06\x03U\x04\x0b\x13\x07Android1\x100\x0e\x06\x03U\x04\x03\x13\x07Android1"0 \x06\t*\x86H\x86\xf7\r\x01\t\x01\x16\x13android@android.com'>; Issuer=<asn1crypto.x509.Name 2089465567744 b'0\x81\x941\x0b0\t\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x13\nCalifornia1\x160\x14\x06\x03U\x04\x07\x13\rMountain View1\x100\x0e\x06\x03U\x04\n\x13\x07Android1\x100\x0e\x06\x03U\x04\x0b\x13\x07Android1\x100\x0e\x06\x03U\x04\x03\x13\x07Android1"0 \x06\t*\x86H\x86\xf7\r\x01\t\x01\x16\x13android@android.com'>`
+- 证据：`Subject=<asn1crypto.x509.Name 2914080671104 b'0\x81\x941\x0b0\t\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x13\nCalifornia1\x160\x14\x06\x03U\x04\x07\x13\rMountain View1\x100\x0e\x06\x03U\x04\n\x13\x07Android1\x100\x0e\x06\x03U\x04\x0b\x13\x07Android1\x100\x0e\x06\x03U\x04\x03\x13\x07Android1"0 \x06\t*\x86H\x86\xf7\r\x01\t\x01\x16\x13android@android.com'>; Issuer=<asn1crypto.x509.Name 2914080672352 b'0\x81\x941\x0b0\t\x06\x03U\x04\x06\x13\x02US1\x130\x11\x06\x03U\x04\x08\x13\nCalifornia1\x160\x14\x06\x03U\x04\x07\x13\rMountain View1\x100\x0e\x06\x03U\x04\n\x13\x07Android1\x100\x0e\x06\x03U\x04\x0b\x13\x07Android1\x100\x0e\x06\x03U\x04\x03\x13\x07Android1"0 \x06\t*\x86H\x86\xf7\r\x01\t\x01\x16\x13android@android.com'>`
 - 建议：核对签名证书是否符合官方发布习惯。
 
 

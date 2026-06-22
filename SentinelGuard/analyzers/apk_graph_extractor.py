@@ -6,6 +6,7 @@ from math import log2
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from SentinelGuard.state import GraphNodeFeature, GraphStructure
+from .apk_rules import SENSITIVE_API_RULES, match_sensitive_api, sensitive_api_category
 
 try:  # pragma: no cover - optional dependency fallback
     from androguard.core.bytecodes.dvm import DalvikVMFormat
@@ -27,42 +28,7 @@ class APKGraphExtractor:
       heuristic graph synthesized from APK summary metadata.
     """
 
-    SENSITIVE_APIS: Dict[str, Tuple[str, ...]] = {
-        "privacy": (
-            "Landroid/telephony/TelephonyManager;->getDeviceId",
-            "Landroid/telephony/TelephonyManager;->getImei",
-            "Landroid/telephony/TelephonyManager;->getSubscriberId",
-            "Landroid/provider/Settings$Secure;->getString",
-            "Landroid/location/LocationManager;->getLastKnownLocation",
-            "Landroid/accounts/AccountManager;->getAccounts",
-        ),
-        "payment": (
-            "Landroid/app/PendingIntent;->getActivity",
-            "Landroid/content/Intent;->setPackage",
-            "Landroid/net/Uri;->parse",
-            "Ljavax/crypto/Cipher;->doFinal",
-        ),
-        "system": (
-            "Ljava/lang/Runtime;->exec",
-            "Ljava/lang/System;->loadLibrary",
-            "Ljava/lang/ClassLoader;->loadClass",
-            "Ldalvik/system/DexClassLoader;-><init>",
-            "Ldalvik/system/PathClassLoader;-><init>",
-        ),
-        "network": (
-            "Ljava/net/URL;->openConnection",
-            "Ljava/net/HttpURLConnection;->connect",
-            "Lokhttp3/OkHttpClient;->newCall",
-            "Lorg/apache/http/client/HttpClient;->execute",
-            "Ljava/net/Socket;->connect",
-        ),
-        "reflection": (
-            "Ljava/lang/reflect/Method;->invoke",
-            "Ljava/lang/Class;->forName",
-            "Ljava/lang/reflect/Field;->get",
-            "Ljava/lang/reflect/Field;->set",
-        ),
-    }
+    SENSITIVE_APIS: Dict[str, Tuple[str, ...]] = SENSITIVE_API_RULES
 
     def extract_all(self, dex_data: Any, apk_summary: Dict[str, Any]) -> Dict[str, Any]:
         """入口方法，返回包含 cfg、fcg、api_graph、stats 的字典。"""
@@ -687,19 +653,21 @@ class APKGraphExtractor:
         return ""
 
     def _match_sensitive_api(self, inst: Any) -> str:
-        text = self._instruction_output(inst) + " " + self._instruction_name(inst)
-        lowered = text.lower()
-        for category, signatures in self.SENSITIVE_APIS.items():
+        output = self._instruction_output(inst) or ""
+        name = self._instruction_name(inst) or ""
+        combined = f"{output} {name}".lower()
+
+        # 更宽松的匹配：同时检查完整签名与短名称，降低对原始输出格式的依赖
+        for _category, signatures in SENSITIVE_API_RULES.items():
             for signature in signatures:
-                if signature.lower() in lowered:
+                short_name = signature.split(";->")[-1] if ";->" in signature else signature
+                short_name = short_name.split("(")[0]
+                if signature.lower() in combined or short_name.lower() in combined:
                     return signature
         return ""
 
     def _sensitive_api_category(self, signature: str) -> str:
-        for category, signatures in self.SENSITIVE_APIS.items():
-            if signature in signatures:
-                return category
-        return "unknown"
+        return sensitive_api_category(signature)
 
     def _instruction_name(self, inst: Any) -> str:
         name = self._call_or_value(inst, "get_name") or self._call_or_value(inst, "name")

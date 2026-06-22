@@ -4,6 +4,7 @@ import base64
 import difflib
 import mimetypes
 import html
+import json
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -147,6 +148,7 @@ def _render_apk_html_report(report: DetectionReport) -> str:
     parent_report_block = _render_parent_report_block(report)
     apk_dynamic_block = _render_apk_dynamic_block(report)
     apk_graph_block = _render_apk_graph_block(report)
+    apk_heatmap_block = _render_apk_heatmap_block(report)
     apk_consistency_block = _render_apk_consistency_block(report)
     apk_robustness_block = _render_apk_robustness_block(report)
     arbitration_block = _render_arbitration_block(report)
@@ -175,6 +177,7 @@ def _render_apk_html_report(report: DetectionReport) -> str:
         parent_report_block=parent_report_block,
         apk_dynamic_block=apk_dynamic_block,
         apk_graph_block=apk_graph_block,
+        apk_heatmap_block=apk_heatmap_block,
         apk_consistency_block=apk_consistency_block,
         apk_robustness_block=apk_robustness_block,
         arbitration_block=arbitration_block,
@@ -262,14 +265,19 @@ def render_markdown_report(report: DetectionReport) -> str:
             lines.extend(["", "## 四点二、图结构分析"])
             lines.extend(apk_graph_lines)
 
+        heatmap_lines = _markdown_apk_heatmap_block(report)
+        if heatmap_lines:
+            lines.extend(["", "## 四点三、函数风险热力图"])
+            lines.extend(heatmap_lines)
+
         consistency_lines = _markdown_apk_consistency_block(report)
         if consistency_lines:
-            lines.extend(["", "## 四点三、一致性验证"])
+            lines.extend(["", "## 四点四、一致性验证"])
             lines.extend(consistency_lines)
 
         robustness_lines = _markdown_apk_robustness_block(report)
         if robustness_lines:
-            lines.extend(["", "## 四点四、鲁棒性分析"])
+            lines.extend(["", "## 四点五、鲁棒性分析"])
             lines.extend(robustness_lines)
     else:
         lines.extend(["", "## 四点一、页面线索"])
@@ -1047,11 +1055,31 @@ def _render_apk_graph_block(report: DetectionReport) -> str:
         for k, v in sorted(api_call_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0])))[:20]
     ) or "<li>无</li>"
 
+    explanation = """
+      <div style='margin-bottom:12px;'>
+        <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #60a5fa;'>
+          <strong>📊 图结构分析说明：</strong>CFG（控制流图）用于观察函数内部的分支、跳转与返回结构；
+          FCG（函数调用图）用于观察函数之间的调用关系与依赖传播；API 调用图则聚焦敏感接口命中情况。
+          如果某个函数的控制流复杂、调用密集且命中了敏感 API，通常意味着它更值得优先复核。
+        </p>
+      </div>
+    """
+
+    interpretation = """
+      <div style='margin-top:12px;'>
+        <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.03); padding:10px 14px; border-radius:12px; border-left:3px solid #f59e0b;'>
+          <strong>🔎 如何解读：</strong>CFG 节点/边越多，说明函数内部逻辑越复杂；FCG 边越密集，说明函数间耦合越强；
+          API 调用数越高且越集中在少数函数中，越可能存在权限滥用、命令执行或动态加载等行为链。
+        </p>
+      </div>
+    """
+
     return f"""
       <div style='height:14px'></div>
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>CFG / FCG / API 调用图分析</h4>
+          {explanation}
           <p class='subtle'>以下统计基于 APK 解析出的 CFG、FCG 与 API 调用图，仅展示关键数字，不绘制图形。</p>
           <p class='subtle'>图结构状态：<strong>{html.escape(graph_status)}</strong>{f" · 原因：{html.escape(warning_text)}" if warning_text else ""}</p>
           <table class='table'>
@@ -1068,6 +1096,226 @@ def _render_apk_graph_block(report: DetectionReport) -> str:
           <div style='height:12px'></div>
           <h4>API 调用明细</h4>
           <ul>{api_call_items}</ul>
+          {interpretation}
+        </div>
+      </div>
+    """
+
+
+def _render_apk_heatmap_block(report: DetectionReport) -> str:
+    apk = report.target_ir.apk
+    if not apk:
+        return ""
+
+    heatmap_data = []
+    if isinstance(report.apk_summary, dict):
+        heatmap_data = list(report.apk_summary.get("function_heatmap_data", []) or [])
+
+    if not heatmap_data:
+        apk = report.target_ir.apk
+        graph_data = _apk_graph_data_map(getattr(apk, "graph_data", None) if apk else None)
+        api_call_counts = {}
+        if isinstance(graph_data, dict) and isinstance(graph_data.get("api_graph", {}), dict):
+            api_call_counts = graph_data.get("api_graph", {}).get("api_call_counts", {}) or {}
+
+        if api_call_counts:
+            api_items = "".join(
+                f"<li><code>{html.escape(str(k))}</code>：{v} 次</li>"
+                for k, v in sorted(api_call_counts.items(), key=lambda x: -int(x[1] or 0))[:20]
+            )
+            return f"""
+              <div style='height:14px'></div>
+              <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+                <div class='panel-inner'>
+                  <h4 style='margin-top:0;'>敏感 API 调用分布（热力图数据生成中）</h4>
+                  <p class='subtle'>检测到 {len(api_call_counts)} 个敏感 API 调用，但未达到热力图展示阈值。以下展示 Top20 调用分布：</p>
+                  <ul>{api_items}</ul>
+                </div>
+              </div>
+            """
+
+        return """
+          <div style='height:14px'></div>
+          <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+            <div class='panel-inner'>
+              <h4 style='margin-top:0;'>静态函数风险热力图</h4>
+              <p class='subtle'>当前样本未识别到明显的恶意函数特征。可能原因：样本为良性应用、图结构提取未成功、或敏感 API 未在 DEX 中直接调用。</p>
+              <p class='subtle'>建议：结合动态沙箱或反编译工具进一步分析。</p>
+            </div>
+          </div>
+        """
+
+    def risk_band(score: int) -> str:
+        if score >= 75:
+            return "高危"
+        if score >= 45:
+            return "中危"
+        return "低危"
+
+    def risk_color(score: int) -> str:
+        score = max(0, min(100, int(score or 0)))
+        # 0-45: green -> yellow, 45-75: yellow -> orange, 75-100: orange -> red
+        if score < 45:
+            ratio = score / 45 if 45 else 0
+            start = (34, 197, 94)   # #22c55e
+            end = (245, 158, 11)    # #f59e0b
+        elif score < 75:
+            ratio = (score - 45) / 30
+            start = (245, 158, 11)  # #f59e0b
+            end = (249, 115, 22)    # #f97316
+        else:
+            ratio = (score - 75) / 25
+            start = (249, 115, 22)  # #f97316
+            end = (220, 38, 38)     # #dc2626
+
+        def lerp(a: int, b: int, t: float) -> int:
+            return int(round(a + (b - a) * max(0.0, min(1.0, t))))
+
+        r = lerp(start[0], end[0], ratio)
+        g = lerp(start[1], end[1], ratio)
+        b = lerp(start[2], end[2], ratio)
+        return f"rgb({r}, {g}, {b})"
+
+    grouped: dict[str, list[dict[str, Any]]] = {"高危": [], "中危": [], "低危": []}
+    detail_rows = []
+    for item in heatmap_data:
+        name = str(item.get("name") or "unknown")
+        score = int(item.get("risk_score") or 0)
+        api_hits = item.get("api_hits") or []
+        feature = item.get("feature") or {}
+        band = risk_band(score)
+        api_children = []
+        for entry in api_hits:
+            api_name = str(entry.get("name") or "unknown")
+            api_weight = int(entry.get("weight") or 0)
+            api_children.append({
+                "name": api_name,
+                "value": max(1, api_weight),
+            })
+        grouped[band].append({
+            "name": name,
+            "value": max(1, score),
+            "risk_score": score,
+            "api_hit_count": int(item.get("api_hit_count") or 0),
+            "feature": feature,
+            "itemStyle": {
+                "color": risk_color(score),
+            },
+            "children": api_children,
+        })
+        api_hit_text = ", ".join(f"{entry.get('name')}({entry.get('weight')})" for entry in api_hits) if api_hits else "无"
+        detail_rows.append(
+            "<tr>"
+            f"<td>{html.escape(name)}</td>"
+            f"<td>{html.escape(str(score))}</td>"
+            f"<td>{html.escape(str(item.get('api_hit_count', 0)))}</td>"
+            f"<td>{html.escape(api_hit_text)}</td>"
+            f"<td>{html.escape(_format_value(feature))}</td>"
+            "</tr>"
+        )
+
+    # TreeMap要求每个节点都有value，父节点的value应为子节点value之和
+    def sum_children_value(children_list):
+        total = 0
+        for child in children_list:
+            total += child.get("value", 0)
+        return total
+
+    tree_children = []
+    for band, rows in grouped.items():
+        if not rows:
+            continue
+        # 确保每个子节点都有value字段
+        for row in rows:
+            if "value" not in row:
+                row["value"] = row.get("risk_score", 10)
+        band_children = {
+            "name": band,
+            "children": rows,
+            "value": sum_children_value(rows)
+            ,"itemStyle": {
+                "color": risk_color(int(sum_children_value(rows) / max(1, len(rows))))
+            }
+        }
+        tree_children.append(band_children)
+
+    tree_data = [{
+        "name": "静态函数风险密集区",
+        "children": tree_children,
+        "value": sum_children_value(tree_children)
+    }]
+    chart_data = {
+        "treeData": tree_data,
+        "detailLabels": [str(item.get("name") or "unknown") for item in heatmap_data],
+    }
+    chart_data_json = json.dumps(chart_data, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    detail_table = "".join(detail_rows) or "<tr><td colspan='5'>暂无详细记录</td></tr>"
+    return f"""
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>静态函数风险树图</h4>
+          <p class='subtle'>基于 APKGraphExtractor 的 CFG / FCG / API 调用图与指令特征，按风险分层展示函数密集区；高危分支可优先复核。</p>
+          <div id='apk-function-heatmap' style='width:100%;height:420px;'></div>
+          <div class='scroll-box slim' style='margin-top:14px;'>
+            <table class='table'>
+              <tr><th>函数</th><th>风险分数</th><th>敏感 API 命中</th><th>API 明细</th><th>指令特征</th></tr>
+              {detail_table}
+            </table>
+          </div>
+          <script src='https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js'></script>
+          <script>
+            (function() {{
+              var el = document.getElementById('apk-function-heatmap');
+              if (!el || typeof echarts === 'undefined') {{ return; }}
+              var payload = {chart_data_json};
+              var chart = echarts.init(el);
+              var option = {{
+                backgroundColor: 'transparent',
+                tooltip: {{
+                  trigger: 'item',
+                  formatter: function(params) {{
+                    var data = params.data || {{}};
+                    var title = data.name || '';
+                    var score = data.risk_score || data.value || 0;
+                    var hits = data.api_hit_count || (data.children ? data.children.length : 0) || 0;
+                    return title + '<br/>风险分数：' + score + '<br/>敏感 API 命中：' + hits;
+                  }}
+                }},
+                series: [{{
+                  type: 'treemap',
+                  data: payload.treeData,
+                  roam: false,
+                  leafDepth: 2,
+                  upperLabel: {{ show: true, height: 24, color: '#e2e8f0' }},
+                  breadcrumb: {{ show: false }},
+                  nodeClick: 'zoomToNode',
+                  label: {{
+                    show: true,
+                    color: '#ffffff',
+                    formatter: '{{b}}',
+                  }},
+                  itemStyle: {{
+                    borderColor: 'rgba(15,23,42,.9)',
+                    borderWidth: 2,
+                    gapWidth: 2,
+                  }},
+                  colorMappingBy: 'value',
+                  color: ['#22c55e', '#f59e0b', '#f97316', '#dc2626'],
+                  levels: [
+                    {{ borderWidth: 3, gapWidth: 3, colorAlpha: [0.25, 0.9], colorSaturation: [0.25, 0.95] }},
+                    {{ borderWidth: 2, gapWidth: 2, colorAlpha: [0.35, 1], colorSaturation: [0.3, 1] }},
+                    {{ borderWidth: 1, gapWidth: 1, colorAlpha: [0.45, 1], colorSaturation: [0.35, 1] }},
+                  ],
+                  visualMin: 1,
+                  visualMax: 100,
+                  colorMappingBy: 'value',
+                }}]
+              }};
+              chart.setOption(option);
+              window.addEventListener('resize', function() {{ chart.resize(); }});
+            }})();
+          </script>
         </div>
       </div>
     """
@@ -1213,6 +1461,28 @@ def _markdown_apk_graph_block(report: DetectionReport) -> list[str]:
     if api_call_counts:
         lines.append("- API 调用明细：")
         lines.extend([f"  - `{k}`：{v}" for k, v in sorted(api_call_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0])))[:20]])
+    return lines
+
+
+def _markdown_apk_heatmap_block(report: DetectionReport) -> list[str]:
+    apk = report.target_ir.apk
+    if not apk or not isinstance(report.apk_summary, dict):
+        return []
+
+    heatmap_data = list(report.apk_summary.get("function_heatmap_data", []) or [])
+    if not heatmap_data:
+        return ["- 当前未生成可用的函数风险热力图数据。"]
+
+    lines = [
+        "> **🧯 函数风险热力图说明**：通过静态图结构与指令特征自动定位可疑函数密集区，分数越高表示越值得优先复核。",
+        "",
+        "- 热力图函数数：`%d`" % len(heatmap_data),
+        "- 最高风险函数：`%s`（%s）" % (
+            str(heatmap_data[0].get("name") or "unknown"),
+            str(heatmap_data[0].get("risk_score") or 0),
+        ),
+        "- 热力图说明：HTML 报告中将以 ECharts 条形热力图展示函数风险排序。",
+    ]
     return lines
 
 
