@@ -1,0 +1,546 @@
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>
+   Lost Password Reset - DICHVUHOST.VN
+  </title>
+  <!-- Styling -->
+  <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet"/>
+  <link href="/templates/hostiko-material/css/all.min.css?v=0885b4" rel="stylesheet"/>
+  <link href="/assets/css/fontawesome-all.min.css" rel="stylesheet"/>
+  <link href="/templates/hostiko-material/css/custom.css" rel="stylesheet"/>
+  <link href="/templates/hostiko-material/assets/css/overwrite.css" rel="stylesheet"/>
+  <link href="/templates/hostiko-material/assets/css/color.css" rel="stylesheet"/>
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+  <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+
+<![endif]-->
+  <script type="text/javascript">
+   var csrfToken = '22568bd752251c09eb7cbf5d0e90701657b32cb5',
+        markdownGuide = 'Markdown Guide',
+        locale = 'en',
+        saved = 'saved',
+        saving = 'autosaving',
+        whmcsBaseUrl = "",
+            requiredText = 'Required',
+            recaptchaSiteKey = "6Ldyye4UAAAAAFasxsbOufMjFYbHgbiruyZjE4YL";
+  </script>
+  <script src="/templates/hostiko-material/js/scripts.min.js?v=0885b4">
+  </script>
+ </head>
+ <body data-phone-cc-input="1">
+  <nav class="navbar navbar-default no-margin">
+   <!-- Brand and toggle get grouped for better mobile display -->
+   <div class="navbar-header fixed-brand">
+    <button class="navbar-toggle collapsed" data-toggle="collapse" id="menu-toggle" type="button">
+     <span class="sr-only">
+      Toggle navigation
+     </span>
+     <span class="icon-bar">
+     </span>
+     <span class="icon-bar">
+     </span>
+     <span class="icon-bar">
+     </span>
+    </button>
+    <a class="logo" href="/index.php">
+     <img alt="DICHVUHOST.VN" src="/assets/img/logo.png"/>
+    </a>
+   </div>
+   <!-- navbar-header-->
+   <div class="header_content_right " id="bs-example-navbar-collapse-1">
+    <ul class="nav navbar-nav">
+     <li class="active">
+      <button class="navbar-toggle collapse in" data-toggle="collapse" id="menu-toggle-2">
+       <span class="sr-only">
+        Toggle navigation
+       </span>
+       <span class="icon-bar">
+       </span>
+       <span class="icon-bar">
+       </span>
+       <span class="icon-bar">
+       </span>
+      </button>
+     </li>
+    </ul>
+    <ul class="top-nav pull-left">
+     <li>
+      <a class="choose-language" data-toggle="popover" href="#" id="languageChooser">
+       <i class="fas fa-language">
+       </i>
+       <b class="caret">
+       </b>
+      </a>
+      <div class="hidden" id="languageChooserContent">
+       <ul>
+        <li>
+         <a href="/password/reset/begin?language=arabic">
+          العربية
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=azerbaijani">
+          Azerbaijani
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=catalan">
+          Catal&agrave;
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=chinese">
+          中文
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=croatian">
+          Hrvatski
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=czech">
+          Če&scaron;tina
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=danish">
+          Dansk
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=dutch">
+          Nederlands
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=english">
+          English
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=estonian">
+          Estonian
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=farsi">
+          Persian
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=french">
+          Fran&ccedil;ais
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=german">
+          Deutsch
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=hebrew">
+          עברית
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=hungarian">
+          Magyar
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=italian">
+          Italiano
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=macedonian">
+          Macedonian
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=norwegian">
+          Norwegian
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=portuguese-br">
+          Portugu&ecirc;s
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=portuguese-pt">
+          Portugu&ecirc;s
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=romanian">
+          Rom&acirc;nă
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=russian">
+          Русский
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=spanish">
+          Espa&ntilde;ol
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=swedish">
+          Svenska
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=turkish">
+          T&uuml;rk&ccedil;e
+         </a>
+        </li>
+        <li>
+         <a href="/password/reset/begin?language=ukranian">
+          Українська
+         </a>
+        </li>
+       </ul>
+      </div>
+     </li>
+     <li>
+      <a href="/cart.php?a=view">
+       <i class="fas fa-shopping-cart">
+       </i>
+      </a>
+     </li>
+    </ul>
+    <ul class="top-nav pull-right">
+     <li class="dropdown" id="Secondary_Navbar-Account" menuitemname="Account">
+      <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+       Account
+                        &nbsp;
+       <b class="caret">
+       </b>
+      </a>
+      <ul class="dropdown-menu">
+       <li id="Secondary_Navbar-Account-Login" menuitemname="Login">
+        <a href="/clientarea.php">
+         Login
+        </a>
+       </li>
+       <li id="Secondary_Navbar-Account-Register" menuitemname="Register">
+        <a href="/register.php">
+         Register
+        </a>
+       </li>
+       <li class="nav-divider" id="Secondary_Navbar-Account-Divider" menuitemname="Divider">
+        <a href="">
+         -----
+        </a>
+       </li>
+       <li id="Secondary_Navbar-Account-Forgot_Password?" menuitemname="Forgot Password?">
+        <a href="/password/reset/begin">
+         Forgot Password?
+        </a>
+       </li>
+      </ul>
+     </li>
+    </ul>
+   </div>
+   <!-- bs-example-navbar-collapse-1 -->
+  </nav>
+  <div id="wrapper">
+   <!-- Sidebar -->
+   <div id="sidebar-wrapper">
+    <div class="collapse navbar-collapse" id="primary-nav">
+     <ul class="nav navbar-nav">
+      <li class="" id="Primary_Navbar-Home" menuitemname="Home">
+       <a href="/index.php">
+        <span class="sidenav-icons">
+         <i class="fas fa-home">
+         </i>
+        </span>
+        Home
+       </a>
+      </li>
+      <li class="dropdown" id="Primary_Navbar-Store" menuitemname="Store">
+       <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+        <span class="sidenav-icons">
+         <i class="fas fa-store">
+         </i>
+        </span>
+        Store
+                        &nbsp;
+        <b class="caret">
+        </b>
+       </a>
+       <ul class="dropdown-menu">
+        <li id="Primary_Navbar-Store-Browse_Products_Services" menuitemname="Browse Products Services">
+         <a href="/cart.php">
+          Browse All
+         </a>
+        </li>
+        <li class="nav-divider" id="Primary_Navbar-Store-Shop_Divider_1" menuitemname="Shop Divider 1">
+         <a href="">
+          -----
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Shared_Hosting" menuitemname="Shared Hosting">
+         <a href="/cart.php?gid=1">
+          Shared Hosting
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Reseller_Hosting" menuitemname="Reseller Hosting">
+         <a href="/cart.php?gid=6">
+          Reseller Hosting
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Cloud_VPS" menuitemname="Cloud VPS">
+         <a href="/cart.php?gid=4">
+          Cloud VPS
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Email_Basic" menuitemname="Email Basic">
+         <a href="/cart.php?gid=2">
+          Email Basic
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Email_Pro" menuitemname="Email Pro">
+         <a href="/cart.php?gid=5">
+          Email Pro
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-SSL" menuitemname="SSL">
+         <a href="/cart.php?gid=7">
+          SSL
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Email_Personal" menuitemname="Email Personal">
+         <a href="/cart.php?gid=12">
+          Email Personal
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Register_a_New_Domain" menuitemname="Register a New Domain">
+         <a href="/cart.php?a=add&amp;domain=register">
+          Register a New Domain
+         </a>
+        </li>
+        <li id="Primary_Navbar-Store-Transfer_a_Domain_to_Us" menuitemname="Transfer a Domain to Us">
+         <a href="/cart.php?a=add&amp;domain=transfer">
+          Transfer Domains to Us
+         </a>
+        </li>
+       </ul>
+      </li>
+      <li class="" id="Primary_Navbar-Announcements" menuitemname="Announcements">
+       <a href="/announcements">
+        <span class="sidenav-icons">
+         <i class="fas fa-bullhorn">
+         </i>
+        </span>
+        Announcements
+       </a>
+      </li>
+      <li class="" id="Primary_Navbar-Knowledgebase" menuitemname="Knowledgebase">
+       <a href="/knowledgebase">
+        <span class="sidenav-icons">
+         <i class="fas fa-info">
+         </i>
+        </span>
+        Knowledgebase
+       </a>
+      </li>
+      <li class="" id="Primary_Navbar-Network_Status" menuitemname="Network Status">
+       <a href="/serverstatus.php">
+        <span class="sidenav-icons">
+         <i class="fas fa-exclamation-triangle">
+         </i>
+        </span>
+        Network Status
+       </a>
+      </li>
+      <li class="" id="Primary_Navbar-Affiliates" menuitemname="Affiliates">
+       <a href="/affiliates.php">
+        Affiliates
+       </a>
+      </li>
+      <li class="" id="Primary_Navbar-Contact_Us" menuitemname="Contact Us">
+       <a href="/contact.php">
+        <span class="sidenav-icons">
+         <i class="fas fa-envelope">
+         </i>
+        </span>
+        Contact Us
+       </a>
+      </li>
+     </ul>
+    </div>
+   </div>
+   <!-- /#sidebar-wrapper -->
+   <!-- Page Content -->
+   <div id="page-content-wrapper">
+    <div class="container-fluid xyz">
+     <section id="main-body">
+      <div class="container">
+       <div class="row">
+        <!-- Container for main page display content -->
+        <div class="col-xs-12 main-content">
+         <div class="logincontainer">
+          <div class="header-lined">
+           <h1>
+            Lost Password Reset
+           </h1>
+          </div>
+          <p>
+           Forgotten your password? Enter your email address below to begin the reset process.
+          </p>
+          <form action="/password/reset/email/validate" method="post" role="form">
+           <input name="token" type="hidden" value="22568bd752251c09eb7cbf5d0e90701657b32cb5"/>
+           <input name="action" type="hidden" value="reset"/>
+           <div class="form-group">
+            <label for="inputEmail">
+             Email Address
+            </label>
+            <input autofocus="" class="form-control" id="inputEmail" name="email" placeholder="Enter email" type="email"/>
+           </div>
+           <div class="text-center margin-bottom">
+           </div>
+           <div class="form-group text-center">
+            <button class="btn btn-primary" type="submit">
+             Submit
+            </button>
+           </div>
+          </form>
+         </div>
+        </div>
+        <!-- /.main-content -->
+       </div>
+      </div>
+     </section>
+    </div>
+   </div>
+   <section id="footer">
+    <a class="back-to-top" href="#">
+     <i class="fas fa-chevron-up">
+     </i>
+    </a>
+    <p>
+     Copyright &copy; 2021 DICHVUHOST.VN. All Rights Reserved.
+    </p>
+   </section>
+  </div>
+  <div class="hidden" id="fullpage-overlay">
+   <div class="outer-wrapper">
+    <div class="inner-wrapper">
+     <img src="/assets/img/overlay-spinner.svg"/>
+     <br/>
+     <span class="msg">
+     </span>
+    </div>
+   </div>
+  </div>
+  <div aria-hidden="true" class="modal system-modal fade" id="modalAjax" role="dialog" tabindex="-1">
+   <div class="modal-dialog">
+    <div class="modal-content panel-primary">
+     <div class="modal-header panel-heading">
+      <button class="close" data-dismiss="modal" type="button">
+       <span aria-hidden="true">
+        &times;
+       </span>
+       <span class="sr-only">
+        Close
+       </span>
+      </button>
+      <h4 class="modal-title">
+      </h4>
+     </div>
+     <div class="modal-body panel-body">
+      Loading...
+     </div>
+     <div class="modal-footer panel-footer">
+      <div class="pull-left loader">
+       <i class="fas fa-circle-notch fa-spin">
+       </i>
+       Loading...
+      </div>
+      <button class="btn btn-default" data-dismiss="modal" type="button">
+       Close
+      </button>
+      <button class="btn btn-primary modal-submit" type="button">
+       Submit
+      </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script src="/templates/hostiko-material/assets/js/custom.js">
+  </script>
+  <!-- UI jQuery (For Module #5 and #6) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.js" type="text/javascript">
+  </script>
+  <form action="#" class="form-horizontal" id="frmGeneratePassword">
+   <div class="modal fade" id="modalGeneratePassword">
+    <div class="modal-dialog">
+     <div class="modal-content panel-primary">
+      <div class="modal-header panel-heading">
+       <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+        <span aria-hidden="true">
+         &times;
+        </span>
+       </button>
+       <h4 class="modal-title">
+        Generate Password
+       </h4>
+      </div>
+      <div class="modal-body">
+       <div class="alert alert-danger hidden" id="generatePwLengthError">
+        Please enter a number between 8 and 64 for the password length
+       </div>
+       <div class="form-group">
+        <label class="col-sm-4 control-label" for="generatePwLength">
+         Password Length
+        </label>
+        <div class="col-sm-8">
+         <input class="form-control input-inline input-inline-100" id="inputGeneratePasswordLength" max="64" min="8" step="1" type="number" value="12"/>
+        </div>
+       </div>
+       <div class="form-group">
+        <label class="col-sm-4 control-label" for="generatePwOutput">
+         Generated Password
+        </label>
+        <div class="col-sm-8">
+         <input class="form-control" id="inputGeneratePasswordOutput" type="text"/>
+        </div>
+       </div>
+       <div class="row">
+        <div class="col-sm-8 col-sm-offset-4">
+         <button class="btn btn-default btn-sm" type="submit">
+          <i class="fas fa-plus fa-fw">
+          </i>
+          Generate new password
+         </button>
+         <button class="btn btn-default btn-sm copy-to-clipboard" data-clipboard-target="#inputGeneratePasswordOutput" type="button">
+          <img alt="Copy to clipboard" src="/assets/img/clippy.svg" width="15"/>
+         </button>
+        </div>
+       </div>
+      </div>
+      <div class="modal-footer">
+       <button class="btn btn-default" data-dismiss="modal" type="button">
+        Close
+       </button>
+       <button class="btn btn-primary" data-clipboard-target="#inputGeneratePasswordOutput" id="btnGeneratePasswordInsert" type="button">
+        Copy to clipboard &amp; Insert
+       </button>
+      </div>
+     </div>
+    </div>
+   </div>
+  </form>
+ </body>
+</html>

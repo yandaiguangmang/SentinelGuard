@@ -1,0 +1,1107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>
+   Iron Condors Explained | Online Option Trading Guide
+  </title>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <link href="http://www.theoptionsguide.com/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+  <!-- Latest compiled and minified CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.6/yeti/bootstrap.min.css" rel="stylesheet"/>
+  <link href="stylesheet.css" rel="stylesheet"/>
+  <!-- FB CSS -->
+  <link href="fb.css" rel="stylesheet"/>
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+  </script>
+  <!-- Latest compiled and minified JavaScript -->
+  <script crossorigin="anonymous" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js">
+  </script>
+  <!-- Show Exit Intent Popup based on visitor country -->
+  <!-- Exit Intent Dialog -->
+  <script src="http://beeker.io/lab/exit-intent-popup/bioep.min.js" type="text/javascript">
+  </script>
+  <script type="text/javascript">
+   var countryCode = '';
+			
+			function jsonpCallback(data) {
+			countryCode = data.address.country_code;
+
+			if (countryCode != 'US') {
+			
+
+			$('#adMiddle').html('<a rel="nofollow" target="_blank" href="https://iqoption.com/en/tutorials?aff=48648&afftrack=togbannermiddle"><img src="https://images01.iqoption.com/09/0209/static-04400167357364830209.gif" width="728" height="90" /></a>');
+
+			$('#adMiddleMobile').html('<div class="well"><a rel="nofollow" target="_blank" href="https://iqoption.com/en/tutorials?aff=48648&afftrack=togbannermiddlemobile"><img src="https://images01.iqoption.com/45/9745/static-03261764547320479745.gif" width="300" height="250" /></a></div>');
+
+			bioEp.init({
+			width: 800,
+			height: 600,
+			<!-- Make sure the following code is all in one single line, otherwise will not work! -->
+			html: '<a rel="nofollow" href="https://www.binance.com/?ref=21120722" target="_top"><img width="800" height="600" src="images/binance.jpg" alt="Start Trading Cryptocurrencies Now!" border="0"/></a>', cookieExp: 0 });
+
+			}
+
+			else {
+			<!-- Ditched ETrade for Adsense in USA -->
+			<!-- $('#adTopDesktop').html('<a rel="nofollow" href="https://ad.doubleclick.net/ddm/jump/N84001.3000316OPTIONSGUIDE/B10727559.200213279;sz=300x250;ord=[timestamp]?" target="_top"><img src="https://ad.doubleclick.net/ddm/ad/N84001.3000316OPTIONSGUIDE/B10727559.200213279;sz=300x250;ord=[timestamp];dc_lat=;dc_rdid=;tag_for_child_directed_treatment=?" width="300" height="250" alt="" border="0"/></a>'); -->
+			<!-- $('#adTopMobile').html('<a rel="nofollow" href="https://ad.doubleclick.net/ddm/jump/N84001.3000316OPTIONSGUIDE/B10727559.200209880;sz=300x50;ord=[timestamp]?" target="_top"><img src="https://ad.doubleclick.net/ddm/ad/N84001.3000316OPTIONSGUIDE/B10727559.200209880;sz=300x50;ord=[timestamp];dc_lat=;dc_rdid=;tag_for_child_directed_treatment=?" width="300" height="50" alt="" border="0"/></a>'); -->
+
+			bioEp.init({
+			width: 800,
+			height: 600,
+			<!-- Make sure the following code is all in one single line, otherwise will not work! -->
+			html: '<a rel="nofollow" href="https://www.binance.com/?ref=21120722" target="_top"><img width="800" height="600" src="images/binance.jpg" alt="Start Trading Cryptocurrencies Now!" border="0"/></a>', cookieExp: 0 });
+
+
+
+		}
+
+		}
+  </script>
+  <!-- Adsense Page Level Ads -->
+  <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+  </script>
+  <script>
+   (adsbygoogle = window.adsbygoogle || []).push({
+			google_ad_client: "ca-pub-6324364492949153",
+			enable_page_level_ads: true
+			});
+  </script>
+  <meta content="What is Iron Condor? See detailed explanations and examples on how and when to use the Iron Condor options trading strategy." name="description"/>
+  <meta content="iron condor, iron condor options, iron condor strategy, iron condor tutorial, iron condor definition, iron condor explained" name="keywords"/>
+ </head>
+ <body>
+  <!-- Facebook SDK integration -->
+  <script type="text/javascript">
+   window.onload=function(){
+		window.fbAsyncInit = function() {
+		FB.Event.subscribe(
+		'ad.loaded',
+		function(placementID) {
+		console.log('ad loaded');
+		}
+		);
+
+		FB.Event.subscribe(
+		'ad.error',
+		function(errorCode, errorMessage, placementID) {
+		console.log('ad error ' + errorCode + ': ' + errorMessage);
+		}
+		);
+		};
+
+		(function(d, s, id) {
+		var js, fjs = d.getElementsByTagName(s)[0];
+		if (d.getElementById(id)) return;
+		js = d.createElement(s); js.id = id;
+		js.src = "//connect.facebook.net/en_US/sdk/xfbml.ad.js#xfbml=1&version=v2.5&appId=1549110715417488";
+		fjs.parentNode.insertBefore(js, fjs);
+		}(document, 'script', 'facebook-jssdk'));
+		}
+  </script>
+  <nav class="navbar navbar-inverse">
+   <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+     <button aria-expanded="false" class="navbar-toggle collapsed" data-target="#bs-example-navbar-collapse-1" data-toggle="collapse" type="button">
+      <span class="sr-only">
+       Toggle navigation
+      </span>
+      <span class="icon-bar">
+      </span>
+      <span class="icon-bar">
+      </span>
+      <span class="icon-bar">
+      </span>
+     </button>
+     <a class="navbar-brand" href="#">
+      The Options Guide
+     </a>
+    </div>
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+     <ul class="nav navbar-nav">
+      <li class="active">
+       <a href="default.aspx">
+        Home
+        <span class="sr-only">
+         (current)
+        </span>
+       </a>
+      </li>
+      <li>
+       <a href="binary-option.aspx">
+        Binary Options
+       </a>
+      </li>
+      <li>
+       <a href="stock-option.aspx">
+        Stock Options
+       </a>
+      </li>
+      <li>
+       <a href="option-trading-strategies.aspx">
+        Stock Option Strategies
+       </a>
+      </li>
+      <li>
+       <a href="futures-option.aspx">
+        Futures Options
+       </a>
+      </li>
+      <li>
+       <a href="https://coin.guru">
+        Crypto Trading (new!)
+       </a>
+      </li>
+     </ul>
+     <ul class="nav navbar-nav navbar-right">
+      <li>
+       <form action="http://www.theoptionsguide.com/search.aspx" class="navbar-form navbar-left" role="search">
+        <div class="form-group">
+         <input name="cx" type="hidden" value="partner-pub-7340752664697664:j1105w2chqc"/>
+         <input name="cof" type="hidden" value="FORID:11"/>
+         <input name="ie" type="hidden" value="ISO-8859-1"/>
+         <input alt="Search" class="" maxlength="50" name="q" onfocus="this.className += ' searchSelected'" type="text" value=""/>
+        </div>
+        <button class="btn btn-default" name="sa" type="submit">
+         Search
+        </button>
+       </form>
+       <script src="http://google.com/coop/cse/brand?form=searchbox_010623007121925777439%3Aborv1rd2h2a" type="text/javascript">
+       </script>
+      </li>
+     </ul>
+    </div>
+    <!-- /.navbar-collapse -->
+   </div>
+   <!-- /.container-fluid -->
+  </nav>
+  <div class="container">
+   <div class="row">
+    <div class="col-sm-8">
+     <div class="visible-lg">
+      <a href="default.aspx">
+       Home
+      </a>
+      /
+      <a href="option-trading-strategies.aspx">
+       Option Strategy Finder
+      </a>
+      /
+      <a href="neutral-trading-strategies.aspx">
+       Neutral Trading Strategies
+      </a>
+     </div>
+     <h1>
+      Iron Condors
+     </h1>
+     <div class="visible-lg" id="adTopDesktop" style="float:left;">
+      <a href="https://www.deribit.com/reg-11795.4331?q=home" rel="nofollow" target="_blank">
+       <img class="img-responsive" src="images/crypto-options-square.jpg" width="330"/>
+      </a>
+     </div>
+     <div class="hidden-lg" id="adTopMobile">
+      <a href="https://www.deribit.com/reg-11795.4331?q=home" rel="nofollow" target="_blank">
+       <img class="img-responsive" src="images/crypto-options-square.jpg" width="100%"/>
+      </a>
+     </div>
+     <br/>
+     <!-- google_ad_section_start -->
+     <p>
+      The iron condor is a limited risk, non-directional option trading strategy that is designed to have a large probability of earning a small limited profit when the
+      <a href="underlying-security.aspx">
+       underlying security
+      </a>
+      is perceived to have low volatility. The iron condor strategy can also be visualized as a combination of a
+      <a href="bull-put-spread.aspx">
+       bull put spread
+      </a>
+      and a
+      <a href="bear-call-spread.aspx">
+       bear call spread
+      </a>
+      .
+     </p>
+     <table class="table">
+      <tbody>
+       <tr class="info">
+        <td>
+         Iron Condor Construction
+        </td>
+       </tr>
+       <tr>
+        <td>
+         Sell 1 OTM Put
+         <br/>
+         Buy 1 OTM Put (Lower Strike)
+         <br/>
+         Sell 1 OTM Call
+         <br/>
+         Buy 1 OTM Call (Higher Strike)
+        </td>
+       </tr>
+      </tbody>
+     </table>
+     <p>
+      Using options expiring on the same expiration month, the option trader creates an iron condor by selling a lower strike
+      <a href="out-of-the-money-puts.aspx">
+       out-of-the-money put
+      </a>
+      , buying an even lower strike out-of-the-money put, selling
+        a higher strike
+      <a href="out-of-the-money-calls.aspx">
+       out-of-the-money call
+      </a>
+      and buying another even higher strike out-of-the-money call. This results in a net credit to put on the trade.
+     </p>
+     <h2>
+      Limited Profit
+     </h2>
+     <p>
+      Maximum gain for the iron condor strategy is equal to the net credit received when entering the trade. Maximum
+    profit is attained when the underlying stock price at expiration is between the
+    strikes of the call and put sold. At this price, all the options expire worthless.
+     </p>
+     <p>
+      The formula for calculating maximum profit is given below:
+     </p>
+     <span class="highlight">
+      <ul>
+       <li>
+        Max Profit = Net Premium Received - Commissions Paid
+       </li>
+       <li>
+        Max Profit Achieved When Price of Underlying is in between Strike Prices of the Short Put and the Short Call
+       </li>
+      </ul>
+     </span>
+     <div class="panel panel-default">
+      <div class="panel-heading">
+       Iron Condor Payoff Diagram
+      </div>
+      <div align="center" class="panel-body">
+       <img alt="Graph showing the expected profit or loss for the iron condor option strategy in relation to the market price of the underlying security on option expiration date." class="img-responsive" src="images/iron-condor.gif"/>
+      </div>
+     </div>
+     <div align="center" class="visible-lg" id="adMiddle">
+      <div class="well">
+       <span style="width:100%;color:#1b1b1b!important">
+        <b>
+         0.00% Commissions Option Trading!
+         <br/>
+         <a href="http://www.anrdoezrs.net/6q121wktqks7AD9HDC979AA9FDFA79CBAAA8E88888" onmouseout="window.status=' ';return true;" onmouseover="window.status='http://www.optionshouse.com';return true;" rel="nofollow" target="_top">
+          Trade options FREE For 60 Days when you Open a New OptionsHouse Account
+         </a>
+         <img border="0" height="1" src="http://www.lduhtrp.net/94116xjnbhf0362A65202332868302543331711111" width="1"/>
+        </b>
+       </span>
+      </div>
+     </div>
+     <div align="center" class="hidden-lg" id="adMiddleMobile">
+      <div class="well">
+       <span style="width:100%;color:#1b1b1b!important">
+        <b>
+         0.00% Commissions Option Trading!
+         <br/>
+         <a href="http://www.anrdoezrs.net/6q121wktqks7AD9HDC979AA9FDFA79CBAAA8E88888" onmouseout="window.status=' ';return true;" onmouseover="window.status='http://www.optionshouse.com';return true;" rel="nofollow" target="_top">
+          Trade options FREE For 60 Days when you Open a New OptionsHouse Account
+         </a>
+         <img border="0" height="1" src="http://www.lduhtrp.net/94116xjnbhf0362A65202332868302543331711111" width="1"/>
+        </b>
+       </span>
+      </div>
+     </div>
+     <h2>
+      Limited Risk
+     </h2>
+     <p>
+      Maximum loss for the iron condor spread is also limited but significantly higher than the maximum profit. It
+    occurs when the stock price falls at or below the lower strike of the put purchased
+    or rise above or equal to the higher strike of the call purchased. In either situation,
+    maximum loss is equal to the difference in strike between the calls (or puts) minus
+    the net credit received when entering the trade.
+     </p>
+     <p>
+      The formula for calculating maximum loss is given below:
+     </p>
+     <span class="highlight">
+      <ul>
+       <li>
+        Max Loss = Strike Price of Long Call - Strike Price of Short Call - Net Premium Received + Commissions Paid
+       </li>
+       <li>
+        Max Loss Occurs When Price of Underlying &gt;= Strike Price of Long Call OR Price of Underlying &lt;= Strike Price of Long Put
+       </li>
+      </ul>
+     </span>
+     <a id="breakeven">
+     </a>
+     <h2>
+      Breakeven Point(s)
+     </h2>
+     <p>
+      There are 2 break-even points for the iron condor position. The breakeven points can be calculated using the following formulae.
+     </p>
+     <span class="highlight">
+      <ul>
+       <li>
+        Upper Breakeven Point = Strike Price of Short Call + Net Premium Received
+       </li>
+       <li>
+        Lower Breakeven Point = Strike Price of Short Put - Net Premium Received
+       </li>
+      </ul>
+     </span>
+     <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+     </script>
+     <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-format="auto" data-ad-slot="9835693821" style="display:block">
+     </ins>
+     <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+     </script>
+     <h2>
+      Example
+     </h2>
+     <p>
+      Suppose XYZ stock is trading at $45 in June. An options trader executes an iron
+    condor by buying a JUL 35 put for $50, writing a JUL 40 put for $100, writing another
+    JUL 50 call for $100 and buying another JUL 55 call for $50. The net credit received
+    when entering the trade is $100, which is also his maximum possible profit.
+     </p>
+     <p>
+      On expiration in July, XYZ stock is still trading at $45. All the 4 options expire worthless and the options trader gets to keep the entire credit received as profit.
+        This is also his maximum possible profit.
+     </p>
+     <p>
+      If XYZ stock is instead trading at $35 on expiration, all the options except the
+        JUL 40 put sold expire worthless. The JUL 40 put has an intrinsic value
+        of $500.
+        This option has to be bought back to exit the trade. Thus, subtracting his initial
+        $100 credit received, the options
+        trader suffers his maximum possible loss of $400.
+        This maximum loss situation also occurs if the stock price had gone up to $55 instead.
+     </p>
+     <p>
+      To further see why $400 is the maximum possible loss, lets examine what happens
+        when the stock price falls to $30 on expiration. At this price, both the JUL 35
+        put and the JUL 40 put options expire in-the-money. The long JUL 35 put has an intrinsic
+        value of $500 while the short JUL 40 put is worth $1000. Selling the long put for
+        $500, he still need $500 to buy back the short put. Subtracting the initial credit
+        of $100 received, his loss is still $400.
+     </p>
+     <p>
+      <i>
+       Note: While we have covered the use of this strategy with reference to stock options, the iron condor is equally applicable using ETF options,
+       <a href="index-options.aspx">
+        index options
+       </a>
+       as well as
+       <a href="futures-option.aspx">
+        options on futures
+       </a>
+       .
+      </i>
+     </p>
+     <h2>
+      Commissions
+     </h2>
+     <p>
+      Commission charges can make a
+      <a href="impact-of-commissions-on-option-spreads-profits.aspx">
+       significant impact to overall profit or loss
+      </a>
+      when implementing option spreads strategies. Their effect is even more pronounced for the iron condor as there are 4 legs involved in this trade compared to simpler strategies like the vertical spreads which have only 2 legs.
+     </p>
+     <p>
+      If you make multi-legged options trades frequently, you should check out the brokerage firm
+      <a href="http://www.anrdoezrs.net/hd108cy63y5LORNVRQNLNMVSTOTM" onmouseout="window.status=' ';return true;" onmouseover="window.status='http://www.optionshouse.com';return true;" rel="nofollow" target="_top">
+       OptionsHouse.com
+      </a>
+      where they charge a low fee of only $0.15 per contract (+$4.95 per trade).
+     </p>
+     <h2>
+      Similar Strategies
+     </h2>
+     <p>
+      The following strategies are similar to the iron condor in that they are also low volatility strategies that have limited profit potential and limited risk.
+     </p>
+     <div class="row">
+      <div class="col-md-4">
+       <div class="panel panel-primary">
+        <div class="panel-heading">
+         Neutral Calendar Spread
+        </div>
+        <div class="panel-body">
+         <a href="neutral-calendar-spread.aspx">
+          <img border="1" class="img-responsive" src="images/neutral-calendar-spread.gif"/>
+         </a>
+        </div>
+       </div>
+      </div>
+      <div class="col-md-4">
+       <div class="panel panel-primary">
+        <div class="panel-heading">
+         Long Put Butterfly
+        </div>
+        <div class="panel-body">
+         <a href="long-put-butterfly.aspx">
+          <img border="1" class="img-responsive" src="images/long-butterfly.gif"/>
+         </a>
+        </div>
+       </div>
+      </div>
+      <div class="col-md-4">
+       <div class="panel panel-primary">
+        <div class="panel-heading">
+         Iron Butterfly
+        </div>
+        <div class="panel-body">
+         <a href="iron-butterfly.aspx">
+          <img border="1" class="img-responsive" src="images/iron-butterfly.gif"/>
+         </a>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="row">
+      <a class="btn btn-primary btn-sm" href="option-trading-strategies.aspx?outlook=Neutral - Bearish on Volatility&amp;profit=Limited&amp;risk=Limited" role="button">
+       View More Similar Strategies
+      </a>
+     </div>
+     <h2>
+      The Reverse Iron Condor
+     </h2>
+     <p>
+      The converse strategy to the iron condor is the
+      <a href="reverse-iron-condor.aspx">
+       reverse or short iron condor.
+      </a>
+      Short iron condors are used when one perceives the volatility of the price of the underlying
+    stock to be high.
+     </p>
+     <h2>
+      Wingspreads
+     </h2>
+     <p>
+      The iron condor spread belongs to a family of spreads called
+      <a href="wingspreads.aspx">
+       wingspreads
+      </a>
+      whose members are named after a myriad of flying creatures.
+     </p>
+     <!-- google_ad_section_end -->
+     <br/>
+     <br/>
+     <div id="adBottom">
+      <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+      </script>
+      <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-format="fluid" data-ad-layout="in-article" data-ad-slot="9599466629" style="display:block; text-align:center;">
+      </ins>
+      <script>
+       (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+     </div>
+     <h3>
+      You May Also Like
+     </h3>
+     <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+     </script>
+     <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-format="autorelaxed" data-ad-slot="6053946625" style="display:block">
+     </ins>
+     <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+     </script>
+     <h2>
+      Continue Reading...
+     </h2>
+     <h3>
+      <a href="buying-straddles-into-earnings.aspx">
+       Buying Straddles into Earnings
+      </a>
+     </h3>
+     <p>
+      Buying straddles is a great way to play earnings.
+        Many a times, stock price gap up or down following the quarterly earnings report
+        but often, the direction of the movement can be unpredictable. For instance, a sell
+        off can occur even though the earnings report is good if investors had expected
+        great results....
+      <a href="buying-straddles-into-earnings.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="writing-puts-to-purchase-stocks.aspx">
+       Writing Puts to Purchase Stocks
+      </a>
+     </h3>
+     <p>
+      If you are very bullish on a particular stock for the long term and is looking to
+        purchase the stock but feels that it is slightly overvalued at the moment, then
+        you may want to consider writing put options on the
+        stock as a means to acquire it at a discount....
+      <a href="writing-puts-to-purchase-stocks.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="binary-option.aspx">
+       What are Binary Options and How to Trade Them?
+      </a>
+     </h3>
+     <p>
+      Also known as digital options, binary options belong to a special class of exotic options in which the option trader speculate purely on the direction of the underlying within a relatively short period of time.....
+      <a href="binary-options.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="investing-in-growth-stocks-using-leaps.aspx">
+       Investing in Growth Stocks using LEAPS&Acirc;&reg; options
+      </a>
+     </h3>
+     <p>
+      If you are investing the Peter Lynch style, trying to predict the next multi-bagger,
+    then you would want to find out more about LEAPS&Acirc;&reg; and why I consider them to be a great option for investing in the next Microsoft&Acirc;&reg;....
+      <a href="investing-in-growth-stocks-using-leaps.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="effect-of-dividends-on-option-pricing.aspx">
+       Effect of Dividends on Option Pricing
+      </a>
+     </h3>
+     <p>
+      Cash dividends issued by stocks have big impact on their option prices. This is
+    because the underlying stock price is expected to drop by the dividend amount on the ex-dividend date....
+      <a href="effect-of-dividends-on-option-pricing.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="bull-call-spread-instead-of-covered-call.aspx">
+       Bull Call Spread: An Alternative to the Covered Call
+      </a>
+     </h3>
+     <p>
+      As an alternative to writing covered calls, one can enter a bull call spread for
+    a similar profit potential but with significantly less capital requirement. In
+    place of holding the underlying stock in the covered call strategy, the alternative....
+      <a href="bull-call-spread-instead-of-covered-call.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+     </script>
+     <!-- The Options Guide - Medium Rectangle 2 -->
+     <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-format="auto" data-ad-slot="5199571825" style="display:block">
+     </ins>
+     <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+     </script>
+     <h3>
+      <a href="dividend-capture-using-covered-calls.aspx">
+       Dividend Capture using Covered Calls
+      </a>
+     </h3>
+     <p>
+      Some stocks pay generous dividends every quarter. You qualify for the dividend if
+        you are holding on the shares before the ex-dividend date....
+      <a href="dividend-capture-using-covered-calls.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="leverage-using-calls-not-margin-calls.aspx">
+       Leverage using Calls, Not Margin Calls
+      </a>
+     </h3>
+     <p>
+      To achieve higher returns in the stock market, besides doing more homework on the
+        companies you wish to buy, it is often necessary to
+        take on higher risk. A most common way to do that is to buy stocks on margin....
+      <a href="leverage-using-calls-not-margin-calls.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="day-trading-option.aspx">
+       Day Trading using Options
+      </a>
+     </h3>
+     <p>
+      Day trading options can be a successful, profitable strategy but there are a couple of things you need to know before you use start using options for day trading....
+      <a href="day-trading-option.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="put-call-ratio.aspx">
+       What is the Put Call Ratio and How to Use It
+      </a>
+     </h3>
+     <p>
+      Learn about the put call ratio, the way it is derived and how it can be used as a contrarian indicator....
+      <a href="put-call-ratio.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="understanding-put-call-parity.aspx">
+       Understanding Put-Call Parity
+      </a>
+     </h3>
+     <p>
+      Put-call parity is an important principle in options pricing first identified by Hans Stoll in his paper, The Relation Between Put and Call Prices, in 1969. It states that the premium of a call option implies a certain fair price for the corresponding put option having the same strike price and expiration date, and vice versa....
+      <a href="understanding-put-call-parity.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="the-greeks.aspx">
+       Understanding the Greeks
+      </a>
+     </h3>
+     <p>
+      In options trading, you may notice the use of certain greek alphabets like delta
+        or gamma when describing risks associated with various positions. They are known as "the greeks"....
+      <a href="the-greeks.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <h3>
+      <a href="discounted-cash-flow.aspx">
+       Valuing Common Stock using Discounted Cash Flow
+    Analysis
+      </a>
+     </h3>
+     <p>
+      Since the value of stock options depends on the price of the underlying stock, it
+        is useful to calculate the fair value of the stock by using a technique known as
+        discounted cash flow....
+      <a href="discounted-cash-flow.aspx">
+       [Read on...]
+      </a>
+     </p>
+     <!-- 
+<h3>From Around The Web</h3> 
+<div id="rcjsload_89e4a0"></div>
+<script type="text/javascript">
+(function() {
+var referer="";try{if(referer=document.referrer,"undefined"==typeof referer)throw"undefined"}catch(exception){referer=document.location.href,(""==referer||"undefined"==typeof referer)&&(referer=document.URL)}referer=referer.substr(0,700);
+var rcel = document.createElement("script");
+rcel.id = 'rc_' + Math.floor(Math.random() * 1000);
+rcel.type = 'text/javascript';
+rcel.src = "http://trends.revcontent.com/serve.js.php?w=52801&t="+rcel.id+"&c="+(new Date()).getTime()+"&width="+(window.outerWidth || document.documentElement.clientWidth)+"&referer="+referer;
+rcel.async = true;
+var rcds = document.getElementById("rcjsload_89e4a0"); rcds.appendChild(rcel);
+})();
+</script>
+-->
+    </div>
+    <div class="col-sm-4">
+     <!-- Go to www.addthis.com/dashboard to customize your tools -->
+     <script src="//s7.addthis.com/js/300/addthis_widget.js#pubid=searchkeys" type="text/javascript">
+     </script>
+     <!-- Go to www.addthis.com/dashboard to customize your tools -->
+     <div class="addthis_sharing_toolbox">
+     </div>
+     <!-- The Options Forum RSS Feed -->
+     <br/>
+     <!-- 300x600 Adsense -->
+     <!-- Hide in mobile to improve Adsense Viewability score -->
+     <div class="visible-lg">
+      <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+      </script>
+      <!-- The Options Guide - Sidebar Ad -->
+      <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-slot="9007239028" style="display:inline-block;width:300px;height:600px">
+      </ins>
+      <script>
+       (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+     </div>
+     <br/>
+     <h4>
+      Follow Us on Facebook to Get Daily Strategies &amp; Tips!
+     </h4>
+     <div class="fb-page" data-adapt-container-width="true" data-hide-cover="false" data-href="https://www.facebook.com/theoptionsguide" data-show-facepile="true" data-small-header="false" data-tabs="timeline">
+      <blockquote cite="https://www.facebook.com/theoptionsguide" class="fb-xfbml-parse-ignore">
+       <a href="https://www.facebook.com/theoptionsguide">
+        The Options Guide
+       </a>
+      </blockquote>
+     </div>
+     <br/>
+     <br/>
+     <!-- Hide in mobile to improve Adsense Viewability score -->
+     <div class="visible-lg">
+      <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+      </script>
+      <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-slot="7307119827" style="display:inline-block;width:336px;height:280px">
+      </ins>
+      <script>
+       (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+     </div>
+     <br/>
+     <h4>
+      Neutral Strategies
+     </h4>
+     <div class="list-group">
+      <a class="list-group-item" href="neutral-trading-strategies.aspx">
+       Overview
+      </a>
+      <a class="list-group-item" href="butterfly-spread.aspx">
+       Butterfly Spread
+      </a>
+      <a class="list-group-item" href="calendar-straddle.aspx">
+       Calendar Straddle
+      </a>
+      <a class="list-group-item" href="condor.aspx">
+       Condor
+      </a>
+      <a class="list-group-item" href="iron-butterfly.aspx">
+       Iron Butterfly
+      </a>
+      <a class="list-group-item" href="iron-condor.aspx">
+       Iron Condor
+      </a>
+      <a class="list-group-item" href="long-put-butterfly.aspx">
+       Long Put Butterfly
+      </a>
+      <a class="list-group-item" href="long-straddle.aspx">
+       Long Straddle
+      </a>
+      <a class="list-group-item" href="long-strangle.aspx">
+       Long Strangle
+      </a>
+      <a class="list-group-item" href="neutral-calendar-spread.aspx">
+       Neutral Calendar Spread
+      </a>
+      <a class="list-group-item" href="put-ratio-spread.aspx">
+       Put Ratio Spread
+      </a>
+      <a class="list-group-item" href="ratio-call-write.aspx">
+       Ratio Call Write
+      </a>
+      <a class="list-group-item" href="ratio-put-write.aspx">
+       Ratio Put Write
+      </a>
+      <a class="list-group-item" href="ratio-spread.aspx">
+       Ratio Spread
+      </a>
+      <a class="list-group-item" href="short-butterfly.aspx">
+       Short Butterfly
+      </a>
+      <a class="list-group-item" href="short-condor.aspx">
+       Short Condor
+      </a>
+      <a class="list-group-item" href="short-put-butterfly.aspx">
+       Short Put Butterfly
+      </a>
+      <a class="list-group-item" href="short-straddle.aspx">
+       Short Straddle
+      </a>
+      <a class="list-group-item" href="short-strangle.aspx">
+       Short Strangle
+      </a>
+      <a class="list-group-item" href="variable-ratio-write.aspx">
+       Variable Ratio Write
+      </a>
+      <a class="list-group-item" href="reverse-iron-condor.aspx">
+       Reverse Iron Condor
+      </a>
+      <a class="list-group-item" href="reverse-iron-butterfly.aspx">
+       Reverse Iron Butterfly
+      </a>
+      <a class="list-group-item" href="long-guts.aspx">
+       Long Guts
+      </a>
+      <a class="list-group-item" href="short-guts.aspx">
+       Short Guts
+      </a>
+      <a class="list-group-item" href="long-call-ladder.aspx">
+       Long Call Ladder
+      </a>
+      <a class="list-group-item" href="short-call-ladder.aspx">
+       Short Call Ladder
+      </a>
+      <a class="list-group-item" href="long-put-ladder.aspx">
+       Long Put Ladder
+      </a>
+      <a class="list-group-item" href="short-put-ladder.aspx">
+       Short Put Ladder
+      </a>
+      <a class="list-group-item" href="strip.aspx">
+       Strip
+      </a>
+      <a class="list-group-item" href="strap.aspx">
+       Strap
+      </a>
+     </div>
+     <h4>
+      Options Strategies
+     </h4>
+     <div class="list-group">
+      <a class="list-group-item" href="buying-options.aspx">
+       Buying Options
+      </a>
+      <a class="list-group-item" href="selling-options.aspx">
+       Selling Options
+      </a>
+      <a class="list-group-item" href="options-spread.aspx">
+       Options Spreads
+      </a>
+      <a class="list-group-item" href="combinations.aspx">
+       Options Combinations
+      </a>
+      <a class="list-group-item" href="bullish-trading-strategies.aspx">
+       Bullish Strategies
+      </a>
+      <a class="list-group-item" href="bearish-trading-strategies.aspx">
+       Bearish Strategies
+      </a>
+      <a class="list-group-item" href="neutral-trading-strategies.aspx">
+       Neutral Strategies
+      </a>
+      <a class="list-group-item" href="synthetic-position.aspx">
+       Synthetic Positions
+      </a>
+      <a class="list-group-item" href="options-arbitrage.aspx">
+       Options Arbitrage
+      </a>
+      <a class="list-group-item" href="option-trading-strategies.aspx">
+       Strategy Finder
+      </a>
+      <a class="list-group-item" href="articles.aspx">
+       Strategy Articles
+      </a>
+     </div>
+     <!-- The Options Guide - Sidebar Square Ad 2 -->
+     <!-- Hidden for Mobile to improve Ad viewability score -->
+     <div class="visible-lg">
+      <script async="" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+      </script>
+      <ins class="adsbygoogle" data-ad-client="ca-pub-6324364492949153" data-ad-slot="1260586222" style="display:inline-block;width:336px;height:280px">
+      </ins>
+      <script>
+       (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+     </div>
+     <h4>
+      Options Strategy Finder
+     </h4>
+     <form action="option-trading-strategies.aspx" method="post" name="aspnetForm">
+      <div>
+       <input id="__VIEWSTATEGENERATOR" name="__VIEWSTATEGENERATOR" type="hidden" value="C1D08F0A"/>
+       <input id="__EVENTVALIDATION" name="__EVENTVALIDATION" type="hidden" value="/wEWFgKQsrC0BQKY8NPNAQLt5PzPAgLuh4nOAgLHiYC9AwL074rXBwK5y9aVAQLLtpaZAgLi1ZT2DALUlqqoAwLZt8v0CQLw1MmbBwLGl/fFCAL9hL7lCALA/4OZDQL7xPr1DwLWpo/CCwLZyaWsBwLYyaWsBwLbyaWsBwLayaWsBwLQs6/UBTfiTnmtlKIGBr4W85wHaxUYxaZr"/>
+      </div>
+      <div class="well">
+       <div class="row">
+        Outlook on Underlying:
+        <br/>
+        <select id="ctl00_Main_ddlOutlook" name="outlook">
+         <option value="">
+         </option>
+         <option value="Arbitrage">
+          Arbitrage
+         </option>
+         <option value="Bearish">
+          Bearish
+         </option>
+         <option selected="selected" value="Bullish">
+          Bullish
+         </option>
+         <option value="Neutral - Bearish on Volatility">
+          Neutral - Bearish on Volatility
+         </option>
+         <option value="Neutral - Bullish on Volatility">
+          Neutral - Bullish on Volatility
+         </option>
+        </select>
+        <br/>
+        <br/>
+        Profit Potential:
+        <br/>
+        <select id="ctl00_Main_ddlProfitPotential" name="profit">
+         <option value="">
+         </option>
+         <option value="Limited">
+          Limited
+         </option>
+         <option value="Unlimited">
+          Unlimited
+         </option>
+        </select>
+        <br/>
+        <br/>
+        Loss Potential:
+        <br/>
+        <select id="ctl00_Main_ddlRisk" name="risk">
+         <option value="">
+         </option>
+         <option value="Limited">
+          Limited
+         </option>
+         <option value="Unlimited">
+          Unlimited
+         </option>
+        </select>
+        <br/>
+        <br/>
+        Credit/Debit:
+        <br/>
+        <select id="ctl00_Main_ddlCreditDebit" name="creditdebit">
+         <option value="">
+         </option>
+         <option value="Credit">
+          Credit
+         </option>
+         <option value="Debit">
+          Debit
+         </option>
+        </select>
+        <br/>
+        <br/>
+        No. Legs:
+        <br/>
+        <select id="ctl00_Main_ddlNumLegs" name="numlegs">
+         <option value="">
+         </option>
+         <option value="1">
+          1
+         </option>
+         <option value="2">
+          2
+         </option>
+         <option value="3">
+          3
+         </option>
+         <option value="4">
+          4
+         </option>
+        </select>
+        <br/>
+        <br/>
+       </div>
+       <div align="right">
+        <input class="btn btn-info" id="ctl00_Main_btnFilter" name="ctl00$Main$btnFilter" type="submit" value="Find Strategies"/>
+       </div>
+      </div>
+     </form>
+     <div class="visible-lg" id="adSidebarBottom">
+      <a href="https://ad.doubleclick.net/ddm/jump/N84001.3000316OPTIONSGUIDE/B10727559.200213282;sz=300x600;ord=[timestamp]?" rel="nofollow" target="_top">
+       <img alt="" border="0" height="600" src="https://ad.doubleclick.net/ddm/ad/N84001.3000316OPTIONSGUIDE/B10727559.200213282;sz=300x600;ord=[timestamp];dc_lat=;dc_rdid=;tag_for_child_directed_treatment=?" width="300"/>
+      </a>
+     </div>
+    </div>
+   </div>
+   <!-- /.row -->
+   <div class="row">
+    <br/>
+    <br/>
+    <div align="center" class="row">
+     <div class="col-sm-3 visible-lg">
+     </div>
+     <div class="col-sm-6 well">
+      <form action="http://www.theoptionsguide.com/search.aspx" class="form-inline" role="search">
+       <div class="form-group">
+        <input class="form-control" name="q" placeholder="Enter search term" type="text"/>
+       </div>
+       <button class="btn btn-info" type="submit">
+        Search
+       </button>
+      </form>
+     </div>
+     <div class="col-sm-3 visible-lg">
+     </div>
+    </div>
+    <p>
+     <small>
+      Risk Warning: Stocks, futures and binary options trading discussed on this website can be considered High-Risk Trading Operations and their execution can be very risky and may result in significant losses or even in a total loss of all funds on your account. You should not risk more than you afford to lose. Before deciding to trade, you need to ensure that you understand the risks involved taking into account your investment objectives and level of experience.
+		Information on this website is provided strictly for informational and educational purposes only and is not intended as a trading recommendation service. TheOptionsGuide.com shall not be liable for any errors, omissions, or delays in the content, or for any actions taken in reliance thereon.
+     </small>
+    </p>
+    <table bgcolor="#f80" border="0">
+     <tbody>
+      <tr>
+       <td style="padding: 5px; text-align: center; font-family: 'Arial';">
+        <span>
+         <b>
+          General Risk Warning:
+         </b>
+        </span>
+        <br/>
+        <span>
+         The financial products offered by the company carry a high level of risk and can result in the loss of all your funds. You should never invest money that you cannot afford to lose.
+        </span>
+       </td>
+      </tr>
+     </tbody>
+    </table>
+    <div align="center" class="row">
+     <br/>
+     <a href="default.aspx">
+      Home
+     </a>
+     |
+     <a href="about-us.aspx" rel="nofollow">
+      About Us
+     </a>
+     |
+     <a href="terms-and-conditions.aspx" rel="nofollow">
+      Terms of Use
+     </a>
+     |
+     <a href="disclaimer.aspx" rel="nofollow">
+      Disclaimer
+     </a>
+     |
+     <a href="privacy-policy.aspx" rel="nofollow">
+      Privacy Policy
+     </a>
+     |
+     <a href="sitemap.aspx">
+      Sitemap
+     </a>
+     <br/>
+     <br/>
+     Copyright 2017. TheOptionsGuide.com - All Rights Reserved.
+     <br/>
+     <br/>
+    </div>
+    <script src="http://api.wipmania.com/jsonp?callback=jsonpCallback" type="text/javascript">
+    </script>
+    <!-- Start of StatCounter Code -->
+    <script language="javascript" type="text/javascript">
+     var sc_project=1867628; 
+var sc_invisible=1; 
+var sc_partition=17; 
+var sc_security="71d827d2";
+    </script>
+    <script language="javascript" src="http://www.statcounter.com/counter/counter.js" type="text/javascript">
+    </script>
+    <noscript>
+     <a href="http://www.statcounter.com/" target="_blank">
+      <img alt="best counter" border="0" src="http://c18.statcounter.com/counter.php?sc_project=1867628&amp;java=0&amp;security=71d827d2&amp;invisible=1"/>
+     </a>
+    </noscript>
+    <!-- End of StatCounter Code -->
+    <script>
+     (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+	ga('create', 'UA-808745-1', 'auto');
+	ga('send', 'pageview');
+    </script>
+   </div>
+   <!-- /.row -->
+  </div>
+  <!-- /.container -->
+ </body>
+</html>

@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <script>
+   var BASE_URL = 'https://www.akaipro.com/';
+    var require = {
+        "baseUrl": "https://d10z1m3ycmasau.cloudfront.net/version1608191534/frontend/Linchpin/akai/en_US"
+    };
+  </script>
+  <meta charset="utf-8"/>
+  <script type="text/javascript">
+   (window.NREUM||(NREUM={})).loader_config={licenseKey:"NRJS-163ea197e411098f0e0",applicationID:"1027111231"};window.NREUM||(NREUM={}),__nr_require=function(e,t,n){function r(n){if(!t[n]){var i=t[n]={exports:{}};e[n][0].call(i.exports,function(t){var i=e[n][1][t];return r(i||t)},i,i.exports)}return t[n].exports}if("function"==typeof __nr_require)return __nr_require;for(var i=0;i<n.length;i++)r(n[i]);return r}({1:[function(e,t,n){function r(){}function i(e,t,n){return function(){return o(e,[u.now()].concat(c(arguments)),t?null:this,n),t?void 0:this}}var o=e("handle"),a=e(6),c=e(7),f=e("ee").get("tracer"),u=e("loader"),s=NREUM;"undefined"==typeof window.newrelic&&(newrelic=s);var d=["setPageViewName","setCustomAttribute","setErrorHandler","finished","addToTrace","inlineHit","addRelease"],p="api-",l=p+"ixn-";a(d,function(e,t){s[t]=i(p+t,!0,"api")}),s.addPageAction=i(p+"addPageAction",!0),s.setCurrentRouteName=i(p+"routeName",!0),t.exports=newrelic,s.interaction=function(){return(new r).get()};var m=r.prototype={createTracer:function(e,t){var n={},r=this,i="function"==typeof t;return o(l+"tracer",[u.now(),e,n],r),function(){if(f.emit((i?"":"no-")+"fn-start",[u.now(),r,i],n),i)try{return t.apply(this,arguments)}catch(e){throw f.emit("fn-err",[arguments,this,e],n),e}finally{f.emit("fn-end",[u.now()],n)}}}};a("actionText,setName,setAttribute,save,ignore,onEnd,getContext,end,get".split(","),function(e,t){m[t]=i(l+t)}),newrelic.noticeError=function(e,t){"string"==typeof e&&(e=new Error(e)),o("err",[e,u.now(),!1,t])}},{}],2:[function(e,t,n){function r(){return c.exists&&performance.now?Math.round(performance.now()):(o=Math.max((new Date).getTime(),o))-a}function i(){return o}var o=(new Date).getTime(),a=o,c=e(8);t.exports=r,t.exports.offset=a,t.exports.getLastTimestamp=i},{}],3:[function(e,t,n){function r(e,t){var n=e.getEntries();n.forEach(function(e){"first-paint"===e.name?d("timing",["fp",Math.floor(e.startTime)]):"first-contentful-paint"===e.name&&d("timing",["fcp",Math.floor(e.startTime)])})}function i(e,t){var n=e.getEntries();n.length>0&&d("lcp",[n[n.length-1]])}function o(e){e.getEntries().forEach(function(e){e.hadRecentInput||d("cls",[e])})}function a(e){if(e instanceof m&&!g){var t=Math.round(e.timeStamp),n={type:e.type};t<=p.now()?n.fid=p.now()-t:t>p.offset&&t<=Date.now()?(t-=p.offset,n.fid=p.now()-t):t=p.now(),g=!0,d("timing",["fi",t,n])}}function c(e){d("pageHide",[p.now(),e])}if(!("init"in NREUM&&"page_view_timing"in NREUM.init&&"enabled"in NREUM.init.page_view_timing&&NREUM.init.page_view_timing.enabled===!1)){var f,u,s,d=e("handle"),p=e("loader"),l=e(5),m=NREUM.o.EV;if("PerformanceObserver"in window&&"function"==typeof window.PerformanceObserver){f=new PerformanceObserver(r);try{f.observe({entryTypes:["paint"]})}catch(v){}u=new PerformanceObserver(i);try{u.observe({entryTypes:["largest-contentful-paint"]})}catch(v){}s=new PerformanceObserver(o);try{s.observe({type:"layout-shift",buffered:!0})}catch(v){}}if("addEventListener"in document){var g=!1,y=["click","keydown","mousedown","pointerdown","touchstart"];y.forEach(function(e){document.addEventListener(e,a,!1)})}l(c)}},{}],4:[function(e,t,n){function r(e,t){if(!i)return!1;if(e!==i)return!1;if(!t)return!0;if(!o)return!1;for(var n=o.split("."),r=t.split("."),a=0;a<r.length;a++)if(r[a]!==n[a])return!1;return!0}var i=null,o=null,a=/Version\/(\S+)\s+Safari/;if(navigator.userAgent){var c=navigator.userAgent,f=c.match(a);f&&c.indexOf("Chrome")===-1&&c.indexOf("Chromium")===-1&&(i="Safari",o=f[1])}t.exports={agent:i,version:o,match:r}},{}],5:[function(e,t,n){function r(e){function t(){e(a&&document[a]?document[a]:document[i]?"hidden":"visible")}"addEventListener"in document&&o&&document.addEventListener(o,t,!1)}t.exports=r;var i,o,a;"undefined"!=typeof document.hidden?(i="hidden",o="visibilitychange",a="visibilityState"):"undefined"!=typeof document.msHidden?(i="msHidden",o="msvisibilitychange"):"undefined"!=typeof document.webkitHidden&&(i="webkitHidden",o="webkitvisibilitychange",a="webkitVisibilityState")},{}],6:[function(e,t,n){function r(e,t){var n=[],r="",o=0;for(r in e)i.call(e,r)&&(n[o]=t(r,e[r]),o+=1);return n}var i=Object.prototype.hasOwnProperty;t.exports=r},{}],7:[function(e,t,n){function r(e,t,n){t||(t=0),"undefined"==typeof n&&(n=e?e.length:0);for(var r=-1,i=n-t||0,o=Array(i<0?0:i);++r<i;)o[r]=e[t+r];return o}t.exports=r},{}],8:[function(e,t,n){t.exports={exists:"undefined"!=typeof window.performance&&window.performance.timing&&"undefined"!=typeof window.performance.timing.navigationStart}},{}],ee:[function(e,t,n){function r(){}function i(e){function t(e){return e&&e instanceof r?e:e?f(e,c,o):o()}function n(n,r,i,o){if(!p.aborted||o){e&&e(n,r,i);for(var a=t(i),c=v(n),f=c.length,u=0;u<f;u++)c[u].apply(a,r);var d=s[w[n]];return d&&d.push([b,n,r,a]),a}}function l(e,t){h[e]=v(e).concat(t)}function m(e,t){var n=h[e];if(n)for(var r=0;r<n.length;r++)n[r]===t&&n.splice(r,1)}function v(e){return h[e]||[]}function g(e){return d[e]=d[e]||i(n)}function y(e,t){u(e,function(e,n){t=t||"feature",w[n]=t,t in s||(s[t]=[])})}var h={},w={},b={on:l,addEventListener:l,removeEventListener:m,emit:n,get:g,listeners:v,context:t,buffer:y,abort:a,aborted:!1};return b}function o(){return new r}function a(){(s.api||s.feature)&&(p.aborted=!0,s=p.backlog={})}var c="nr@context",f=e("gos"),u=e(6),s={},d={},p=t.exports=i();p.backlog=s},{}],gos:[function(e,t,n){function r(e,t,n){if(i.call(e,t))return e[t];var r=n();if(Object.defineProperty&&Object.keys)try{return Object.defineProperty(e,t,{value:r,writable:!0,enumerable:!1}),r}catch(o){}return e[t]=r,r}var i=Object.prototype.hasOwnProperty;t.exports=r},{}],handle:[function(e,t,n){function r(e,t,n,r){i.buffer([e],r),i.emit(e,t,n)}var i=e("ee").get("handle");t.exports=r,r.ee=i},{}],id:[function(e,t,n){function r(e){var t=typeof e;return!e||"object"!==t&&"function"!==t?-1:e===window?0:a(e,o,function(){return i++})}var i=1,o="nr@id",a=e("gos");t.exports=r},{}],loader:[function(e,t,n){function r(){if(!E++){var e=b.info=NREUM.info,t=p.getElementsByTagName("script")[0];if(setTimeout(u.abort,3e4),!(e&&e.licenseKey&&e.applicationID&&t))return u.abort();f(h,function(t,n){e[t]||(e[t]=n)});var n=a();c("mark",["onload",n+b.offset],null,"api"),c("timing",["load",n]);var r=p.createElement("script");r.src="https://"+e.agent,t.parentNode.insertBefore(r,t)}}function i(){"complete"===p.readyState&&o()}function o(){c("mark",["domContent",a()+b.offset],null,"api")}var a=e(2),c=e("handle"),f=e(6),u=e("ee"),s=e(4),d=window,p=d.document,l="addEventListener",m="attachEvent",v=d.XMLHttpRequest,g=v&&v.prototype;NREUM.o={ST:setTimeout,SI:d.setImmediate,CT:clearTimeout,XHR:v,REQ:d.Request,EV:d.Event,PR:d.Promise,MO:d.MutationObserver};var y=""+location,h={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",agent:"js-agent.newrelic.com/nr-1184.min.js"},w=v&&g&&g[l]&&!/CriOS/.test(navigator.userAgent),b=t.exports={offset:a.getLastTimestamp(),now:a,origin:y,features:{},xhrWrappable:w,userAgent:s};e(1),e(3),p[l]?(p[l]("DOMContentLoaded",o,!1),d[l]("load",r,!1)):(p[m]("onreadystatechange",i),d[m]("onload",r)),c("mark",["firstbyte",a.getLastTimestamp()],null,"api");var E=0},{}],"wrap-function":[function(e,t,n){function r(e){return!(e&&e instanceof Function&&e.apply&&!e[a])}var i=e("ee"),o=e(7),a="nr@original",c=Object.prototype.hasOwnProperty,f=!1;t.exports=function(e,t){function n(e,t,n,i){function nrWrapper(){var r,a,c,f;try{a=this,r=o(arguments),c="function"==typeof n?n(r,a):n||{}}catch(u){p([u,"",[r,a,i],c])}s(t+"start",[r,a,i],c);try{return f=e.apply(a,r)}catch(d){throw s(t+"err",[r,a,d],c),d}finally{s(t+"end",[r,a,f],c)}}return r(e)?e:(t||(t=""),nrWrapper[a]=e,d(e,nrWrapper),nrWrapper)}function u(e,t,i,o){i||(i="");var a,c,f,u="-"===i.charAt(0);for(f=0;f<t.length;f++)c=t[f],a=e[c],r(a)||(e[c]=n(a,u?c+i:i,o,c))}function s(n,r,i){if(!f||t){var o=f;f=!0;try{e.emit(n,r,i,t)}catch(a){p([a,n,r,i])}f=o}}function d(e,t){if(Object.defineProperty&&Object.keys)try{var n=Object.keys(e);return n.forEach(function(n){Object.defineProperty(t,n,{get:function(){return e[n]},set:function(t){return e[n]=t,t}})}),t}catch(r){p([r])}for(var i in e)c.call(e,i)&&(t[i]=e[i]);return t}function p(t){try{e.emit("internal-error",t)}catch(n){}}return e||(e=i),n.inPlace=u,n.flag=a,n}},{}]},{},["loader"]);
+  </script>
+  <meta content="Software Downloads" name="title"/>
+  <meta content="Instructions to retrieve your software download(s)" name="description"/>
+  <meta content="INDEX,FOLLOW" name="robots"/>
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+  <meta content="telephone=no" name="format-detection"/>
+  <title>
+   Software Downloads
+  </title>
+  <link href="https://d10z1m3ycmasau.cloudfront.net/version1608191534/_cache/merged/70278bcf500659a34543dae68b309171.css" media="all" rel="stylesheet" type="text/css"/>
+  <link href="https://d10z1m3ycmasau.cloudfront.net/version1608191534/frontend/Linchpin/akai/en_US/css/styles-l.css" media="screen and (min-width: 768px)" rel="stylesheet" type="text/css"/>
+  <link href="https://d10z1m3ycmasau.cloudfront.net/version1608191534/frontend/Linchpin/akai/en_US/css/print.css" media="print" rel="stylesheet" type="text/css"/>
+  <script src="https://d10z1m3ycmasau.cloudfront.net/version1608191534/_cache/merged/c5071190746f2dc2b4daef5e9ece2f30.js" type="text/javascript">
+  </script>
+  <link href="https://fonts.googleapis.com/css?family=Pathway+Gothic+One|Poppins:100,300,400,600,700&amp;amp;subset=latin-ext" rel="stylesheet" type="text/css"/>
+  <link href="https://d1jtxvnvoxswj8.cloudfront.net/favicon/stores/3/akai-favicon-32x32.png" rel="icon" type="image/x-icon"/>
+  <link href="https://d1jtxvnvoxswj8.cloudfront.net/favicon/stores/3/akai-favicon-32x32.png" rel="shortcut icon" type="image/x-icon"/>
+  <script async="" defer="" src="https://www.google.com/recaptcha/api.js">
+  </script>
+  <meta content="DbUYClByLC9ZS1nNvtYBtXGtTl5X49W7FxzPvORnMaU" name="google-site-verification"/>
+  <script type="text/javascript">
+   window.$zopim||(function(d,s){var z=$zopim=function(c){z._.push(c)},$=z.s=
+   d.createElement(s),e=d.getElementsByTagName(s)[0];z.set=function(o){z.set.
+   _.push(o)};z._=[];z.set._=[];$.async=!0;$.setAttribute("charset","utf-8");
+   $.src="https://v2.zopim.com/?2Tb7PyYgMccsV049zA1tLOZQ3JgLj45d";z.t=+new Date;$.
+   type="text/javascript";e.parentNode.insertBefore($,e)})(document,"script");
+  </script>
+  <link href="https://d1jtxvnvoxswj8.cloudfront.net/porto/web/css/custom.css" media="all" rel="stylesheet" type="text/css"/>
+  <link href="https://d1jtxvnvoxswj8.cloudfront.net/porto/configed_css/design_akai_store_us.css" media="all" rel="stylesheet" type="text/css"/>
+  <link href="https://d1jtxvnvoxswj8.cloudfront.net/porto/configed_css/settings_akai_store_us.css" media="all" rel="stylesheet" type="text/css"/>
+  <script type="text/javascript">
+   require([
+    'jquery'
+], function ($) {
+    jQuery(function($) {
+
+        var $body = $('body'),
+			body_classes = [
+			    'layout-fullwidth',
+				'wide',
+			];
+
+	    
+        $body.addClass( body_classes.join( ' ' ) );
+
+        $(".drop-menu > a").off("click").on("click", function() {
+
+            var $nav_sections = $(this).parent().children('.nav-sections');
+
+            if ( $nav_sections.hasClass("visible") ) {
+                $nav_sections.removeClass("visible");
+			} else {
+                $nav_sections.addClass("visible");
+            }
+        });
+    });
+});
+  </script>
+  <!-- GOOGLE TAG MANAGER -->
+  <script type="text/x-magento-init">
+   {
+                "*": {
+                    "Magento_GoogleTagManager/js/google-tag-manager": {
+                        "isCookieRestrictionModeEnabled": 0,
+                        "currentWebsite": 3,
+                        "cookieName": "user_allowed_save_cookie",
+                        "gtmAccountId": "GTM\u002DN4DXNSM",
+                        "storeCurrencyCode": "USD",
+                        "ordersData": []                    }
+                }
+            }
+  </script>
+  <!-- END GOOGLE TAG MANAGER -->
+  <!-- BEGIN GOOGLE VERIFICATION TAG -->
+  <!-- END GOOGLE VERIFICATION TAG -->
+  <!-- BEGIN GTAG GLOBAL TAG -->
+  <!-- END GTAG GLOBAL TAG -->
+ </head>
+ <body class="cms-softwaredownload cms-page-view page-layout-1column" data-container="body" data-mage-init='{"loaderAjax": {}, "loader": { "icon": "https://d10z1m3ycmasau.cloudfront.net/version1608191534/frontend/Linchpin/akai/en_US/images/loader-2.gif"}}'>
+  <script type="text/x-magento-init">
+   {
+        "*": {
+            "Magento_PageBuilder/js/widget-initializer": {
+                "config": {"[data-content-type=\"slider\"][data-appearance=\"default\"]":{"Magento_PageBuilder\/js\/content-type\/slider\/appearance\/default\/widget":false},"[data-content-type=\"map\"]":{"Magento_PageBuilder\/js\/content-type\/map\/appearance\/default\/widget":false},"[data-content-type=\"row\"]":{"Magento_PageBuilder\/js\/content-type\/row\/appearance\/default\/widget":false},"[data-content-type=\"tabs\"]":{"Magento_PageBuilder\/js\/content-type\/tabs\/appearance\/default\/widget":false},"[data-content-type=\"slide\"]":{"Magento_PageBuilder\/js\/content-type\/slide\/appearance\/default\/widget":{"buttonSelector":".pagebuilder-slide-button","showOverlay":"hover","dataRole":"slide"}},"[data-content-type=\"banner\"]":{"Magento_PageBuilder\/js\/content-type\/banner\/appearance\/default\/widget":{"buttonSelector":".pagebuilder-banner-button","showOverlay":"hover","dataRole":"banner"}},"[data-content-type=\"buttons\"]":{"Magento_PageBuilder\/js\/content-type\/buttons\/appearance\/inline\/widget":false},"[data-content-type=\"products\"][data-appearance=\"carousel\"]":{"Magento_PageBuilder\/js\/content-type\/products\/appearance\/carousel\/widget":false}},
+                "breakpoints": {"desktop":{"conditions":{"min-width":"1024px"},"options":{"products":{"default":{"slidesToShow":"5"}}}},"tablet":{"conditions":{"max-width":"1024px","min-width":"768px"},"options":{"products":{"default":{"slidesToShow":"4"},"continuous":{"slidesToShow":"3"}}}},"mobile":{"conditions":{"max-width":"768px","min-width":"640px"},"options":{"products":{"default":{"slidesToShow":"3"}}}},"mobile-small":{"conditions":{"max-width":"640px"},"options":{"products":{"default":{"slidesToShow":"2"},"continuous":{"slidesToShow":"1"}}}}}            }
+        }
+    }
+  </script>
+  <script type="text/x-magento-init">
+   {
+        "*": {
+            "mage/cookies": {
+                "expires": null,
+                "path": "\u002F",
+                "domain": ".www.akaipro.com",
+                "secure": false,
+                "lifetime": "7200"
+            }
+        }
+    }
+  </script>
+  <noscript>
+   <div class="message global noscript">
+    <div class="content">
+     <p>
+      <strong>
+       JavaScript seems to be disabled in your browser.
+      </strong>
+      <span>
+       For the best experience on our site, be sure to turn on Javascript in your browser.
+      </span>
+     </p>
+    </div>
+   </div>
+  </noscript>
+  <script>
+   require.config({
+        map: {
+            '*': {
+                wysiwygAdapter: 'mage/adminhtml/wysiwyg/tiny_mce/tinymce4Adapter'
+            }
+        }
+    });
+  </script>
+  <script>
+   window.cookiesConfig = window.cookiesConfig || {};
+    window.cookiesConfig.secure = true;
+  </script>
+  <!-- GOOGLE TAG MANAGER -->
+  <noscript>
+   <iframe height="0" src="https://www.googletagmanager.com/ns.html?id=GTM-N4DXNSM" style="display:none;visibility:hidden" width="0">
+   </iframe>
+  </noscript>
+  <!-- END GOOGLE TAG MANAGER -->
+  <script type="text/x-magento-init">
+   {
+        "*": {
+            "Magento_GoogleTagManager/js/google-tag-manager-cart": {
+                "blockNames": ["category.products.list","product.info.upsell","catalog.product.related","checkout.cart.crosssell","search_result_list"],
+                "cookieAddToCart": "add_to_cart",
+                "cookieRemoveFromCart": "remove_from_cart"
+            }
+        }
+    }
+  </script>
+  <script>
+   require.config({
+        paths: {
+            googleMaps: 'https\u003A\u002F\u002Fmaps.googleapis.com\u002Fmaps\u002Fapi\u002Fjs\u003Fv\u003D3\u0026key\u003D'
+        },
+        config: {
+            'Magento_PageBuilder/js/utils/map': {
+                style: ''
+            },
+            'Magento_PageBuilder/js/content-type/map/preview': {
+                apiKey: '',
+                apiKeyErrorMessage: 'You\u0020must\u0020provide\u0020a\u0020valid\u0020\u003Ca\u0020href\u003D\u0027https\u003A\u002F\u002Fwww.akaipro.com\u002Fadminhtml\u002Fsystem_config\u002Fedit\u002Fsection\u002Fcms\u002F\u0023cms_pagebuilder\u0027\u0020target\u003D\u0027_blank\u0027\u003EGoogle\u0020Maps\u0020API\u0020key\u003C\u002Fa\u003E\u0020to\u0020use\u0020a\u0020map.'
+            },
+            'Magento_PageBuilder/js/form/element/map': {
+                apiKey: '',
+                apiKeyErrorMessage: 'You\u0020must\u0020provide\u0020a\u0020valid\u0020\u003Ca\u0020href\u003D\u0027https\u003A\u002F\u002Fwww.akaipro.com\u002Fadminhtml\u002Fsystem_config\u002Fedit\u002Fsection\u002Fcms\u002F\u0023cms_pagebuilder\u0027\u0020target\u003D\u0027_blank\u0027\u003EGoogle\u0020Maps\u0020API\u0020key\u003C\u002Fa\u003E\u0020to\u0020use\u0020a\u0020map.'
+            },
+        }
+    });
+  </script>
+  <script>
+   require.config({
+        shim: {
+            'Magento_PageBuilder/js/utils/map': {
+                deps: ['googleMaps']
+            }
+        }
+    });
+  </script>
+  <!-- BEGIN GTAG CART SCRIPT -->
+  <!-- END GTAG CART SCRIPT -->
+  <div class="page-wrapper">
+   <div class="sticky-fixed-header" id="main-header">
+    <header class="page-header type13 header-newskin">
+     <div class="header content">
+      <a class="logo" href="https://www.akaipro.com/" title="">
+       <img alt="" src="https://d1jtxvnvoxswj8.cloudfront.net/logo/stores/3/akai_pro_header_logo.png"/>
+      </a>
+      <div class="panel header">
+       <div class="top-panel">
+        <a class="action skip contentarea" href="#contentarea">
+         <span>
+          Skip to Content
+         </span>
+        </a>
+        <div class="menu-area">
+         <div class="sections nav-sections">
+          <div class="section-items nav-sections-items" data-mage-init='{"tabs":{"openedState":"active"}}'>
+           <div class="section-item-title nav-sections-item-title" data-role="collapsible">
+            <a class="nav-sections-item-switch" data-toggle="switch" href="#store.menu">
+             Menu
+            </a>
+           </div>
+           <div class="section-item-content nav-sections-item-content" data-role="content" id="store.menu">
+            <nav class="navigation sw-megamenu " role="navigation">
+             <ul>
+              <ul class="akai-pro-menu" id="akai-pro-menu">
+               <li class="has-dropdown">
+                <a href="javascript:void(0)">
+                 Products
+                </a>
+                <div class="dropdown-container">
+                 <ul class="subchildmenu">
+                  <li>
+                   <a href="https://www.akaipro.com/products/new-products">
+                    New Products
+                   </a>
+                  </li>
+                  <li class="parent-nav">
+                   <a href="https://www.akaipro.com/products/mpc-series">
+                    MPC Series
+                   </a>
+                   <div class="sub-section">
+                    <ul>
+                     <li>
+                      <a href="https://www.akaipro.com/mpc-software">
+                       MPC Software
+                      </a>
+                     </li>
+                     <li>
+                      <a href="https://www.akaipro.com/products/mpc-series">
+                       MPC Hardware
+                      </a>
+                     </li>
+                     <li>
+                      <a href="https://www.akaipro.com/products/mpc-expansion-packs">
+                       MPC Expansion Packs
+                      </a>
+                     </li>
+                    </ul>
+                   </div>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/force-forcexus">
+                    Force
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/products/keyboards">
+                    Keyboards
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/products/controllers">
+                    Controllers
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/products/drum-machines">
+                    Drum Machines
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/products/ewi-series">
+                    EWI Series
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/products/legacy">
+                    Legacy
+                   </a>
+                  </li>
+                 </ul>
+                </div>
+               </li>
+               <li class="has-dropdown">
+                <a href="https://www.akaipro.com/support">
+                 Support
+                </a>
+                <div class="dropdown-container">
+                 <ul class="subchildmenu">
+                  <li>
+                   <a href="https://inmusicbrands.force.com/akaipro" target="_blank">
+                    Knowledge Base
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/support">
+                    Contact
+                   </a>
+                  </li>
+                 </ul>
+                </div>
+               </li>
+               <li class="has-dropdown">
+                <a href="https://www.akaipro.com/support">
+                 Company
+                </a>
+                <div class="dropdown-container">
+                 <ul class="subchildmenu">
+                  <li>
+                   <a href="https://www.inmusicbrands.com/about" target="_blank">
+                    About Us
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/press">
+                    Press Releases
+                   </a>
+                  </li>
+                  <li>
+                   <a href="https://www.akaipro.com/dealers">
+                    Dealers
+                   </a>
+                  </li>
+                 </ul>
+                </div>
+               </li>
+               <li class="show-for-ipad-down">
+                <a href="https://www.akaipro.com/customer/account/login">
+                 Account
+                </a>
+               </li>
+              </ul>
+             </ul>
+            </nav>
+            <script type="text/javascript">
+             require([
+        'jquery',
+        'Smartwave_Megamenu/js/sw_megamenu'
+    ], function ($) {
+        $(".sw-megamenu").swMegamenu();
+    });
+            </script>
+           </div>
+           <div class="section-item-title nav-sections-item-title" data-role="collapsible">
+            <a class="nav-sections-item-switch" data-toggle="switch" href="#store.links">
+             Account
+            </a>
+           </div>
+           <div class="section-item-content nav-sections-item-content" data-role="content" id="store.links">
+            <!-- Account links -->
+           </div>
+           <div class="section-item-title nav-sections-item-title" data-role="collapsible">
+            <a class="nav-sections-item-switch" data-toggle="switch" href="#store.settings">
+             Settings
+            </a>
+           </div>
+           <div class="section-item-content nav-sections-item-content" data-role="content" id="store.settings">
+            <div class="switcher language switcher-language" data-ui-id="language-switcher" id="switcher-language-nav">
+             <strong class="label switcher-label">
+              <span>
+               Language
+              </span>
+             </strong>
+             <div class="actions dropdown options switcher-options">
+              <div class="action toggle switcher-trigger" id="switcher-language-trigger-nav">
+               <strong class="view-akai_store_us">
+                <span>
+                 US
+                </span>
+               </strong>
+              </div>
+              <ul class="dropdown switcher-dropdown" data-mage-init='{"dropdownDialog":{
+                "appendTo":"#switcher-language-nav &gt; .options",
+                "triggerTarget":"#switcher-language-trigger-nav",
+                "closeOnMouseLeave": false,
+                "triggerClass":"active",
+                "parentClass":"active",
+                "buttons":null}}'>
+               <li class="view-road88 switcher-option">
+                <a data-post='{"action":"https:\/\/www.akaipro.com\/stores\/store\/redirect\/","data":{"___store":"road88","___from_store":"akai_store_us","uenc":"aHR0cHM6Ly9yb2FkODguYWthaXByby5jb20vc29mdHdhcmVkb3dubG9hZD9fX19zdG9yZT1yb2FkODg,"}}' href="#">
+                 Road 88
+                </a>
+               </li>
+               <li class="view-force switcher-option">
+                <a data-post='{"action":"https:\/\/www.akaipro.com\/stores\/store\/redirect\/","data":{"___store":"force","___from_store":"akai_store_us","uenc":"aHR0cHM6Ly9mb3JjZS5ha2FpcHJvLmNvbS9zb2Z0d2FyZWRvd25sb2FkP19fX3N0b3JlPWZvcmNl"}}' href="#">
+                 Force
+                </a>
+               </li>
+              </ul>
+             </div>
+            </div>
+           </div>
+          </div>
+         </div>
+        </div>
+        <div class="top-links-area">
+        </div>
+        <div class="custom-block">
+         <ul class="akai-pro-menu" id="akai-pro-menu">
+          <li class="has-dropdown">
+           <a href="javascript:void(0)">
+            Products
+           </a>
+           <div class="dropdown-container">
+            <ul class="subchildmenu">
+             <li>
+              <a href="https://www.akaipro.com/products/new-products">
+               New Products
+              </a>
+             </li>
+             <li class="parent-nav">
+              <a href="https://www.akaipro.com/products/mpc-series">
+               MPC Series
+              </a>
+              <div class="sub-section">
+               <ul>
+                <li>
+                 <a href="https://www.akaipro.com/mpc-software">
+                  MPC Software
+                 </a>
+                </li>
+                <li>
+                 <a href="https://www.akaipro.com/products/mpc-series">
+                  MPC Hardware
+                 </a>
+                </li>
+                <li>
+                 <a href="https://www.akaipro.com/products/mpc-expansion-packs">
+                  MPC Expansion Packs
+                 </a>
+                </li>
+               </ul>
+              </div>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/force-forcexus">
+               Force
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/products/keyboards">
+               Keyboards
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/products/controllers">
+               Controllers
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/products/drum-machines">
+               Drum Machines
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/products/ewi-series">
+               EWI Series
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/products/legacy">
+               Legacy
+              </a>
+             </li>
+            </ul>
+           </div>
+          </li>
+          <li class="has-dropdown">
+           <a href="https://www.akaipro.com/support">
+            Support
+           </a>
+           <div class="dropdown-container">
+            <ul class="subchildmenu">
+             <li>
+              <a href="https://inmusicbrands.force.com/akaipro" target="_blank">
+               Knowledge Base
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/support">
+               Contact
+              </a>
+             </li>
+            </ul>
+           </div>
+          </li>
+          <li class="has-dropdown">
+           <a href="https://www.akaipro.com/support">
+            Company
+           </a>
+           <div class="dropdown-container">
+            <ul class="subchildmenu">
+             <li>
+              <a href="https://www.inmusicbrands.com/about" target="_blank">
+               About Us
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/press">
+               Press Releases
+              </a>
+             </li>
+             <li>
+              <a href="https://www.akaipro.com/dealers">
+               Dealers
+              </a>
+             </li>
+            </ul>
+           </div>
+          </li>
+          <li class="show-for-ipad-down">
+           <a href="https://www.akaipro.com/customer/account/login">
+            Account
+           </a>
+          </li>
+         </ul>
+        </div>
+       </div>
+       <div class="bottom-panel">
+        <div class="bottom-panel__row">
+         <div class="bs-header-navigation bs-header-navigation__not-logged-in">
+          <a class="bs-header-navigation__toggle bs-btn-account" href="https://www.akaipro.com/customer/account/">
+           <span class="bs-icon-user">
+           </span>
+           <span>
+            Account
+           </span>
+          </a>
+         </div>
+         <script type="text/x-magento-init">
+          {
+        ".bs-header-navigation": {
+            "navigation": {}
+        }
+    }
+         </script>
+         <span class="action nav-toggle" data-action="toggle-nav">
+          <span>
+           Toggle Nav
+          </span>
+         </span>
+        </div>
+       </div>
+      </div>
+     </div>
+    </header>
+   </div>
+   <div class="bs-modal__hidden" id="create-account-modal">
+    <div class="block block-customer-create bs-modal-content">
+     <div class="bs-modal-content__progress-bar-container bs-indent__normal-margin__left">
+      <div class="bs-modal-content__progress-bar">
+       <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="33.333333333333" class="bs-modal-content__progress-bar-slider" id="create-account-progressbar" role="progressbar" style="width: 33.333333333333%">
+       </div>
+      </div>
+      <p class="bs-modal-content__progress-bar-container__text bs-indent__null-margin__top bs-indent__x-small-margin__bottom">
+       Step
+       <span id="current-step">
+        1
+       </span>
+       of
+       <span id="max-steps">
+        3
+       </span>
+      </p>
+     </div>
+     <div class="modal-backstage-registration-intro">
+      <div id="intro-part-1">
+       <p style="text-transform: uppercase;
+    font-size: 25px;
+    color: white;
+font-weight:600;
+    margin-bottom: 10px;">
+        Create your InMusic Profile
+       </p>
+       <p>
+        Akai Professional is part of an elite family of hardware and software companies known as inMusic Brands. The inMusic Profile is where you can register products, download software titles, and access exclusive content and offers - not just for Akai Professional, but for any brands within the inMusic network!
+       </p>
+      </div>
+      <div class="bs-display-hidden" id="intro-part-2">
+       <p style="text-transform: uppercase;
+    font-size: 25px;
+    color: white;
+font-weight:600;
+    margin-bottom: 10px;">
+        Create your InMusic Profile
+       </p>
+       <p>
+        Akai Professional is part of an elite family of hardware and software companies known as inMusic Brands. Select the brands you are interested in learning more about. We've selected a few already to get you started.
+       </p>
+      </div>
+     </div>
+     <div aria-labelledby="block-customer-login-heading" class="block-content">
+      <form autocomplete="off" class="form modal-form-create-account" data-mage-init='{"validation":{}, "dateRule":{}}' enctype="multipart/form-data" id="form-validate" method="post">
+       <input name="form_key" type="hidden" value="2A29HMwvPkmArDTz"/>
+       <div id="step-1">
+        <fieldset class="fieldset create info">
+         <input name="success_url" type="hidden" value=""/>
+         <input name="error_url" type="hidden" value=""/>
+         <div class="field field-name-firstname required">
+          <label class="label" for="firstname">
+           First name
+          </label>
+          <div class="control">
+           <input aria-required="true" autocomplete="off" class="input-text required-entry" data-validate="{required:true}" id="firstname" name="firstname" placeholder="First name" title="First Name" type="text" value=""/>
+          </div>
+         </div>
+         <div class="field field-name-lastname required">
+          <label class="label" for="lastname">
+           Last name
+          </label>
+          <div class="control">
+           <input aria-required="true" autocomplete="off" class="input-text required-entry" data-validate="{required:true}" id="lastname" name="lastname" placeholder="Last name" title="Last Name" type="text" value=""/>
+          </div>
+         </div>
+         <div class="field required">
+          <label class="label" for="email">
+           Email address
+          </label>
+          <div class="control">
+           <input aria-required="true" autocomplete="email" class="input-text" data-validate="{required:true, 'validate-email':true}" id="email_address" name="email" placeholder="Email address" title="Email" type="email" value=""/>
+          </div>
+         </div>
+         <div class="field date required">
+          <label class="label" for="dob">
+           Date of birth
+          </label>
+          <div class="control">
+           <input aria-required="true" autocomplete="off" class="bs-date" data-datepicker-format="mm/dd/yy" data-datepicker-min-year="18" data-validate="{required:true, 'date-validation-mm-dd-yyyy':true}" name="dob" placeholder="mm/dd/yyyy" type="text" value=""/>
+          </div>
+         </div>
+         <div class="field password required">
+          <label class="label" for="password">
+           Password
+          </label>
+          <div class="control">
+           <input autocomplete="new-password" class="input-text" data-password-min-character-sets="" data-password-min-length="" data-validate="{required:true, 'validate-customer-password':true}" id="password" name="password" placeholder="Password" title="Password" type="password"/>
+           <div aria-live="polite" class="bs-modal-content__password-strength-meter" data-role="password-strength-meter" id="password-strength-meter-container">
+            <div class="password-strength-meter bs-indent__xx-small-margin__top" id="password-strength-meter">
+             Password Strength:
+             <span data-role="password-strength-meter-label" id="password-strength-meter-label">
+              No Password
+             </span>
+            </div>
+           </div>
+          </div>
+         </div>
+         <div class="field confirmation required">
+          <label class="label" for="password_confirmation">
+           Password confirmation
+          </label>
+          <div class="control">
+           <input autocomplete="off" class="input-text" data-validate="{required:true, equalTo:'#password'}" id="password-confirmation" name="password_confirmation" placeholder="Confirm password" title="Password confirmation" type="password"/>
+          </div>
+         </div>
+         <div class="field countries required">
+          <label class="label" for="country">
+           Country
+          </label>
+          <div class="control">
+           <select id="country" name="country" required="">
+            <option disabled="disabled" selected="" value="">
+             Choose country
+            </option>
+            <option value="US">
+             United States
+            </option>
+            <option value="AF">
+             Afghanistan
+            </option>
+            <option value="AX">
+             &Aring;land Islands
+            </option>
+            <option value="AL">
+             Albania
+            </option>
+            <option value="DZ">
+             Algeria
+            </option>
+            <option value="AS">
+             American Samoa
+            </option>
+            <option value="AD">
+             Andorra
+            </option>
+            <option value="AO">
+             Angola
+            </option>
+            <option value="AI">
+             Anguilla
+            </option>
+            <option value="AQ">
+             Antarctica
+            </option>
+            <option value="AG">
+             Antigua &amp; Barbuda
+            </option>
+            <option value="AR">
+             Argentina
+            </option>
+            <option value="AM">
+             Armenia
+            </option>
+            <option value="AW">
+             Aruba
+            </option>
+            <option value="AU">
+             Australia
+            </option>
+            <option value="AT">
+             Austria
+            </option>
+            <option value="AZ">
+             Azerbaijan
+            </option>
+            <option value="BS">
+             Bahamas
+            </option>
+            <option value="BH">
+             Bahrain
+            </option>
+            <option value="BD">
+             Bangladesh
+            </option>
+            <option value="BB">
+             Barbados
+            </option>
+            <option value="BY">
+             Belarus
+            </option>
+            <option value="BE">
+             Belgium
+            </option>
+            <option value="BZ">
+             Belize
+            </option>
+            <option value="BJ">
+             Benin
+            </option>
+            <option value="BM">
+             Bermuda
+            </option>
+            <option value="BT">
+             Bhutan
+            </option>
+            <option value="BO">
+             Bolivia
+            </option>
+            <option value="BA">
+             Bosnia &amp; Herzegovina
+            </option>
+            <option value="BW">
+             Botswana
+            </option>
+            <option value="BV">
+             Bouvet Island
+            </option>
+            <option value="BR">
+             Brazil
+            </option>
+            <option value="IO">
+             British Indian Ocean Territory
+            </option>
+            <option value="VG">
+             British Virgin Islands
+            </option>
+            <option value="BN">
+             Brunei
+            </option>
+            <option value="BG">
+             Bulgaria
+            </option>
+            <option value="BF">
+             Burkina Faso
+            </option>
+            <option value="BI">
+             Burundi
+            </option>
+            <option value="KH">
+             Cambodia
+            </option>
+            <option value="CM">
+             Cameroon
+            </option>
+            <option value="CA">
+             Canada
+            </option>
+            <option value="CV">
+             Cape Verde
+            </option>
+            <option value="BQ">
+             Caribbean Netherlands
+            </option>
+            <option value="KY">
+             Cayman Islands
+            </option>
+            <option value="CF">
+             Central African Republic
+            </option>
+            <option value="TD">
+             Chad
+            </option>
+            <option value="CL">
+             Chile
+            </option>
+            <option value="CN">
+             China
+            </option>
+            <option value="CX">
+             Christmas Island
+            </option>
+            <option value="CC">
+             Cocos (Keeling) Islands
+            </option>
+            <option value="CO">
+             Colombia
+            </option>
+            <option value="KM">
+             Comoros
+            </option>
+            <option value="CG">
+             Congo - Brazzaville
+            </option>
+            <option value="CD">
+             Congo - Kinshasa
+            </option>
+            <option value="CK">
+             Cook Islands
+            </option>
+            <option value="CR">
+             Costa Rica
+            </option>
+            <option value="CI">
+             C&ocirc;te d&rsquo;Ivoire
+            </option>
+            <option value="HR">
+             Croatia
+            </option>
+            <option value="CU">
+             Cuba
+            </option>
+            <option value="CW">
+             Cura&ccedil;ao
+            </option>
+            <option value="CY">
+             Cyprus
+            </option>
+            <option value="CZ">
+             Czechia
+            </option>
+            <option value="DK">
+             Denmark
+            </option>
+            <option value="DJ">
+             Djibouti
+            </option>
+            <option value="DM">
+             Dominica
+            </option>
+            <option value="DO">
+             Dominican Republic
+            </option>
+            <option value="EC">
+             Ecuador
+            </option>
+            <option value="EG">
+             Egypt
+            </option>
+            <option value="SV">
+             El Salvador
+            </option>
+            <option value="GQ">
+             Equatorial Guinea
+            </option>
+            <option value="ER">
+             Eritrea
+            </option>
+            <option value="EE">
+             Estonia
+            </option>
+            <option value="SZ">
+             Eswatini
+            </option>
+            <option value="ET">
+             Ethiopia
+            </option>
+            <option value="FK">
+             Falkland Islands
+            </option>
+            <option value="FO">
+             Faroe Islands
+            </option>
+            <option value="FJ">
+             Fiji
+            </option>
+            <option value="FI">
+             Finland
+            </option>
+            <option value="FR">
+             France
+            </option>
+            <option value="GF">
+             French Guiana
+            </option>
+            <option value="PF">
+             French Polynesia
+            </option>
+            <option value="TF">
+             French Southern Territories
+            </option>
+            <option value="GA">
+             Gabon
+            </option>
+            <option value="GM">
+             Gambia
+            </option>
+            <option value="GE">
+             Georgia
+            </option>
+            <option value="DE">
+             Germany
+            </option>
+            <option value="GH">
+             Ghana
+            </option>
+            <option value="GI">
+             Gibraltar
+            </option>
+            <option value="GR">
+             Greece
+            </option>
+            <option value="GL">
+             Greenland
+            </option>
+            <option value="GD">
+             Grenada
+            </option>
+            <option value="GP">
+             Guadeloupe
+            </option>
+            <option value="GU">
+             Guam
+            </option>
+            <option value="GT">
+             Guatemala
+            </option>
+            <option value="GG">
+             Guernsey
+            </option>
+            <option value="GN">
+             Guinea
+            </option>
+            <option value="GW">
+             Guinea-Bissau
+            </option>
+            <option value="GY">
+             Guyana
+            </option>
+            <option value="HT">
+             Haiti
+            </option>
+            <option value="HM">
+             Heard &amp; McDonald Islands
+            </option>
+            <option value="HN">
+             Honduras
+            </option>
+            <option value="HK">
+             Hong Kong SAR China
+            </option>
+            <option value="HU">
+             Hungary
+            </option>
+            <option value="IS">
+             Iceland
+            </option>
+            <option value="IN">
+             India
+            </option>
+            <option value="ID">
+             Indonesia
+            </option>
+            <option value="IR">
+             Iran
+            </option>
+            <option value="IQ">
+             Iraq
+            </option>
+            <option value="IE">
+             Ireland
+            </option>
+            <option value="IM">
+             Isle of Man
+            </option>
+            <option value="IL">
+             Israel
+            </option>
+            <option value="IT">
+             Italy
+            </option>
+            <option value="JM">
+             Jamaica
+            </option>
+            <option value="JP">
+             Japan
+            </option>
+            <option value="JE">
+             Jersey
+            </option>
+            <option value="JO">
+             Jordan
+            </option>
+            <option value="KZ">
+             Kazakhstan
+            </option>
+            <option value="KE">
+             Kenya
+            </option>
+            <option value="KI">
+             Kiribati
+            </option>
+            <option value="XK">
+             Kosovo
+            </option>
+            <option value="KW">
+             Kuwait
+            </option>
+            <option value="KG">
+             Kyrgyzstan
+            </option>
+            <option value="LA">
+             Laos
+            </option>
+            <option value="LV">
+             Latvia
+            </option>
+            <option value="LB">
+             Lebanon
+            </option>
+            <option value="LS">
+             Lesotho
+            </option>
+            <option value="LR">
+             Liberia
+            </option>
+            <option value="LY">
+             Libya
+            </option>
+            <option value="LI">
+             Liechtenstein
+            </option>
+            <option value="LT">
+             Lithuania
+            </option>
+            <option value="LU">
+             Luxembourg
+            </option>
+            <option value="MO">
+             Macao SAR China
+            </option>
+            <option value="MG">
+             Madagascar
+            </option>
+            <option value="MW">
+             Malawi
+            </option>
+            <option value="MY">
+             Malaysia
+            </option>
+            <option value="MV">
+             Maldives
+            </option>
+            <option value="ML">
+             Mali
+            </option>
+            <option value="MT">
+             Malta
+            </option>
+            <option value="MH">
+             Marshall Islands
+            </option>
+            <option value="MQ">
+             Martinique
+            </option>
+            <option value="MR">
+             Mauritania
+            </option>
+            <option value="MU">
+             Mauritius
+            </option>
+            <option value="YT">
+             Mayotte
+            </option>
+            <option value="MX">
+             Mexico
+            </option>
+            <option value="FM">
+             Micronesia
+            </option>
+            <option value="MD">
+             Moldova
+            </option>
+            <option value="MC">
+             Monaco
+            </option>
+            <option value="MN">
+             Mongolia
+            </option>
+            <option value="ME">
+             Montenegro
+            </option>
+            <option value="MS">
+             Montserrat
+            </option>
+            <option value="MA">
+             Morocco
+            </option>
+            <option value="MZ">
+             Mozambique
+            </option>
+            <option value="MM">
+             Myanmar (Burma)
+            </option>
+            <option value="NA">
+             Namibia
+            </option>
+            <option value="NR">
+             Nauru
+            </option>
+            <option value="NP">
+             Nepal
+            </option>
+            <option value="NL">
+             Netherlands
+            </option>
+            <option value="NC">
+             New Caledonia
+            </option>
+            <option value="NZ">
+             New Zealand
+            </option>
+            <option value="NI">
+             Nicaragua
+            </option>
+            <option value="NE">
+             Niger
+            </option>
+            <option value="NG">
+             Nigeria
+            </option>
+            <option value="NU">
+             Niue
+            </option>
+            <option value="NF">
+             Norfolk Island
+            </option>
+            <option value="MP">
+             Northern Mariana Islands
+            </option>
+            <option value="KP">
+             North Korea
+            </option>
+            <option value="MK">
+             North Macedonia
+            </option>
+            <option value="NO">
+             Norway
+            </option>
+            <option value="OM">
+             Oman
+            </option>
+            <option value="PK">
+             Pakistan
+            </option>
+            <option value="PW">
+             Palau
+            </option>
+            <option value="PS">
+             Palestinian Territories
+            </option>
+            <option value="PA">
+             Panama
+            </option>
+            <option value="PG">
+             Papua New Guinea
+            </option>
+            <option value="PY">
+             Paraguay
+            </option>
+            <option value="PE">
+             Peru
+            </option>
+            <option value="PH">
+             Philippines
+            </option>
+            <option value="PN">
+             Pitcairn Islands
+            </option>
+            <option value="PL">
+             Poland
+            </option>
+            <option value="PT">
+             Portugal
+            </option>
+            <option value="QA">
+             Qatar
+            </option>
+            <option value="RE">
+             R&eacute;union
+            </option>
+            <option value="RO">
+             Romania
+            </option>
+            <option value="RU">
+             Russia
+            </option>
+            <option value="RW">
+             Rwanda
+            </option>
+            <option value="WS">
+             Samoa
+            </option>
+            <option value="SM">
+             San Marino
+            </option>
+            <option value="ST">
+             S&atilde;o Tom&eacute; &amp; Pr&iacute;ncipe
+            </option>
+            <option value="SA">
+             Saudi Arabia
+            </option>
+            <option value="SN">
+             Senegal
+            </option>
+            <option value="RS">
+             Serbia
+            </option>
+            <option value="SC">
+             Seychelles
+            </option>
+            <option value="SL">
+             Sierra Leone
+            </option>
+            <option value="SG">
+             Singapore
+            </option>
+            <option value="SX">
+             Sint Maarten
+            </option>
+            <option value="SK">
+             Slovakia
+            </option>
+            <option value="SI">
+             Slovenia
+            </option>
+            <option value="SB">
+             Solomon Islands
+            </option>
+            <option value="SO">
+             Somalia
+            </option>
+            <option value="ZA">
+             South Africa
+            </option>
+            <option value="GS">
+             South Georgia &amp; South Sandwich Islands
+            </option>
+            <option value="KR">
+             South Korea
+            </option>
+            <option value="ES">
+             Spain
+            </option>
+            <option value="LK">
+             Sri Lanka
+            </option>
+            <option value="BL">
+             St. Barth&eacute;lemy
+            </option>
+            <option value="SH">
+             St. Helena
+            </option>
+            <option value="KN">
+             St. Kitts &amp; Nevis
+            </option>
+            <option value="LC">
+             St. Lucia
+            </option>
+            <option value="MF">
+             St. Martin
+            </option>
+            <option value="PM">
+             St. Pierre &amp; Miquelon
+            </option>
+            <option value="VC">
+             St. Vincent &amp; Grenadines
+            </option>
+            <option value="SD">
+             Sudan
+            </option>
+            <option value="SR">
+             Suriname
+            </option>
+            <option value="SJ">
+             Svalbard &amp; Jan Mayen
+            </option>
+            <option value="SE">
+             Sweden
+            </option>
+            <option value="CH">
+             Switzerland
+            </option>
+            <option value="SY">
+             Syria
+            </option>
+            <option value="TW">
+             Taiwan, Province of China
+            </option>
+            <option value="TJ">
+             Tajikistan
+            </option>
+            <option value="TZ">
+             Tanzania
+            </option>
+            <option value="TH">
+             Thailand
+            </option>
+            <option value="TL">
+             Timor-Leste
+            </option>
+            <option value="TG">
+             Togo
+            </option>
+            <option value="TK">
+             Tokelau
+            </option>
+            <option value="TO">
+             Tonga
+            </option>
+            <option value="TT">
+             Trinidad &amp; Tobago
+            </option>
+            <option value="TN">
+             Tunisia
+            </option>
+            <option value="TR">
+             Turkey
+            </option>
+            <option value="TM">
+             Turkmenistan
+            </option>
+            <option value="TC">
+             Turks &amp; Caicos Islands
+            </option>
+            <option value="TV">
+             Tuvalu
+            </option>
+            <option value="UG">
+             Uganda
+            </option>
+            <option value="UA">
+             Ukraine
+            </option>
+            <option value="AE">
+             United Arab Emirates
+            </option>
+            <option value="GB">
+             United Kingdom
+            </option>
+            <option value="UY">
+             Uruguay
+            </option>
+            <option value="UM">
+             U.S. Outlying Islands
+            </option>
+            <option value="VI">
+             U.S. Virgin Islands
+            </option>
+            <option value="UZ">
+             Uzbekistan
+            </option>
+            <option value="VU">
+             Vanuatu
+            </option>
+            <option value="VA">
+             Vatican City
+            </option>
+            <option value="VE">
+             Venezuela
+            </option>
+            <option value="VN">
+             Vietnam
+            </option>
+            <option value="WF">
+             Wallis &amp; Futuna
+            </option>
+            <option value="EH">
+             Western Sahara
+            </option>
+            <option value="YE">
+             Yemen
+            </option>
+            <option value="ZM">
+             Zambia
+            </option>
+            <option value="ZW">
+             Zimbabwe
+            </option>
+           </select>
+          </div>
+         </div>
+        </fieldset>
+        <div class="bs-modal-content__errors bs-indent__medium-margin__bottom" id="modal-account-errors">
+        </div>
+        <div class="actions-container bs-indent__medium-margin__top bs-indent__normal-margin__bottom bs-indent__x-large-margin__bottom">
+         <button class="bs-btn-primary bs-btn-modal bs-indent__xx-small-margin__top" data-send="false" id="create-next" title="Next step">
+          <span>
+           Next Step
+          </span>
+         </button>
+         <p class="already-registered bs-indent__xx-small-margin__top">
+          Already Registered?
+          <a class="close-modal-registration login-link " href="https://www.akaipro.com/customer/account/">
+           Sign in
+          </a>
+         </p>
+        </div>
+       </div>
+       <div class="bs-modal__hidden" id="step-2">
+        <div class="newsletter-container bs-indent__normal-margin__bottom">
+         <div class="newsletter-brands">
+          <label class="bs-indent__null-padding newsletter-brands__item checked">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/air.png"/>
+           <input checked="" name="newsletter" type="checkbox" value="AIR"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item checked">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/akai.png"/>
+           <input checked="" name="newsletter" type="checkbox" value="AKAI"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item checked">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/maudio.png"/>
+           <input checked="" name="newsletter" type="checkbox" value="M_AUDIO"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item checked">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/sonivox.png"/>
+           <input checked="" name="newsletter" type="checkbox" value="SONIVOX"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/alesis.png"/>
+           <input name="newsletter" type="checkbox" value="ALESIS"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/alto.png"/>
+           <input name="newsletter" type="checkbox" value="ALTOPRO"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/bfd.png"/>
+           <input name="newsletter" type="checkbox" value="BFD"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/denondj.png"/>
+           <input name="newsletter" type="checkbox" value="DENONDJ"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/denonpro.png"/>
+           <input name="newsletter" type="checkbox" value="DENONPRO"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/headrush.png"/>
+           <input name="newsletter" type="checkbox" value="HEADRUSH"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/ion.png"/>
+           <input name="newsletter" type="checkbox" value="ION"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/marantz.png"/>
+           <input name="newsletter" type="checkbox" value="MARANTZPRO"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/marq.png"/>
+           <input name="newsletter" type="checkbox" value="MARQ"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/mixmeister.png"/>
+           <input name="newsletter" type="checkbox" value="MIXMEISTER"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/numark.png"/>
+           <input name="newsletter" type="checkbox" value="NUMARK"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/rane.png"/>
+           <input name="newsletter" type="checkbox" value="RANE"/>
+          </label>
+          <label class="bs-indent__null-padding newsletter-brands__item ">
+           <div class="newsletter-brands__checkmark-container">
+            <div class="newsletter-brands__checkmark-background">
+             <div class="newsletter-brands__checkmark">
+             </div>
+            </div>
+           </div>
+           <img alt="" src="/media/Profile/soundswitch.png"/>
+           <input name="newsletter" type="checkbox" value="SOUNDSWITCH"/>
+          </label>
+         </div>
+        </div>
+        <div class="cta-toolbar bs-privacy-and-terms bs-indent__normal-margin__bottom">
+         <div class="field required">
+          <input aria-required="true" class="input-checkbox required-entry" data-validate="{required:true}" id="privacy_and_terms" name="privacy_and_terms" required="required" title="privacy_and_terms" type="checkbox" value="1"/>
+          <label for="privacy_and_terms">
+           <span>
+            I agree to inMusic's
+            <a class="bs-link" href="https://www.akaipro.com/privacy/" target="_blank">
+             Privacy policy
+            </a>
+            and
+            <a class="bs-link" href="https://www.akaipro.com/terms-of-use/" target="_blank">
+             Terms of Use
+            </a>
+            .
+           </span>
+          </label>
+         </div>
+        </div>
+        <div class="actions-container">
+         <button class="bs-btn-secondary bs-btn-modal return" title="Back">
+          <span>
+           Back
+          </span>
+         </button>
+         <button class="bs-btn-primary bs-btn-modal" data-send="true" disabled="disabled" id="submit-create-form" title="Create Account" type="submit">
+          <span>
+           Create Account
+          </span>
+         </button>
+        </div>
+        <div class="captcha-registration bs-indent__small-margin__top hidden">
+         This site is protected by reCAPTCHA and the Google
+         <a class="bs-link" href="https://policies.google.com/privacy">
+          Privacy Policy
+         </a>
+         and
+         <a class="bs-link" href="https://policies.google.com/terms">
+          Terms of Service
+         </a>
+         apply.
+         <div class="field-recaptcha" data-bind="scope:'msp-recaptcha-216cc29b9ad658ee6196fad74897a921'" id="msp-recaptcha-216cc29b9ad658ee6196fad74897a921-container">
+          <!-- ko template: getTemplate() -->
+          <!-- /ko -->
+         </div>
+         <script type="text/x-magento-init">
+          {
+    "#msp-recaptcha-216cc29b9ad658ee6196fad74897a921-container": {
+        "Magento_Ui/js/core/app": {"components":{"msp-recaptcha-216cc29b9ad658ee6196fad74897a921":{"component":"MSP_ReCaptcha\/js\/reCaptcha","zone":"create","settings":{"siteKey":"6LdPO7kZAAAAABGiIAZYVXsusLHXWuCCvJBJG5YU","size":"invisible","badge":"inline","theme":null,"lang":null,"enabled":{"login":false,"create":true,"forgot":true,"contact":true,"review":true,"newsletter":true,"sendfriend":true,"paypal":true}},"reCaptchaId":"msp-recaptcha-216cc29b9ad658ee6196fad74897a921"}}}    }
+}
+         </script>
+        </div>
+       </div>
+       <div class="bs-modal__hidden" id="confirmation-tab">
+        <p style="padding-top:50px;padding-bottom:30px;">
+         <img alt="" src="https://d1jtxvnvoxswj8.cloudfront.net/Profile/profile_logo_white.png" style="display: block; margin-left: auto; margin-right: auto;"/>
+        </p>
+        <!-- <p style="text-align: center;padding-bottom:30px;">We need you to confirm your account. Check your inbox to confirm your account and immediately start discovering your inMusic Profile!</p> -->
+        <div class="message message__success bs-indent__normal-margin__top">
+         <div class="bs-text__align-center bs-text__transform-uppercase-important" id="confirmation-message">
+         </div>
+        </div>
+       </div>
+      </form>
+      <script type="text/x-magento-init">
+       {
+                ".field.password": {
+                    "passwordStrengthIndicator": {
+                    "formSelector": "form.form-create-account"
+                    }
+                },
+                "*": { "bsDate":{} }
+            }
+      </script>
+      <script>
+       require([
+                "jquery",
+                "mage/mage"
+            ], function($){
+                var dataForm = $('#form-validate');
+                var ignore = 'input[id$="full"]';
+                dataForm.mage('validation', {
+                                        errorPlacement: function(error, element) {
+                        error.insertAfter(element);
+                    },
+                    ignore: ':hidden:not(' + ignore + ')'
+                                    });
+
+            });
+      </script>
+     </div>
+    </div>
+   </div>
+   <script type="text/x-magento-init">
+    {
+            "#create-account-modal": {
+                "registrationModal": {"modalId":"create-account-modal","modalClass":"bs-modal bs-modal-register","modalOpenSelectors":".register-link","modalCloseClass":"close-modal-registration","modalFormClass":"modal-form-create-account","modalErrorContainer":"modal-account-errors","redirectUrl":"https:\/\/www.akaipro.com\/customer\/account\/","maxSteps":3,"modalFormSubmit":"submit-create-form","formValidation":"https:\/\/www.akaipro.com\/customer\/account\/modalRegistrationValidation","registrationUrl":"https:\/\/www.akaipro.com\/customer\/account\/modalRegistration\/","showEmailConfirmationTab":true,"emailConfirmationTabId":"confirmation-tab"}            }
+        }
+   </script>
+   <main class="page-main" id="maincontent">
+    <a id="contentarea" tabindex="-1">
+    </a>
+    <div class="page messages">
+     <div data-placeholder="messages">
+     </div>
+     <div data-bind="scope: 'messages'">
+      <div class="messages-wrapper" data-bind="visible: isVisible()">
+       <!-- ko if: cookieMessages && cookieMessages.length > 0 -->
+       <div class="messages" data-bind="foreach: { data: cookieMessages, as: 'message' }" role="alert">
+        <div data-bind="attr: {
+                class: 'message-' + message.type + ' ' + message.type + ' message',
+                'data-ui-id': 'message-' + message.type
+            }">
+         <div data-bind="html: $parent.prepareMessageForHtml(message.text)">
+         </div>
+         <span class="message-close" data-bind="click: $parent.hideMessages">
+         </span>
+        </div>
+       </div>
+       <!-- /ko -->
+       <!-- ko if: messages().messages && messages().messages.length > 0 -->
+       <div class="messages" data-bind="foreach: { data: messages().messages, as: 'message' }" role="alert">
+        <div data-bind="attr: {
+                class: 'message-' + message.type + ' ' + message.type + ' message',
+                'data-ui-id': 'message-' + message.type
+            }">
+         <div data-bind="html: $parent.prepareMessageForHtml(message.text)">
+         </div>
+         <span class="message-close" data-bind="click: $parent.hideMessages">
+         </span>
+        </div>
+       </div>
+       <!-- /ko -->
+      </div>
+     </div>
+     <script type="text/x-magento-init">
+      {
+        "*": {
+            "Magento_Ui/js/core/app": {
+                "components": {
+                        "messages": {
+                            "component": "InMusic_FlashMessage/js/view/messages",
+                            "config": {"timeout": 8000}
+                        }
+                    }
+                }
+            }
+    }
+     </script>
+    </div>
+    <div class="columns">
+     <div class="column main">
+      <input name="form_key" type="hidden" value="c63Q6dDuf4yHsMSo"/>
+      <div data-bind="scope:'authenticationPopup'" id="authenticationPopup" style="display: none;">
+       <script>
+        window.authenticationPopup = {"autocomplete":"off","customerRegisterUrl":"https:\/\/www.akaipro.com\/customer\/account\/create\/","customerForgotPasswordUrl":"https:\/\/www.akaipro.com\/customer\/account\/forgotpassword\/","baseUrl":"https:\/\/www.akaipro.com\/"};
+       </script>
+       <!-- ko template: getTemplate() -->
+       <!-- /ko -->
+       <script type="text/x-magento-init">
+        {
+            "#authenticationPopup": {
+                "Magento_Ui/js/core/app": {"components":{"authenticationPopup":{"component":"Magento_Customer\/js\/view\/authentication-popup","children":{"messages":{"component":"Magento_Ui\/js\/view\/messages","displayArea":"messages"},"captcha":{"component":"Magento_Captcha\/js\/view\/checkout\/loginCaptcha","displayArea":"additional-login-form-fields","formId":"user_login","configSource":"checkout"},"msp_recaptcha":{"component":"MSP_ReCaptcha\/js\/reCaptcha","displayArea":"additional-login-form-fields","configSource":"checkoutConfig","reCaptchaId":"msp-recaptcha-popup-login","zone":"login","badge":"inline","settings":{"siteKey":"6LdPO7kZAAAAABGiIAZYVXsusLHXWuCCvJBJG5YU","size":"invisible","badge":"inline","theme":null,"lang":null,"enabled":{"login":false,"create":true,"forgot":true,"contact":true,"review":true,"newsletter":true,"sendfriend":true,"paypal":true}}}}}}}            },
+            "*": {
+                "Magento_Ui/js/block-loader": "https\u003A\u002F\u002Fd10z1m3ycmasau.cloudfront.net\u002Fversion1608191534\u002Ffrontend\u002FLinchpin\u002Fakai\u002Fen_US\u002Fimages\u002Floader\u002D1.gif"
+            }
+        }
+       </script>
+      </div>
+      <script type="text/x-magento-init">
+       {
+        "*": {
+            "Magento_Customer/js/section-config": {
+                "sections": {"stores\/store\/switch":["*"],"stores\/store\/switchrequest":["*"],"directory\/currency\/switch":["*"],"*":["messages"],"customer\/account\/logout":["*","recently_viewed_product","recently_compared_product","persistent"],"customer\/account\/loginpost":["*"],"customer\/account\/createpost":["*"],"customer\/account\/editpost":["*"],"customer\/ajax\/login":["checkout-data","cart","captcha"],"catalog\/product_compare\/add":["compare-products"],"catalog\/product_compare\/remove":["compare-products"],"catalog\/product_compare\/clear":["compare-products"],"sales\/guest\/reorder":["cart"],"sales\/order\/reorder":["cart"],"checkout\/cart\/add":["cart","directory-data"],"checkout\/cart\/delete":["cart"],"checkout\/cart\/updatepost":["cart"],"checkout\/cart\/updateitemoptions":["cart"],"checkout\/cart\/couponpost":["cart"],"checkout\/cart\/estimatepost":["cart"],"checkout\/cart\/estimateupdatepost":["cart"],"checkout\/onepage\/saveorder":["cart","checkout-data","last-ordered-items"],"checkout\/sidebar\/removeitem":["cart"],"checkout\/sidebar\/updateitemqty":["cart"],"rest\/*\/v1\/carts\/*\/payment-information":["cart","last-ordered-items","instant-purchase"],"rest\/*\/v1\/guest-carts\/*\/payment-information":["cart"],"rest\/*\/v1\/guest-carts\/*\/selected-payment-method":["cart","checkout-data"],"rest\/*\/v1\/carts\/*\/selected-payment-method":["cart","checkout-data","instant-purchase"],"customer_order\/cart\/updatefaileditemoptions":["cart"],"checkout\/cart\/updatefaileditemoptions":["cart"],"customer_order\/cart\/advancedadd":["cart"],"checkout\/cart\/advancedadd":["cart"],"checkout\/cart\/removeallfailed":["cart"],"customer_order\/cart\/addfaileditems":["cart"],"checkout\/cart\/addfaileditems":["cart"],"customer_order\/sku\/uploadfile":["cart"],"wishlist\/index\/add":["wishlist"],"wishlist\/index\/remove":["wishlist"],"wishlist\/index\/updateitemoptions":["wishlist"],"wishlist\/index\/update":["wishlist"],"wishlist\/index\/cart":["wishlist","cart"],"wishlist\/index\/fromcart":["wishlist","cart"],"wishlist\/index\/allcart":["wishlist","cart"],"wishlist\/shared\/allcart":["wishlist","cart"],"wishlist\/shared\/cart":["cart"],"customer\/address\/*":["instant-purchase"],"customer\/account\/*":["instant-purchase"],"vault\/cards\/deleteaction":["instant-purchase"],"wishlist\/index\/copyitem":["wishlist"],"wishlist\/index\/copyitems":["wishlist"],"wishlist\/index\/deletewishlist":["wishlist","multiplewishlist"],"wishlist\/index\/createwishlist":["multiplewishlist"],"wishlist\/index\/editwishlist":["multiplewishlist"],"wishlist\/index\/moveitem":["wishlist"],"wishlist\/index\/moveitems":["wishlist"],"wishlist\/search\/addtocart":["cart","wishlist"],"multishipping\/checkout\/overviewpost":["cart"],"paypal\/express\/placeorder":["cart","checkout-data"],"paypal\/payflowexpress\/placeorder":["cart","checkout-data"],"paypal\/express\/onauthorization":["cart","checkout-data"],"persistent\/index\/unsetcookie":["persistent"],"giftregistry\/index\/cart":["cart"],"giftregistry\/view\/addtocart":["cart"],"review\/product\/post":["review"],"braintree\/paypal\/placeorder":["cart","checkout-data"]},
+                "clientSideSections": ["checkout-data","cart-data"],
+                "baseUrls": ["https:\/\/www.akaipro.com\/"],
+                "sectionNames": ["messages","customer","compare-products","last-ordered-items","cart","directory-data","captcha","wishlist","instant-purchase","multiplewishlist","persistent","review","recently_viewed_product","recently_compared_product","product_data_storage","paypal-billing-agreement"]            }
+        }
+    }
+      </script>
+      <script type="text/x-magento-init">
+       {
+        "*": {
+            "Magento_Customer/js/customer-data": {
+                "sectionLoadUrl": "https\u003A\u002F\u002Fwww.akaipro.com\u002Fcustomer\u002Fsection\u002Fload\u002F",
+                "expirableSectionLifetime": 60,
+                "expirableSectionNames": ["cart","persistent"],
+                "cookieLifeTime": "7200",
+                "updateSessionUrl": "https\u003A\u002F\u002Fwww.akaipro.com\u002Fcustomer\u002Faccount\u002FupdateSession\u002F"
+            }
+        }
+    }
+      </script>
+      <script type="text/x-magento-init">
+       {
+        "*": {
+            "Magento_Customer/js/invalidation-processor": {
+                "invalidationRules": {
+                    "website-rule": {
+                        "Magento_Customer/js/invalidation-rules/website-rule": {
+                            "scopeConfig": {
+                                "websiteId": "3"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+      </script>
+      <script type="text/x-magento-init">
+       {
+        "body": {
+            "pageCache": {"url":"https:\/\/www.akaipro.com\/page_cache\/block\/render\/page_id\/52\/","handles":["default","cms_page_view","cms_page_view_id_softwaredownload"],"originalRequest":{"route":"cms","controller":"page","action":"view","uri":"\/softwaredownload"},"versionCookieName":"private_content_version"}        }
+    }
+      </script>
+      <script type="text/x-magento-init">
+       {
+    "*": {
+        "Magento_Banner/js/model/banner":
+            {"sectionLoadUrl":"https:\/\/www.akaipro.com\/banner\/ajax\/load\/","cacheTtl":30000}        }
+}
+      </script>
+      <div class="container row contained">
+       <div class="col-sm-12">
+        <h3 class="user-account-create-header">
+         Software Downloads
+        </h3>
+        <p>
+         Thank you for purchasing your Akai Professional product. Please follow these simple instructions to retrieve your software download(s).
+        </p>
+        <h5>
+         1. Log In To Your Akai Professional Account
+        </h5>
+        <div class="panel">
+         <p>
+          Already have an account?
+          <a href="https://www.akaipro.com/customer/account/login" rel="noopener" target="_blank">
+           Log in here
+          </a>
+          .
+         </p>
+         <p>
+          If you do not have an Akai Professional Account, please
+          <a href="https://www.akaipro.com/customer/account/create" rel="noopener" target="_blank">
+           click here to create one
+          </a>
+          .
+         </p>
+        </div>
+        <h5>
+         2. Register Your Akai Professional Hardware
+        </h5>
+        <div class="panel">
+         <p>
+          Once you have logged into your Akai Professional Account, you will automatically be directed to the "My Account" page.
+         </p>
+         <p>
+          On the My Account page, click
+          <strong>
+           My Registered Products
+          </strong>
+          . Follow the onscreen instructions to register your product&rsquo;s unique hardware serial number. Your hardware serial number can be found printed on a sticker on the rear or bottom of your product and will be begin with (21). This will enable your software downloads and is a necessary step to obtain downloadable content.
+         </p>
+        </div>
+        <h5>
+         3. Download Your Software
+        </h5>
+        <div class="panel">
+         <p>
+          Once your hardware is registered, your software download link(s) and any necessary authorization codes will appear in your Akai Professional Account.
+         </p>
+        </div>
+        <p>
+         If you need assistance, please visit
+         <a href="https://www.akaipro.com/support">
+          www.akaipro.com/support
+         </a>
+         to open to open a Product Registration Assistance support ticket. We&rsquo;ll be glad to assist!
+        </p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </main>
+   <footer class="page-footer">
+    <div class="footer">
+     <div class="footer-middle">
+      <div class="container">
+       <div class="row">
+        <div class="col-lg-12">
+         <div id="inmusic-logos-scroller">
+          <div class="inmusic-logos-scroller-title text-center">
+           <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-inmusic-wht.png"/>
+           Home of the world's premier music and audio technology brands
+          </div>
+          <ul class="inmusic-logos-scroller">
+           <li>
+            <a href="http://www.airmusictech.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-air-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.akaipro.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-akai-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.alesis.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-alesis-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://altoproaudio.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-alto-pro-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.denondj.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-denon-dj-wht.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.denonpro.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-denon-pro-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.headrushfx.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-headrush-wht.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.ionaudio.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-ion-wht.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.m-audio.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-maudio-wht.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.marantzpro.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-marantz-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.marqlighting.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-marq-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.mixmeister.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-mix-meister-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.numark.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-numark-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.rane.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-rane-wht-2x.png"/>
+            </a>
+           </li>
+           <li>
+            <a href="http://www.sonivoxmi.com/" target="_blank">
+             <img src="https://d1jtxvnvoxswj8.cloudfront.net/wysiwyg/global/logo-sonivox-wht.png"/>
+            </a>
+           </li>
+          </ul>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="footer-middle footer-middle-2">
+      <div class="container">
+       <div class="row">
+        <div class="col-lg-12">
+         <div class="socialize text-center color-black links-black">
+          <h2 class="margin-top-none text-uppercase">
+           Stay Informed
+          </h2>
+          <ul class="inline-block-list icon-list">
+           <li>
+            <a class="icon-facebook" href="https://www.facebook.com/AkaiPro/" target="_blank">
+             <span class="screen-reader-text">
+              Facebook
+             </span>
+            </a>
+           </li>
+           <li>
+            <a class="icon-twitter" href="https://twitter.com/akai_pro" target="_blank">
+             <span class="screen-reader-text">
+              Twitter
+             </span>
+            </a>
+           </li>
+           <li>
+            <a class="icon-instagram" href="https://instagram.com/akai_pro" target="_blank">
+             <span class="screen-reader-text">
+              Instagram
+             </span>
+            </a>
+           </li>
+           <li>
+            <a class="icon-youtube" href="https://www.youtube.com/user/akaiprovideo" target="_blank">
+             <span class="screen-reader-text">
+              YouTube
+             </span>
+            </a>
+           </li>
+           <li>
+            <a class="icon-soundcloud" href="https://soundcloud.com/akaipro" target="_blank">
+             <span class="screen-reader-text">
+              SoundCloud
+             </span>
+            </a>
+           </li>
+          </ul>
+          <div class="akai-footer-menu">
+           <p>
+            <a href="https://www.akaipro.com/privacy-policy/">
+             Privacy
+            </a>
+            |
+            <a href="https://www.akaipro.com/terms-of-use/">
+             Terms
+            </a>
+           </p>
+          </div>
+          <span class="copyright padding-top block text-center">
+           &copy; 2020 inMusic, Inc.
+          </span>
+         </div>
+         <script type="text/javascript">
+          jQuery(function() {
+jQuery('body').on('click', '.mobile-pdp-menu-container .data.item.title:not(.product-title)', function ( event ) {
+	event.preventDefault();
+
+	var $section_id = jQuery('.data.switch', this).attr('href'),
+        $section = jQuery('.data.item.content[data-id="' + $section_id.replace('#', '') + '"]');
+
+    jQuery('.data.item.content:visible').hide();
+    $section.show();
+
+    jQuery('.mobile-pdp-menu-container').slideToggle();
+
+    jQuery('html,body').animate({
+        scrollTop: jQuery('.product.info.detailed').offset().top - 50
+    }, 500);
+} );
+});
+         </script>
+        </div>
+        <div class="col-lg-3">
+        </div>
+        <div class="col-lg-3">
+        </div>
+        <div class="col-lg-3">
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+    <a href="javascript:void(0)" id="totop">
+     <em class="porto-icon-up-open">
+     </em>
+    </a>
+   </footer>
+   <script type="text/x-magento-init">
+    {
+            "*": {
+                "Magento_Ui/js/core/app": {
+                    "components": {
+                        "storage-manager": {
+                            "component": "Magento_Catalog/js/storage-manager",
+                            "appendTo": "",
+                            "storagesConfiguration" : {"recently_viewed_product":{"requestConfig":{"syncUrl":"https:\/\/www.akaipro.com\/catalog\/product\/frontend_action_synchronize\/"},"lifetime":"1000","allowToSendRequest":null},"recently_compared_product":{"requestConfig":{"syncUrl":"https:\/\/www.akaipro.com\/catalog\/product\/frontend_action_synchronize\/"},"lifetime":"1000","allowToSendRequest":null},"product_data_storage":{"updateRequestConfig":{"url":"https:\/\/www.akaipro.com\/rest\/akai_store_us\/V1\/products-render-info"},"requestConfig":{"syncUrl":"https:\/\/www.akaipro.com\/catalog\/product\/frontend_action_synchronize\/"},"allowToSendRequest":null}}                        }
+                    }
+                }
+            }
+        }
+   </script>
+   <script src="/js/react.bundle.js">
+   </script>
+  </div>
+  <script type="text/javascript">
+   window.NREUM||(NREUM={});NREUM.info={"beacon":"bam.nr-data.net","licenseKey":"NRJS-163ea197e411098f0e0","applicationID":"1027111231","transactionName":"YlNTYRRSCBdUABZaX1sZcFYSWgkKGgAPQB9FV1ZQSUUPAUI=","queueTime":0,"applicationTime":141,"atts":"ThRQF1xIGxk=","errorBeacon":"bam.nr-data.net","agent":""}
+  </script>
+ </body>
+</html>

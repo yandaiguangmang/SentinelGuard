@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .72);
+  --panel-light: #ffffff;
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .2);
+  --shadow: 0 16px 50px rgba(2, 6, 23, .28);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #16213e 0, #0b1220 38%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code { background: rgba(148, 163, 184, .18); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+header {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .92), rgba(30, 64, 175, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .28);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .76), rgba(15, 23, 42, .54));
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #f59e0b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric { padding: 18px 18px 20px; background: rgba(255,255,255,.04); border-radius: 18px; border: 1px solid rgba(148, 163, 184, .16); }
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px; padding: 14px 16px; margin: 0;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px;
+  min-height: 160px; overflow: auto; max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%;
+  background: #f59e0b; box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px; }
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#screenshots">页面截图</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 11</span>
+      <span class="chip warning">风险 MEDIUM</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">MEDIUM</div>
+      <div class="hint">0 条高危 / 4 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">风险分数</div>
+      <div class="value">44/100</div>
+      <div class="hint">越高表示越值得拦截与复核</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度检查报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://baksmany.net/zh</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度检查报告</small>
+        </div>
+        
+      <p><span class="badge">MEDIUM</span></p>
+      <p>风险分数：<strong>44/100</strong></p>
+      <p>原始输入：<code>https://baksmany.net/zh</code></p>
+      <p>报告类型：<strong>模型深度检查报告</strong></p>
+      <div class="pill-row"><span class='pill medium'>MEDIUM · TLS 证书签发时间较短</span><span class='pill low'>LOW · 代理访问失败后已回退直连</span><span class='pill medium'>MEDIUM · 域名注册信息分析</span><span class='pill medium'>MEDIUM · 缺乏外部信誉信息</span><span class='pill low'>LOW · 疑似重定向配置错误</span><span class='pill low'>LOW · 页面内容缺失</span><span class='pill low'>LOW · 页面重定向后内容为空</span><span class='pill low'>LOW · 疑似重定向配置错误</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_url_static_20260621_200321_797074.html' target='_blank'>关联静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_url_static_20260621_200321_797074.md' target='_blank'>关联静态 Markdown 报告</a></p>
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          <p class='subtle'>抓取模式：direct / 代理：否</p>
+        </div>
+      </div>
+    
+        
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>输入归一化与对象识别</small>
+        </div>
+        <table class='table'><tr><th>规范化 URL</th><td>https://baksmany.net/zh</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>baksmany.net</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/zh</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://baksmany.net/zh</li><li>https://baksmany.net/zh/zh</li></ol>
+        <h4>页面线索</h4>
+        <table class='table'><tr><td>status_code</td><td>302</td></tr><tr><td>content_type</td><td>text/html; charset=UTF-8</td></tr><tr><td>final_url</td><td>https://baksmany.net/zh/zh</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>direct</td></tr><tr><td>proxy_used</td><td>False</td></tr><tr><td>proxy_config</td><td>{}</td></tr><tr><td>redirect_location</td><td>/zh/zh</td></tr><tr><td>redirect_final_url</td><td>https://baksmany.net/zh/zh</td></tr><tr><td>title</td><td></td></tr><tr><td>visible_text_excerpt</td><td></td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>0</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>无</td></tr><tr><td>form_actions</td><td>无</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&#x27;, &#x27;text_excerpt&#x27;: &#x27;&#x27;}</td></tr></table>
+      </div>
+      <div class="pill-row"><span class='pill muted'>MEDIUM · TLS 证书签发时间较短</span><span class='pill muted'>LOW · 代理访问失败后已回退直连</span><span class='pill muted'>MEDIUM · 域名注册信息分析</span><span class='pill muted'>MEDIUM · 缺乏外部信誉信息</span><span class='pill muted'>LOW · 疑似重定向配置错误</span><span class='pill muted'>LOW · 页面内容缺失</span><span class='pill muted'>LOW · 页面重定向后内容为空</span><span class='pill muted'>LOW · 疑似重定向配置错误</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class='scroll-box slim'><h4>MEDIUM（4）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>TLS 证书签发时间较短 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：CERT_RECENT</div>
+      <p>证书签发于 19 天前。</p>
+      <div class="kv">
+        <b>证据</b><span><code>签发时间: Jun  2 05:52:23 2026 GMT</code></span>
+        <b>建议</b><span>建议结合其他证据综合判断。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>域名注册信息分析 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：INTEL_INFRA_1</div>
+      <p>域名 baksmany.net 的注册时间较短，可能表明该域名是新注册的，存在一定的风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>域名注册时间较短，具体注册日期未提供。</code></span>
+        <b>建议</b><span>建议进一步调查该域名的历史记录及其背后的组织信息。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>缺乏外部信誉信息 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：INTEL_COVERAGE_1</div>
+      <p>当前情报源未覆盖该域名的信誉信息，无法判断其安全性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>缺乏域名信誉、证书透明度和黑名单情报。</code></span>
+        <b>建议</b><span>建议使用信誉查询工具或服务来获取更多信息。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>TLS 证书签发时间较短 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_CERT_AGE</div>
+      <p>证书签发于 19 天前，对于新注册域名，需警惕其在短期内被用于恶意活动的风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>签发时间: Jun 2 05:52:23 2026 GMT</code></span>
+        <b>建议</b><span>建议保持监控，若后续页面出现异常内容，需重新评估风险。</span>
+      </div>
+    </div>
+    </div><h4>LOW（7）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>代理访问失败后已回退直连 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：PAGE_PROXY_FALLBACK_DIRECT</div>
+      <p>目标站点优先尝试通过 VPN / 代理访问，代理失败后已自动切换为原网络直连。</p>
+      <div class="kv">
+        <b>证据</b><span><code>当前抓取使用直连通道完成页面分析。</code></span>
+        <b>建议</b><span>若目标站点在直连下仍不可用，请检查 VPN 节点、代理地址或目标站点封锁策略。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>疑似重定向配置错误 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_STATIC_REDIRECT_LOOP</div>
+      <p>目标 URL 存在冗余的路径重定向（/zh -&gt; /zh/zh），这通常是服务器配置错误或开发阶段的遗留问题，而非典型的恶意跳转行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>重定向链: https://baksmany.net/zh -&gt; https://baksmany.net/zh/zh</code></span>
+        <b>建议</b><span>关注该域名后续是否会部署实际内容，当前状态无实质性风险。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面内容缺失 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_STATIC_EMPTY_CONTENT</div>
+      <p>页面返回 302 状态码后，最终目标地址未包含任何 HTML 结构、脚本或可见文本，表明该站点目前处于空置或不可用状态。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTML 摘要为空，无脚本、无表单、无下载链接。</code></span>
+        <b>建议</b><span>无需进一步深度分析，建议标记为不可用。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面重定向后内容为空 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_BEHAVIOR_INERT_PAGE</div>
+      <p>访问初始URL后，页面通过一次服务器端302重定向跳转至同一域名下的子路径。该最终页面完全空白，未加载任何脚本、表单或可见内容。这种行为表明网站当前处于非活动状态，可能是配置错误、正在建设中或已被废弃。</p>
+      <div class="kv">
+        <b>证据</b><span><code>重定向链: https://baksmany.net/zh -&gt; https://baksmany.net/zh/zh。浏览器证据显示最终页面标题和内容均为空，未发现脚本加载、表单提交或下载行为。</code></span>
+        <b>建议</b><span>当前页面无实际威胁。建议将该域名加入监控列表，以防其未来被激活并用于恶意目的。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>疑似重定向配置错误 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_REDIRECT_LOOP</div>
+      <p>目标 URL 存在冗余的路径重定向（/zh -&gt; /zh/zh），这通常是服务器配置错误或开发阶段的遗留问题。</p>
+      <div class="kv">
+        <b>证据</b><span><code>重定向链: https://baksmany.net/zh -&gt; https://baksmany.net/zh/zh</code></span>
+        <b>建议</b><span>无需立即封锁，建议关注该域名后续是否会部署实际内容。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面内容缺失 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_ADVICE_EMPTY_CONTENT</div>
+      <p>页面返回 302 状态码后，最终目标地址未包含任何 HTML 结构、脚本或可见文本，表明该站点目前处于空置或不可用状态。</p>
+      <div class="kv">
+        <b>证据</b><span><code>HTML 摘要为空，无脚本、无表单、无下载链接。</code></span>
+        <b>建议</b><span>当前页面无实际威胁，建议将其加入监控列表，以防其未来被激活并用于恶意目的。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>TLS 证书签发时间较短 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：CERT_RECENT</div>
+      <p>证书较新属于轻度风险信号，但在缺乏页面恶意行为、外部信誉和投放痕迹的情况下，当前只能作为观察项，不能单独支撑高风险判断。</p>
+      <div class="kv">
+        <b>证据</b><span><code>签发时间: Jun 2 05:52:23 2026 GMT</code></span>
+        <b>建议</b><span>结合后续页面内容、域名信誉和证书透明度继续观察。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="screenshots" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>页面截图证据</h3>
+        <small>仅在高风险 URL 上自动采集</small>
+      </div>
+      <p class='subtle'>未采集到截图证据。</p>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。 基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>该域名目前处于无法访问或内容为空的状态。从静态结构分析，该域名存在明显的重定向循环或路径配置错误（/zh 跳转至 /zh/zh），且页面无任何 HTML 内容或脚本特征。TLS 证书签发时间较短（19天前）是唯一的风险指标，但由于缺乏实际页面内容，无法确认其恶意意图。目前证据不足以判定其为恶意，倾向于该站点处于未完成部署或配置异常状态。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>行为分析显示，初始URL `https://baksmany.net/zh` 经过一次服务器端302重定向，跳转至同一域名下的路径 `https://baksmany.net/zh/zh`。最终页面完全空白，未加载任何脚本、表单、下载链接或可见内容，无任何交互行为。从行为链上看，该页面目前处于非活动或配置错误状态，不构成直接威胁。尽管静态分析提到证书签发时间较短，但由于缺乏任何后续的恶意行为（如钓鱼、脚本执行、恶意软件下载），仅凭此无法断定其为恶意。综合判断，该页面行为可疑度低，但其意图不明确。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-4o-mini</span></h4>
+          <p>该页面未明显模仿特定品牌或组织，无法识别出明确的目标。域名 baksmany.net 似乎没有与已知品牌或组织相关的内容。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>目标站点目前处于异常状态，表现为路径配置错误（存在冗余的 302 重定向）且页面内容完全缺失。尽管 TLS 证书签发时间较短（19 天前）且缺乏外部信誉数据，但基于当前分析，该站点未发现任何恶意脚本、钓鱼表单或恶意下载行为。综合判断，该站点目前处于未完成部署或空置状态，不构成直接威胁。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。 基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">该域名目前处于无法访问或内容为空的状态。从静态结构分析，该域名存在明显的重定向循环或路径配置错误（/zh 跳转至 /zh/zh），且页面无任何 HTML 内容或脚本特征。TLS 证书签发时间较短（19天前）是唯一的风险指标，但由于缺乏实际页面内容，无法确认其恶意意图。目前证据不足以判定其为恶意，倾向于该站点处于未完成部署或配置异常状态。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">行为分析显示，初始URL `https://baksmany.net/zh` 经过一次服务器端302重定向，跳转至同一域名下的路径 `https://baksmany.net/zh/zh`。最终页面完全空白，未加载任何脚本、表单、下载链接或可见内容，无任何交互行为。从行为链上看，该页面目前处于非活动或配置错误状态，不构成直接威胁。尽管静态分析提到证书签发时间较短，但由于缺乏任何后续的恶意行为（如钓鱼、脚本执行、恶意软件下载），仅凭此无法断定其为恶意。综合判断，该页面行为可疑度低，但其意图不明确。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">该页面未明显模仿特定品牌或组织，无法识别出明确的目标。域名 baksmany.net 似乎没有与已知品牌或组织相关的内容。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">目标站点目前处于异常状态，表现为路径配置错误（存在冗余的 302 重定向）且页面内容完全缺失。尽管 TLS 证书签发时间较短（19 天前）且缺乏外部信誉数据，但基于当前分析，该站点未发现任何恶意脚本、钓鱼表单或恶意下载行为。综合判断，该站点目前处于未完成部署或空置状态，不构成直接威胁。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5.4-mini</td><td>基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。 基于离线静态结果、浏览器证据包和四位专家意见，当前目标站点 https://baksmany.net/zh 未显示出直接恶意行为证据。浏览器实际抓取最终停留在 https://baksmany.net/zh/zh，返回 302 重定向，页面未提取到标题、可见文本、脚本、表单、下载链接或其他交互线索，说明当前页面更像是空置、未完成部署或路径配置异常，而不是典型的钓鱼页或投放页。静态侧仅发现两类弱信号：TLS 证书签发时间较短，以及代理失败后回退直连完成抓取；这两项都不足以单独支撑恶意判定。外部情报不足，当前结论主要依赖离线证据。综合四位专家意见，静态分析员、行为分析员与处置建议员均倾向 low/uncertain，情报分析员虽然给出 benign_lean，但也明确说明缺乏外部信誉、证书透明度与黑名单信息，因此总体一致指向“低风险但需观察”。最终采用 low 结论，不上调为恶意，因为现有证据链中没有页面内容、脚本执行、表单诱导、下载投放或品牌仿冒迹象。</td></tr><tr><th>静态分析员</th><td>gemini-2.5-flash</td><td>该域名目前处于无法访问或内容为空的状态。从静态结构分析，该域名存在明显的重定向循环或路径配置错误（/zh 跳转至 /zh/zh），且页面无任何 HTML 内容或脚本特征。TLS 证书签发时间较短（19天前）是唯一的风险指标，但由于缺乏实际页面内容，无法确认其恶意意图。目前证据不足以判定其为恶意，倾向于该站点处于未完成部署或配置异常状态。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-pro</td><td>行为分析显示，初始URL `https://baksmany.net/zh` 经过一次服务器端302重定向，跳转至同一域名下的路径 `https://baksmany.net/zh/zh`。最终页面完全空白，未加载任何脚本、表单、下载链接或可见内容，无任何交互行为。从行为链上看，该页面目前处于非活动或配置错误状态，不构成直接威胁。尽管静态分析提到证书签发时间较短，但由于缺乏任何后续的恶意行为（如钓鱼、脚本执行、恶意软件下载），仅凭此无法断定其为恶意。综合判断，该页面行为可疑度低，但其意图不明确。</td></tr><tr><th>情报分析员</th><td>gpt-4o-mini</td><td>该页面未明显模仿特定品牌或组织，无法识别出明确的目标。域名 baksmany.net 似乎没有与已知品牌或组织相关的内容。</td></tr><tr><th>处置建议员</th><td>gemini-2.5-flash</td><td>目标站点目前处于异常状态，表现为路径配置错误（存在冗余的 302 重定向）且页面内容完全缺失。尽管 TLS 证书签发时间较短（19 天前）且缺乏外部信誉数据，但基于当前分析，该站点未发现任何恶意脚本、钓鱼表单或恶意下载行为。综合判断，该站点目前处于未完成部署或空置状态，不构成直接威胁。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+      
+    <div style="margin-top: 18px;" class="panel">
+        <div class="panel-inner">
+            <div class="section-title">
+                <h3>分析性能统计</h3>
+                <small>深度研判耗时与 Token 消耗</small>
+            </div>
+            <p>总耗时：<strong>42.22 秒</strong></p>
+            <div class="scroll-box slim">
+                <table class="table">
+                    <thead><tr>
+                        <th>角色</th><th>耗时</th><th>输入 Token</th><th>输出 Token</th><th>总 Token</th>
+                    </tr></thead>
+                    <tbody>
+        <tr>
+            <td>情报分析员</td>
+            <td>4.22 秒</td>
+            <td>1482</td>
+            <td>300</td>
+            <td>1782</td>
+        </tr>
+        
+        <tr>
+            <td>静态分析员</td>
+            <td>4.28 秒</td>
+            <td>1575</td>
+            <td>419</td>
+            <td>1994</td>
+        </tr>
+        
+        <tr>
+            <td>行为分析员</td>
+            <td>24.87 秒</td>
+            <td>1719</td>
+            <td>444</td>
+            <td>2163</td>
+        </tr>
+        
+        <tr>
+            <td>处置建议员</td>
+            <td>8.78 秒</td>
+            <td>2870</td>
+            <td>514</td>
+            <td>3384</td>
+        </tr>
+        
+        <tr>
+            <td>主持人</td>
+            <td>8.57 秒</td>
+            <td>3220</td>
+            <td>1465</td>
+            <td>4685</td>
+        </tr>
+        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    </div>
+  </section>
+</main>
+</body>
+</html>

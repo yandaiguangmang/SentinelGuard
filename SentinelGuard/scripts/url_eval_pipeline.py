@@ -26,11 +26,11 @@ if str(ROOT_DIR) not in sys.path:
 # -----------------------------------------------------------------------------
 # Hard‑coded parameters – adjust these for your environment
 # -----------------------------------------------------------------------------
-INDEX_SQL_PATH = Path(r"F:\url_dataset\index.sql")          # Path to index.sql
-HTML_DIR = Path(r"F:\url_dataset\dataset\dataset-part-1")                 # Directory containing *.html files
+INDEX_SQL_PATH = Path(r"E:\xinansai\code1\code\SentinelGuard\data\index.sql")
+HTML_DIR = Path(r"E:\xinansai\code1\code\SentinelGuard\data\html")
 OUTPUT_DIR = Path("./eval_outputs")                  # Where to save results
-SAMPLE_LIMIT: Optional[int] = 2                    # Only evaluate first N samples
-THRESHOLD = 50                                       # Score threshold for phishing (0‑100)
+SAMPLE_LIMIT: Optional[int] = 200                    # Only evaluate first N samples
+THRESHOLD = 60                                       # Score threshold for phishing (0‑100)
 
 # -----------------------------------------------------------------------------
 # SentinelGuard imports – make sure the project root is on sys.path
@@ -145,6 +145,7 @@ def build_page_summary_from_html(html_text: str) -> Dict[str, Any]:
     summary["proxy_used"] = False
     summary["content_type"] = "text/html"
     summary["status_code"] = 200
+    summary["full_html"] = html_text
     return summary
 
 
@@ -369,10 +370,97 @@ def summarize_errors(errors: List[str], topk: int = 10) -> List[Tuple[str, int]]
 
 
 # -----------------------------------------------------------------------------
-# Main evaluation driver
+# Concurrency helpers
 # -----------------------------------------------------------------------------
 
-def evaluate_dataset() -> Dict[str, Any]:
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+
+
+class ThreadSafeCounter:
+    def __init__(self):
+        self._value = 0
+        self._lock = threading.Lock()
+
+    def increment(self):
+        with self._lock:
+            self._value += 1
+            return self._value
+
+
+# -----------------------------------------------------------------------------
+# Single sample processing (for parallel execution)
+# -----------------------------------------------------------------------------
+
+def process_one(row: dict, threshold: int, html_dir: Path) -> dict:
+    """
+    Process one dataset row. Returns a dict with results and metadata.
+    """
+    url = row["url"]
+    website = row["website"]
+    label = int(row["label"])
+
+    # 1. Load HTML
+    try:
+        html_text = load_html(html_dir, website)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "label": label,
+            "error": f"load_html::{website}::{exc}",
+        }
+
+    # 2. Static analysis
+    static_report = build_offline_report(url, html_text)
+    static_pred = prediction_from_static(static_report, threshold)
+
+    # 3. Deep analysis (optional)
+    deep_result = run_deep_analysis(static_report)
+    deep_pred, deep_score, deep_err = prediction_from_deep(deep_result, threshold)
+
+    # 4. Build record
+    record: Dict[str, Any] = {
+        "id": row["id"],
+        "url": url,
+        "website": website,
+        "label": label,
+        "static_score": static_report.score,
+        "static_risk_level": static_report.risk_level,
+        "static_pred": static_pred,
+        "static_findings": [f.to_dict() for f in static_report.findings],
+    }
+
+    if deep_result is not None:
+        record["deep_result"] = _json_safe(deep_result)
+        if deep_err:
+            record["deep_error"] = deep_err
+        else:
+            record["deep_pred"] = deep_pred
+            record["deep_score"] = deep_score
+
+    return {
+        "ok": True,
+        "label": label,
+        "record": record,
+        "static_pred": static_pred,
+        "static_score": static_report.score,
+        "deep_pred": deep_pred if deep_result else None,
+        "deep_score": deep_score if deep_result else None,
+        "error": deep_err if deep_err else None,
+    }
+
+
+# -----------------------------------------------------------------------------
+# Main evaluation driver (concurrent version)
+# -----------------------------------------------------------------------------
+
+def evaluate_dataset(max_workers: int = 16) -> Dict[str, Any]:
     rows = parse_index_sql(INDEX_SQL_PATH)
     if not rows:
         print("No rows parsed from index.sql", file=sys.stderr)
@@ -383,6 +471,35 @@ def evaluate_dataset() -> Dict[str, Any]:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    started = time.time()
+    errors: List[str] = []
+    total = len(rows)
+
+    # ---------- Concurrency ----------
+    results = []  # will be filled in order because we use map
+
+    def task_iterator():
+        for r in rows:
+            yield r, THRESHOLD, HTML_DIR
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        if HAS_TQDM:
+            progress = tqdm(total=total, desc="Processing samples")
+        else:
+            counter = ThreadSafeCounter()
+
+        futures = executor.map(lambda args: process_one(*args), task_iterator())
+
+        for res in futures:
+            results.append(res)
+            if HAS_TQDM:
+                progress.update(1)
+            else:
+                done = counter.increment()
+                if done % 50 == 0:
+                    print(f"[{done}/{total}] processed")
+
+    # ---------- Aggregate metrics ----------
     static_y_true: List[int] = []
     static_y_pred: List[int] = []
     static_y_score: List[float] = []
@@ -392,60 +509,29 @@ def evaluate_dataset() -> Dict[str, Any]:
     deep_y_score: List[float] = []
 
     records: List[Dict[str, Any]] = []
-    errors: List[str] = []
-    started = time.time()
 
-    for idx, row in enumerate(rows, 1):
-        url = row["url"]
-        website = row["website"]
-        label = int(row["label"])
-
-        try:
-            html_text = load_html(HTML_DIR, website)
-        except Exception as exc:
-            errors.append(f"load_html::{website}::{exc}")
+    for res in results:
+        if not res.get("ok"):
+            errors.append(res.get("error", "unknown error"))
             continue
 
-        # Offline static analysis (reuses project modules)
-        static_report = build_offline_report(url, html_text)
-        static_pred = prediction_from_static(static_report, THRESHOLD)
-
-        # Deep analysis (optional, requires API keys)
-        deep_result = run_deep_analysis(static_report)
-        deep_pred, deep_score, deep_err = prediction_from_deep(deep_result, THRESHOLD)
-
-        static_y_true.append(label)
-        static_y_pred.append(static_pred)
-        static_y_score.append(static_report.score / 100.0)
-
-        record: Dict[str, Any] = {
-            "id": row["id"],
-            "url": url,
-            "website": website,
-            "label": label,
-            "static_score": static_report.score,
-            "static_risk_level": static_report.risk_level,
-            "static_pred": static_pred,
-            "static_findings": [f.to_dict() for f in static_report.findings],
-        }
-
-        if deep_result is not None:
-            record["deep_result"] = _json_safe(deep_result)
-            if deep_err:
-                record["deep_error"] = deep_err
-                errors.append(f"deep::{website}::{deep_err}")
-            else:
-                if deep_pred is not None:
-                    deep_y_true.append(label)
-                    deep_y_pred.append(deep_pred)
-                    deep_y_score.append((deep_score or 0) / 100.0)
-                record["deep_pred"] = deep_pred
-                record["deep_score"] = deep_score
-
+        label = res["label"]
+        record = res["record"]
         records.append(record)
 
-        if idx % 50 == 0:
-            print(f"[{idx}/{len(rows)}] processed")
+        # Static metrics
+        if res.get("static_pred") is not None:
+            static_y_true.append(label)
+            static_y_pred.append(res["static_pred"])
+            static_y_score.append(res["static_score"] / 100.0)
+
+        # Deep metrics (only if deep was successful and produced a prediction)
+        if res.get("deep_pred") is not None:
+            deep_y_true.append(label)
+            deep_y_pred.append(res["deep_pred"])
+            deep_y_score.append(res["deep_score"] / 100.0)
+        elif res.get("error"):
+            errors.append(f"deep::{record['website']}::{res['error']}")
 
     elapsed = time.time() - started
 
