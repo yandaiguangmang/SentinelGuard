@@ -22,8 +22,8 @@ ENCODING_NAME = "o200k_base"
 
 # 提取关键标签的正则
 RE_TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
-RE_FORM = re.compile(r"<form[\s>].*?</form>", re.IGNORECASE | re.DOTALL)
-RE_A_TAG = re.compile(r"<a\s[^>]*href\s*=\s*['\"]([^'\"]*)['\"][^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL)
+RE_FORM = re.compile(r"<form[^>]*>(.*?)</form>", re.IGNORECASE | re.DOTALL)
+RE_A_TAG = re.compile(r'<a\s+[^>]*href\s*=\s*["\']([^"\']*)["\'][^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
 
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
@@ -598,20 +598,49 @@ class URLDeepAnalyzer:
         expert_opinions = _coerce_mapping(data.get("expert_opinions"))
         normalized_opinions = {role: str(expert_opinions.get(role) or "") for role in DEEP_ROLE_ORDER}
         for role, role_output in role_outputs.items():
-            if not normalized_opinions.get(role):
+            if not normalized_opinions.get(role, "").strip():
                 normalized_opinions[role] = str(role_output.get("opinion") or "")
 
-        # 如果主持人意见仍为空，用 summary 替代
+        # 如果主持人意见仍为空，用 summary 或兜底摘要替代
         if not normalized_opinions.get("主持人", "").strip():
             summary = str(data.get("summary") or "")
             if summary:
                 normalized_opinions["主持人"] = summary
             else:
-                normalized_opinions["主持人"] = self._build_host_fallback_summary(static_report, role_outputs, static_report.score, static_report.risk_level, "主持人输出缺少总结")
+                normalized_opinions["主持人"] = self._build_host_fallback_summary(
+                    static_report,
+                    role_outputs,
+                    static_report.score,
+                    static_report.risk_level,
+                    "主持人输出缺少总结",
+                )
 
-        missing_roles = [role for role in DEEP_ROLE_ORDER if role != "主持人" and not normalized_opinions.get(role, "").strip()]
-        if missing_roles:
-            raise ValueError(f"模型输出缺少角色意见: {', '.join(missing_roles)}")
+        # 对其他角色做降级填充，避免局部缺失直接失败
+        for role in DEEP_ROLE_ORDER:
+            if normalized_opinions.get(role, "").strip():
+                continue
+
+            role_output = role_outputs.get(role, {})
+            role_opinion = str(role_output.get("opinion") or "").strip()
+            if role_opinion:
+                normalized_opinions[role] = role_opinion
+                continue
+
+            static_opinion = str(static_report.expert_opinions.get(role) or "").strip()
+            if static_opinion:
+                normalized_opinions[role] = static_opinion
+                continue
+
+            if role == "主持人":
+                normalized_opinions[role] = self._build_host_fallback_summary(
+                    static_report,
+                    role_outputs,
+                    static_report.score,
+                    static_report.risk_level,
+                    "主持人输出缺少总结",
+                )
+            else:
+                normalized_opinions[role] = f"{role} 模型输出缺失，已使用静态分析结果降级。"
 
         expert_models = _coerce_mapping(data.get("expert_models")) or self.role_models
         normalized_models = {role: str(expert_models.get(role) or self.role_models.get(role) or "unknown") for role in DEEP_ROLE_ORDER}

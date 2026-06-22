@@ -241,7 +241,6 @@ def _gather_external_intel(hostname: str, proxies: Dict[str, str] | None = None)
     return intel
 
 def _query_whois_safe(domain: str, proxies: Dict[str, str] | None = None) -> Dict[str, Any]:
-    '''   
     # 优先使用传统 WHOIS（如果网络允许）
     if whois is not None:
         try:
@@ -251,7 +250,10 @@ def _query_whois_safe(domain: str, proxies: Dict[str, str] | None = None) -> Dic
                 creation_date = creation_date[0]
             age_days = None
             if creation_date and isinstance(creation_date, datetime):
-                age_days = (datetime.now(timezone.utc) - creation_date.replace(tzinfo=timezone.utc)).days
+                created_dt = creation_date
+                if created_dt.tzinfo is None:
+                    created_dt = created_dt.replace(tzinfo=timezone.utc)
+                age_days = (datetime.now(timezone.utc) - created_dt.astimezone(timezone.utc)).days
             return {
                 "whois_registrar": w.registrar,
                 "whois_country": w.country,
@@ -260,7 +262,7 @@ def _query_whois_safe(domain: str, proxies: Dict[str, str] | None = None) -> Dic
             }
         except Exception:
             pass
-    '''
+
     # 回退：使用 RDAP（HTTP，可走代理）
     try:
         # 通用 RDAP 服务，可按需更换

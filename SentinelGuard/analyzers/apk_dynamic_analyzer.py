@@ -287,7 +287,6 @@ class APKDynamicAnalyzer:
 
         raw_bytes = bytes(result.stdout)
         if raw_bytes:
-            raw_bytes = raw_bytes.replace(b"\r\r\n", b"\n").replace(b"\r\n", b"\n")
             screenshot_path.write_bytes(raw_bytes)
             return str(screenshot_path.as_posix())
         return ""

@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard 哨塔检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .74);
+  --panel-2: rgba(255, 255, 255, .04);
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .18);
+  --shadow: 0 18px 50px rgba(2, 6, 23, .3);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #172554 0, #0b1220 34%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code {
+  background: rgba(148, 163, 184, .16);
+  padding: 2px 6px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .94), rgba(30, 64, 175, .84));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
+}
+.hero {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 22px 22px 18px;
+}
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none;
+  color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(96, 165, 250, .18); }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .8), rgba(15, 23, 42, .56));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #16a34a;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric {
+  padding: 18px 18px 20px;
+  background: rgba(255,255,255,.04);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, .16);
+}
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill {
+  display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22);
+}
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
+.scroll-box.slim { max-height: 240px; }
+.scroll-box.wide { max-height: 420px; }
+.scroll-box.tall { max-height: 680px; }
+.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
+.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.screenshot-grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
+.screenshot-card { background: rgba(255,255,255,.04); border-radius: 16px; padding: 16px; border: 1px solid rgba(148,163,184,.16); }
+.screenshot-card h4 { margin: 0 0 10px; }
+.screenshot-preview { overflow: auto; border-radius: 14px; background: #0f172a; padding: 10px; }
+.screenshot-card img { max-width: 100%; border-radius: 12px; border: 1px solid rgba(148,163,184,.18); display: block; }
+.screenshot-meta { margin-top: 8px; word-break: break-all; }
+.hscroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
+.hscroll .table { min-width: 880px; }
+.hscroll td, .hscroll th { white-space: nowrap; }
+.text-scroll { overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+.text-scroll code, .text-scroll span { white-space: nowrap; }
+.grid-list { display: grid; gap: 12px; }
+.finding {
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-left: 5px solid rgba(148, 163, 184, .48);
+}
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  min-height: 160px;
+  overflow: auto;
+  max-height: 250px;
+}
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 10px;
+  bottom: -10px;
+  width: 2px;
+  background: rgba(148,163,184,.35);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+@media (max-width: 980px) {
+  .two-col { grid-template-columns: 1fr; }
+  header { position: static; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard 哨塔检测报告</h1>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">统一 IR</a>
+      <a href="#chain">跳转链</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#screenshots">页面截图</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#appendix">扩展信息</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">深度研判</span>
+      <span class="chip">证据数 4</span>
+      <span class="chip success">风险 LOW</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">LOW</div>
+      <div class="hint">0 条高危 / 2 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">证据分数</div>
+      <div class="value">22/100</div>
+      <div class="hint">基于已采集证据统一计算</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">深度研判分数</div>
+      <div class="value">6 /100</div>
+      <div class="hint">主持人总结后的单独评分</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">最终风险分数</div>
+      <div class="value">14/100</div>
+      <div class="hint">URL 风险分数公式</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度检查报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">url</div>
+      <div class="hint">https://www.google.com</div>
+    </article>
+    
+  </div>
+
+  <div class="grid two-col" style="margin-top: 18px;">
+    <section class="panel section-anchor" id="result">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>检测总览</h3>
+          <small>模型深度检查报告</small>
+        </div>
+        
+      <p><span class="badge">LOW</span></p>
+      <p>证据分数：<strong>22/100</strong></p>
+      <p>深度研判分数：<strong>6/100</strong></p>
+      <p>最终风险分数：<strong>14/100</strong></p>
+      <p class="subtle">URL 风险分数公式：<code>0.5 × 证据分数 + 0.5 × 深度研判分数</code></p>
+      <p>原始输入：<code>https://www.google.com</code></p>
+      <p>报告类型：<strong>模型深度检查报告</strong></p>
+      <div class="pill-row"><span class='pill medium'>MEDIUM · 良性跨域重定向</span><span class='pill low'>LOW · 离线模式无外部情报</span><span class='pill medium'>MEDIUM · 良性的区域化重定向</span><span class='pill low'>LOW · 页面无主动内容与可疑交互</span></div>
+    
+        <p class='subtle'>关联静态报告：<a href='sentinel_reports/sentinel_report_url_static_20260622_173436_582083.html' target='_blank'>关联静态 HTML 报告</a> · <a href='sentinel_reports/sentinel_report_url_static_20260622_173436_582083.md' target='_blank'>关联静态 Markdown 报告</a></p>
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>页面观察线索</h4>
+          <p class='subtle'>抓取模式：proxy / 代理：是</p>
+          <table class='table'><tr><td>status_code</td><td>302</td></tr><tr><td>content_type</td><td>text/html; charset=UTF-8</td></tr><tr><td>final_url</td><td>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>proxy</td></tr><tr><td>proxy_used</td><td>True</td></tr><tr><td>proxy_config</td><td>{&#x27;http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;https&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_https&#x27;: &#x27;http://10.250.167.176:7890&#x27;}</td></tr><tr><td>redirect_location</td><td>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</td></tr><tr><td>redirect_final_url</td><td>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</td></tr><tr><td>title</td><td>302 Moved</td></tr><tr><td>visible_text_excerpt</td><td>302 Moved 302 Moved The document has moved here .</td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>0</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>无</td></tr><tr><td>form_actions</td><td>无</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html;charset=utf-8&quot;&gt; &lt;TITLE&gt;302 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt; &lt;H1&gt;302 Moved&lt;/H1&gt; The document has moved &lt;A HREF=&quot;https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo&quot;&gt;here&lt;/A&gt;. &lt;/BODY&gt;&lt;/HTML&gt; &#x27;, &#x27;text_excerpt&#x27;: &#x27;302 Moved 302 Moved The document has moved here .&#x27;}</td></tr><tr><td>external_intel</td><td>{}</td></tr></table>
+        </div>
+      </div>
+      
+    
+        
+        
+        
+        
+        
+        
+      </div>
+    </section>
+
+    <section class="panel section-anchor" id="ir">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>统一 IR 摘要</h3>
+          <small>模型深度检查报告 · URL 采用 0.5×证据分数 + 0.5×深度研判分数，APK 采用 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</small>
+        </div>
+        <div class='hscroll'><table class='table'><tr><th>规范化 URL</th><td>https://www.google.com/</td></tr><tr><th>协议</th><td>https</td></tr><tr><th>主机</th><td>www.google.com</td></tr><tr><th>端口</th><td>-</td></tr><tr><th>路径</th><td>/</td></tr><tr><th>查询串</th><td>-</td></tr><tr><th>片段</th><td>-</td></tr><tr><th>参数数量</th><td>0</td></tr><tr><th>用户名</th><td>-</td></tr><tr><th>携带密码</th><td>否</td></tr><tr><th>是否 IP</th><td>否</td></tr></table></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>跳转链与页面线索</h3>
+        <small>支持滑动查看完整页面摘要</small>
+      </div>
+      
+      <div class="scroll-box">
+        <h4>跳转链</h4>
+        <ol><li>https://www.google.com/</li><li>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</li></ol>
+        <h4>页面线索</h4>
+        <table class='table'><tr><td>status_code</td><td>302</td></tr><tr><td>content_type</td><td>text/html; charset=UTF-8</td></tr><tr><td>final_url</td><td>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</td></tr><tr><td>body_limited_to_bytes</td><td>200000</td></tr><tr><td>fetch_mode</td><td>proxy</td></tr><tr><td>proxy_used</td><td>True</td></tr><tr><td>proxy_config</td><td>{&#x27;http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;https&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_http&#x27;: &#x27;http://10.250.167.176:7890&#x27;, &#x27;detection_https&#x27;: &#x27;http://10.250.167.176:7890&#x27;}</td></tr><tr><td>redirect_location</td><td>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</td></tr><tr><td>redirect_final_url</td><td>https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo</td></tr><tr><td>title</td><td>302 Moved</td></tr><tr><td>visible_text_excerpt</td><td>302 Moved 302 Moved The document has moved here .</td></tr><tr><td>password_forms</td><td>0</td></tr><tr><td>hidden_inputs</td><td>0</td></tr><tr><td>meta_refresh</td><td>无</td></tr><tr><td>script_srcs</td><td>无</td></tr><tr><td>form_actions</td><td>无</td></tr><tr><td>download_links</td><td>无</td></tr><tr><td>external_script_count</td><td>0</td></tr><tr><td>html_summary</td><td>{&#x27;raw_excerpt&#x27;: &#x27;&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html;charset=utf-8&quot;&gt; &lt;TITLE&gt;302 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt; &lt;H1&gt;302 Moved&lt;/H1&gt; The document has moved &lt;A HREF=&quot;https://www.google.com.hk/url?sa=p&amp;hl=zh-CN&amp;pref=hkredirect&amp;pval=yes&amp;q=https://www.google.com.hk/&amp;ust=1782120894981916&amp;usg=AOvVaw3XoxVALNjSF1YV9kiW2JZo&quot;&gt;here&lt;/A&gt;. &lt;/BODY&gt;&lt;/HTML&gt; &#x27;, &#x27;text_excerpt&#x27;: &#x27;302 Moved 302 Moved The document has moved here .&#x27;}</td></tr><tr><td>external_intel</td><td>{}</td></tr></table>
+        
+      </div>
+      <div class="pill-row"><span class='pill muted'>MEDIUM · 良性跨域重定向</span><span class='pill muted'>LOW · 离线模式无外部情报</span><span class='pill muted'>MEDIUM · 良性的区域化重定向</span><span class='pill muted'>LOW · 页面无主动内容与可疑交互</span></div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>风险证据</h3>
+        <small>按严重度与规则优先级呈现</small>
+      </div>
+      <div class="scroll-box tall"><h4>MEDIUM（2）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>良性跨域重定向 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：REDIRECT_CROSS_DOMAIN</div>
+      <p>页面从 `www.google.com` 自动重定向到 `www.google.com.hk`。尽管是跨域重定向，但这属于谷歌服务内部常见的、用于区域定位或搜索跟踪的正常业务逻辑，不构成恶意风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>重定向链：`https://www.google.com/` (初始请求) -&gt; `https://www.google.com.hk/url?...` (最终URL，HTTP 302自动重定向)</code></span>
+        <b>建议</b><span>此重定向属于正常业务逻辑，无需特别关注。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>良性的区域化重定向 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_STATIC_BENIGN_REGIONAL_REDIRECT</div>
+      <p>页面从主域名（google.com）重定向至同一服务商的另一区域性域名（google.com.hk）。这是大型互联网服务为提供本地化体验而采取的常见且无害的做法，不构成安全风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>重定向链: www.google.com -&gt; www.google.com.hk</code></span>
+        <b>建议</b><span>此类型重定向属于正常行为，无需担忧。</span>
+      </div>
+    </div>
+    </div><h4>LOW（2）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>离线模式无外部情报 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：INTEL_OFFLINE_MODE</div>
+      <p>本次分析未接入 WHOIS、证书透明度等外部情报，域名归因和基础设施信誉评估缺失。</p>
+      <div class="kv">
+        <b>证据</b><span><code>external_intel 字段为空</code></span>
+        <b>建议</b><span>若需更精准研判，请开启网络连接并启用外部情报查询。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>页面无主动内容与可疑交互 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：NO_ACTIVE_CONTENT</div>
+      <p>页面为标准 302 提示页，无脚本、无表单、无下载链接，降低了被动投递与钓鱼的风险可能性。</p>
+      <div class="kv">
+        <b>证据</b><span><code>external_script_count=0；script_srcs=[]；password_forms=0；download_links=[]；form_actions=[]；visible_text=“302 Moved…”。</code></span>
+        <b>建议</b><span>保持常规监控即可，无需额外隔离或阻断。</span>
+      </div>
+    </div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="screenshots" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>页面截图证据</h3>
+        <small>仅在高风险 URL 上自动采集</small>
+      </div>
+      <p class='subtle'>当前未采集到可渲染的截图证据。</p>
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>模型深度研判</h3>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+      </div>
+      
+      <div class="expert-grid">
+        <article class="expert-card">
+          <h4>主持人 <span class="pill muted">gpt-5</span></h4>
+          <p>基于静态检测与浏览器取证一致显示：目标 https://www.google.com/ 返回标准 HTTP 302，跨域跳转至同一服务体系的区域化域名 https://www.google.com.hk/url?...。页面内容为“302 Moved”占位页，无脚本加载、无下载、无表单与隐藏字段，重定向链长度短（2段），未见可疑投递或利用特征。四位专家中，静态与行为分析员均以高置信度判定为良性倾向；情报与处置分析员在离线情报及审慎前提下给出“uncertain”但风险提示仍为低，未提出相反的恶意结论。综合来看，该跳转符合大型站点按地区分流/引导的常见业务逻辑，当前证据链不支持恶意结论，整体风险低。需要注意的是，本次评估未接入外部情报，建议在生产场景中补充域名信誉与证书透明度以进一步佐证，但这不改变本次“低风险”的总体判断。 综合 1 条证据，当前风险等级为 low。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>静态分析员 <span class="pill muted">gemini-2.5-pro</span></h4>
+          <p>静态分析显示，目标URL为全球知名搜索引擎Google的主页。页面发生了从`google.com`到其香港区域域名`google.com.hk`的重定向。这种基于地理位置的区域化跳转是Google等大型跨国服务的标准操作，旨在为用户提供本地化内容。重定向URL的结构（包含`sa`, `q`, `usg`等参数）和页面内容（标准的302跳转页面）均符合Google的正常行为模式，未发现任何可疑或恶意元素。因此，从静态角度判断，该页面是良性的。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>行为分析员 <span class="pill muted">gemini-2.5-flash</span></h4>
+          <p>该行为链展示了一个从 `www.google.com` 到 `www.google.com.hk` 的标准 HTTP 302 自动重定向。这是一个谷歌内部的重定向机制，通常用于将用户引导至其所在地区的域名，或用于搜索结果的追踪。分析过程中未发现任何恶意行为，例如复杂的重定向链、恶意脚本加载、诱导下载或表单提交。最终重定向的目的地仍然是谷歌的合法域名，因此该行为被判定为良性。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>情报分析员 <span class="pill muted">gpt-5</span></h4>
+          <p>当前处于离线评估模式，未获取任何外部威胁情报（WHOIS、证书日志、黑名单等），无法进行域名归因或基础设施分析。本角色仅能基于其他分析员的结论进行逻辑交叉验证。外部情报字段 external_intel 为空，无法核验域名信誉、注册信息或证书透明度记录，也无法关联潜在攻击基础设施。就现有静态与行为证据而言：目标从 www.google.com 经 302 跳转至 www.google.com.hk，页面仅为移动提示，无密码表单、无脚本加载、无下载链接；这一模式与大型站点按地区进行重定向的常见行为相一致，并不呈现典型钓鱼要素。但在缺乏外部情报的前提下，仍无法确认最终域名与跳转链的信誉或是否存在被滥用情形。因此，本角色不对信誉做出结论，仅确认上述逻辑与其他分析员“低风险、跨域跳转”的判断相互印证。</p>
+        </article>
+        
+        <article class="expert-card">
+          <h4>处置建议员 <span class="pill muted">gpt-5.4-mini</span></h4>
+          <p>综合页面行为、HTML摘要和可见文本来看，该站点仅展示了标准的 302 重定向页面，从 www.google.com 跳转到同一服务体系下的 www.google.com.hk，未见脚本加载、下载、表单提交、隐藏输入或可疑交互。当前证据更符合正常的区域化跳转与站点引导行为，不表现出钓鱼、投递或恶意重定向特征。建议保留访问日志即可；若链接来源可信，可放行。若后续发现异常跳转链、证书异常或外部情报告警，再升级处置。</p>
+        </article>
+        </div>
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 主持人</h4>
+              <p>汇总各方证据，先定风险基调。</p>
+              <p class="subtle" style="margin-top:6px;">基于静态检测与浏览器取证一致显示：目标 https://www.google.com/ 返回标准 HTTP 302，跨域跳转至同一服务体系的区域化域名 https://www.google.com.hk/url?...。页面内容为“302 Moved”占位页，无脚本加载、无下载、无表单与隐藏字段，重定向链长度短（2段），未见可疑投递或利用特征。四位专家中，静态与行为分析员均以高置信度判定为良性倾向；情报与处置分析员在离线情报及审慎前提下给出“uncertain”但风险提示仍为低，未提出相反的恶意结论。综合来看，该跳转符合大型站点按地区分流/引导的常见业务逻辑，当前证据链不支持恶意结论，整体风险低。需要注意的是，本次评估未接入外部情报，建议在生产场景中补充域名信誉与证书透明度以进一步佐证，但这不改变本次“低风险”的总体判断。 综合 1 条证据，当前风险等级为 low。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 静态分析员</h4>
+              <p>聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p class="subtle" style="margin-top:6px;">静态分析显示，目标URL为全球知名搜索引擎Google的主页。页面发生了从`google.com`到其香港区域域名`google.com.hk`的重定向。这种基于地理位置的区域化跳转是Google等大型跨国服务的标准操作，旨在为用户提供本地化内容。重定向URL的结构（包含`sa`, `q`, `usg`等参数）和页面内容（标准的302跳转页面）均符合Google的正常行为模式，未发现任何可疑或恶意元素。因此，从静态角度判断，该页面是良性的。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 行为分析员</h4>
+              <p>聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p class="subtle" style="margin-top:6px;">该行为链展示了一个从 `www.google.com` 到 `www.google.com.hk` 的标准 HTTP 302 自动重定向。这是一个谷歌内部的重定向机制，通常用于将用户引导至其所在地区的域名，或用于搜索结果的追踪。分析过程中未发现任何恶意行为，例如复杂的重定向链、恶意脚本加载、诱导下载或表单提交。最终重定向的目的地仍然是谷歌的合法域名，因此该行为被判定为良性。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 情报分析员</h4>
+              <p>说明离线/外部情报可用性及局限。</p>
+              <p class="subtle" style="margin-top:6px;">当前处于离线评估模式，未获取任何外部威胁情报（WHOIS、证书日志、黑名单等），无法进行域名归因或基础设施分析。本角色仅能基于其他分析员的结论进行逻辑交叉验证。外部情报字段 external_intel 为空，无法核验域名信誉、注册信息或证书透明度记录，也无法关联潜在攻击基础设施。就现有静态与行为证据而言：目标从 www.google.com 经 302 跳转至 www.google.com.hk，页面仅为移动提示，无密码表单、无脚本加载、无下载链接；这一模式与大型站点按地区进行重定向的常见行为相一致，并不呈现典型钓鱼要素。但在缺乏外部情报的前提下，仍无法确认最终域名与跳转链的信誉或是否存在被滥用情形。因此，本角色不对信誉做出结论，仅确认上述逻辑与其他分析员“低风险、跨域跳转”的判断相互印证。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 处置建议员</h4>
+              <p>给出拦截、隔离、复核与留痕建议。</p>
+              <p class="subtle" style="margin-top:6px;">综合页面行为、HTML摘要和可见文本来看，该站点仅展示了标准的 302 重定向页面，从 www.google.com 跳转到同一服务体系下的 www.google.com.hk，未见脚本加载、下载、表单提交、隐藏输入或可疑交互。当前证据更符合正常的区域化跳转与站点引导行为，不表现出钓鱼、投递或恶意重定向特征。建议保留访问日志即可；若链接来源可信，可放行。若后续发现异常跳转链、证书异常或外部情报告警，再升级处置。</p>
+            </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+      
+      <div style="height: 14px"></div>
+      <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+        <div class="panel-inner">
+          <h4 style="margin-top:0;">专家模型映射与主持人总结</h4>
+          <p class="subtle">基于静态检测与浏览器取证一致显示：目标 https://www.google.com/ 返回标准 HTTP 302，跨域跳转至同一服务体系的区域化域名 https://www.google.com.hk/url?...。页面内容为“302 Moved”占位页，无脚本加载、无下载、无表单与隐藏字段，重定向链长度短（2段），未见可疑投递或利用特征。四位专家中，静态与行为分析员均以高置信度判定为良性倾向；情报与处置分析员在离线情报及审慎前提下给出“uncertain”但风险提示仍为低，未提出相反的恶意结论。综合来看，该跳转符合大型站点按地区分流/引导的常见业务逻辑，当前证据链不支持恶意结论，整体风险低。需要注意的是，本次评估未接入外部情报，建议在生产场景中补充域名信誉与证书透明度以进一步佐证，但这不改变本次“低风险”的总体判断。</p>
+          <div class="scroll-box slim">
+            <table class='table'>
+              <thead><tr><th>角色</th><th>模型</th><th>核心意见</th></tr></thead>
+              <tbody><tr><th>主持人</th><td>gpt-5</td><td>基于静态检测与浏览器取证一致显示：目标 https://www.google.com/ 返回标准 HTTP 302，跨域跳转至同一服务体系的区域化域名 https://www.google.com.hk/url?...。页面内容为“302 Moved”占位页，无脚本加载、无下载、无表单与隐藏字段，重定向链长度短（2段），未见可疑投递或利用特征。四位专家中，静态与行为分析员均以高置信度判定为良性倾向；情报与处置分析员在离线情报及审慎前提下给出“uncertain”但风险提示仍为低，未提出相反的恶意结论。综合来看，该跳转符合大型站点按地区分流/引导的常见业务逻辑，当前证据链不支持恶意结论，整体风险低。需要注意的是，本次评估未接入外部情报，建议在生产场景中补充域名信誉与证书透明度以进一步佐证，但这不改变本次“低风险”的总体判断。 综合 1 条证据，当前风险等级为 low。</td></tr><tr><th>静态分析员</th><td>gemini-2.5-pro</td><td>静态分析显示，目标URL为全球知名搜索引擎Google的主页。页面发生了从`google.com`到其香港区域域名`google.com.hk`的重定向。这种基于地理位置的区域化跳转是Google等大型跨国服务的标准操作，旨在为用户提供本地化内容。重定向URL的结构（包含`sa`, `q`, `usg`等参数）和页面内容（标准的302跳转页面）均符合Google的正常行为模式，未发现任何可疑或恶意元素。因此，从静态角度判断，该页面是良性的。</td></tr><tr><th>行为分析员</th><td>gemini-2.5-flash</td><td>该行为链展示了一个从 `www.google.com` 到 `www.google.com.hk` 的标准 HTTP 302 自动重定向。这是一个谷歌内部的重定向机制，通常用于将用户引导至其所在地区的域名，或用于搜索结果的追踪。分析过程中未发现任何恶意行为，例如复杂的重定向链、恶意脚本加载、诱导下载或表单提交。最终重定向的目的地仍然是谷歌的合法域名，因此该行为被判定为良性。</td></tr><tr><th>情报分析员</th><td>gpt-5</td><td>当前处于离线评估模式，未获取任何外部威胁情报（WHOIS、证书日志、黑名单等），无法进行域名归因或基础设施分析。本角色仅能基于其他分析员的结论进行逻辑交叉验证。外部情报字段 external_intel 为空，无法核验域名信誉、注册信息或证书透明度记录，也无法关联潜在攻击基础设施。就现有静态与行为证据而言：目标从 www.google.com 经 302 跳转至 www.google.com.hk，页面仅为移动提示，无密码表单、无脚本加载、无下载链接；这一模式与大型站点按地区进行重定向的常见行为相一致，并不呈现典型钓鱼要素。但在缺乏外部情报的前提下，仍无法确认最终域名与跳转链的信誉或是否存在被滥用情形。因此，本角色不对信誉做出结论，仅确认上述逻辑与其他分析员“低风险、跨域跳转”的判断相互印证。</td></tr><tr><th>处置建议员</th><td>gpt-5.4-mini</td><td>综合页面行为、HTML摘要和可见文本来看，该站点仅展示了标准的 302 重定向页面，从 www.google.com 跳转到同一服务体系下的 www.google.com.hk，未见脚本加载、下载、表单提交、隐藏输入或可疑交互。当前证据更符合正常的区域化跳转与站点引导行为，不表现出钓鱼、投递或恶意重定向特征。建议保留访问日志即可；若链接来源可信，可放行。若后续发现异常跳转链、证书异常或外部情报告警，再升级处置。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>扩展信息</h3>
+        <small>便于后续扩展更多对象类型</small>
+      </div>
+      <ul><li><strong>web</strong>：当前版本聚焦网页恶意检测：后续可继续扩展证书信誉、域名黑名单、跳转链溯源与页面界面线索比对。</li><li><strong>apk</strong>：当前版本支持 APK 静态检测：后续可继续扩展反编译、行为沙箱、证书信誉与动态通信分析。</li></ul><p class='footer-note'>后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+      
+      <p class="footer-note">后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>
