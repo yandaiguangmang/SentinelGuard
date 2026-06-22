@@ -1,18 +1,20 @@
 from __future__ import annotations
-
+from typing import Any, Dict, List
 import html
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Sequence
-
 from SentinelGuard.state import DetectionFinding, DetectionReport
 
-
+from typing import List
+import re
 REPORT_DIR = Path("sentinel_reports")
-
+_SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 def save_detection_report(report: DetectionReport, output_dir: Path | str = REPORT_DIR) -> DetectionReport:
+    # 去重证据，避免报告展示重复
+    report.findings = _dedupe_findings(report.findings)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -30,6 +32,77 @@ def save_detection_report(report: DetectionReport, output_dir: Path | str = REPO
     report.markdown_report_path = str(md_path.as_posix())
     return report
 
+
+
+import re
+from collections import defaultdict
+from typing import List, Dict
+
+def _dedupe_findings(findings: List[DetectionFinding]) -> List[DetectionFinding]:
+    # 第一步：基于 rule_id 去重（含 _REEVALUATED 映射）
+    best: Dict[str, DetectionFinding] = {}
+    for f in findings:
+        rid = f.rule_id
+        base_id = rid
+        if rid.endswith("_REEVALUATED"):
+            base_id = re.sub(r"^(STATIC_|BEHAVIOR_|INTEL_)?", "", rid)
+            base_id = re.sub(r"_REEVALUATED$", "", base_id) or rid
+        existing = best.get(base_id)
+        if existing is None or _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
+            best[base_id] = f
+    first_pass = list(best.values())
+
+    # 第二步：基于完全相同的 evidence 字符串去重（非空）
+    evidence_best: Dict[str, DetectionFinding] = {}
+    for f in first_pass:
+        ev = (f.evidence or "").strip()
+        if not ev:
+            evidence_best[f"__empty__{f.rule_id}__{id(f)}"] = f
+            continue
+        existing = evidence_best.get(ev)
+        if existing is None:
+            evidence_best[ev] = f
+        else:
+            if _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
+                evidence_best[ev] = f
+
+    second_pass = list(evidence_best.values())
+
+    # 第三步：规范化证据去重（处理中英文同义、格式差异）
+    # 定义关键词组：如果描述中包含这些关键词，且数字相同，则视为同类证据
+    KEYWORD_GROUPS = [
+        {"密码", "password", "密码框", "口令"},  # 密码相关
+        {"证书", "cert", "certificate"},         # 证书相关
+        {"脚本", "script", "javascript", "js"},  # 脚本相关
+        # 可按需扩展
+    ]
+
+    def _normalize_evidence_key(finding: DetectionFinding) -> str:
+        """生成规范化键：从 evidence 中提取所有数字，并结合描述关键词分组"""
+        ev = (finding.evidence or "") + " " + (finding.description or "")
+        # 提取所有数字（整数或小数）
+        numbers = re.findall(r'\d+\.?\d*', ev)
+        numbers_str = ",".join(sorted(set(numbers))) if numbers else "NO_NUM"
+        # 确定关键词组
+        group = "other"
+        for g in KEYWORD_GROUPS:
+            if any(kw in ev.lower() for kw in g):
+                group = "-".join(sorted(g))
+                break
+        return f"{group}|{numbers_str}"
+
+    # 合并规范化键相同的 finding
+    norm_best: Dict[str, DetectionFinding] = {}
+    for f in second_pass:
+        key = _normalize_evidence_key(f)
+        existing = norm_best.get(key)
+        if existing is None:
+            norm_best[key] = f
+        else:
+            if _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
+                norm_best[key] = f
+
+    return list(norm_best.values())
 
 def render_html_report(report: DetectionReport) -> str:
     ir = report.target_ir
@@ -734,6 +807,38 @@ def _render_browser_evidence_block(report: DetectionReport) -> str:
     if evidence.get("fetch_mode"):
         proxy_info = f"<p class='subtle'>抓取模式：{html.escape(str(evidence.get('fetch_mode')))} / 代理：{'是' if evidence.get('proxy_used') else '否'}</p>"
 
+    # 外部情报展示
+    external_intel = evidence.get("external_intel", {})
+    intel_html = ""
+    if external_intel:
+        rows = ""
+        if external_intel.get("whois_registrar"):
+            rows += f"<tr><th>注册商</th><td>{html.escape(str(external_intel['whois_registrar']))}</td></tr>"
+        if external_intel.get("whois_country"):
+            rows += f"<tr><th>注册国家</th><td>{html.escape(str(external_intel['whois_country']))}</td></tr>"
+        if external_intel.get("whois_creation_date"):
+            rows += f"<tr><th>域名注册时间</th><td>{html.escape(str(external_intel['whois_creation_date']))}</td></tr>"
+        if external_intel.get("whois_age_days") is not None:
+            rows += f"<tr><th>域名注册天数</th><td>{external_intel['whois_age_days']} 天</td></tr>"
+        if external_intel.get("crt_earliest_cert_date"):
+            rows += f"<tr><th>最早证书签发</th><td>{html.escape(str(external_intel['crt_earliest_cert_date']))}</td></tr>"
+        if external_intel.get("crt_age_days") is not None:
+            rows += f"<tr><th>证书历史天数</th><td>{external_intel['crt_age_days']} 天</td></tr>"
+        if external_intel.get("crt_total_certs") is not None:
+            rows += f"<tr><th>证书总数</th><td>{external_intel['crt_total_certs']} 张</td></tr>"
+        if rows:
+            intel_html = f"""
+            <div style='height:14px'></div>
+            <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+                <div class='panel-inner'>
+                    <h4 style='margin-top:0;'>外部情报</h4>
+                    <table class='table'>
+                        {rows}
+                    </table>
+                </div>
+            </div>
+            """
+
     return f"""
       <div style='height:14px'></div>
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
@@ -742,6 +847,7 @@ def _render_browser_evidence_block(report: DetectionReport) -> str:
           {proxy_info}
         </div>
       </div>
+      {intel_html}
     """
 
 
@@ -823,8 +929,27 @@ def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
         lines.append(f"- 抓取模式：`{evidence.get('fetch_mode')}`")
     if evidence.get("proxy_used") is not None:
         lines.append(f"- 代理是否参与：`{bool(evidence.get('proxy_used'))}`")
-    return lines
 
+    # 外部情报
+    external_intel = evidence.get("external_intel", {})
+    if external_intel:
+        lines.append("")
+        lines.append("### 外部情报")
+        if external_intel.get("whois_registrar"):
+            lines.append(f"- 注册商：`{external_intel['whois_registrar']}`")
+        if external_intel.get("whois_country"):
+            lines.append(f"- 注册国家：`{external_intel['whois_country']}`")
+        if external_intel.get("whois_creation_date"):
+            lines.append(f"- 域名注册时间：`{external_intel['whois_creation_date']}`")
+        if external_intel.get("whois_age_days") is not None:
+            lines.append(f"- 域名注册天数：`{external_intel['whois_age_days']}` 天")
+        if external_intel.get("crt_earliest_cert_date"):
+            lines.append(f"- 最早证书签发时间：`{external_intel['crt_earliest_cert_date']}`")
+        if external_intel.get("crt_age_days") is not None:
+            lines.append(f"- 证书历史天数：`{external_intel['crt_age_days']}` 天")
+        if external_intel.get("crt_total_certs") is not None:
+            lines.append(f"- 证书总数：`{external_intel['crt_total_certs']}` 张")
+    return lines
 
 def _group_findings_by_severity(findings: Sequence[DetectionFinding]) -> dict[str, list[DetectionFinding]]:
     grouped: dict[str, list[DetectionFinding]] = {"critical": [], "high": [], "medium": [], "low": []}

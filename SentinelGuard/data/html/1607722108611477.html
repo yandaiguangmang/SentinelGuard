@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   ESPN+
+  </title>
+  <base href="/"/>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=0" name="viewport"/>
+  <script>
+   function handleCDNLoadError(el, failed) {
+      try {
+        if(failed || (el.sheet.cssRules && !el.sheet.cssRules.length)) {
+          el.href = "assets/styles/bootstrap.min.css";
+          return el;
+        }
+      } catch (err) {
+        if (err.name === 'SecurityError') { // IE Edge fallback
+          el.href = "assets/styles/bootstrap.min.css";
+          return el;
+        }
+      }
+    }
+  </script>
+  <link href="favicon.ico" rel="icon" type="image/x-icon"/>
+  <link crossorigin="anonymous" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css" integrity="sha384-Zug+QiDoJOrZ5t4lssLdxGhVrurbmBWopoEl+M6BdEfwnCJZtKxi1KgxUyJq13dy" onerror="handleCDNLoadError(this, true)" onload="handleCDNLoadError(this)" rel="stylesheet"/>
+  <link href="styles.9244b8730db1dd8b0671.css" rel="stylesheet"/>
+ </head>
+ <body>
+  <app-root>
+  </app-root>
+  <!-- Begin BlueKai Tag -->
+  <iframe frameborder="0" height="1" name="__bkframe" src="javascript:void(0)" style="display: block;" width="1">
+  </iframe>
+  <script src="https://tags.bkrtx.com/js/bk-coretag.js" type="text/javascript">
+  </script>
+  <!-- End BlueKai Tag -->
+  <script async="" src="https://www.googletagmanager.com/gtag/js?id=AW-817714641">
+  </script>
+  <script src="runtime.26209474bfa8dc87a77c.js" type="text/javascript">
+  </script>
+  <script src="polyfills.9dec744b6b05f36e4b38.js" type="text/javascript">
+  </script>
+  <script src="scripts.72f024793e080a752c0c.js" type="text/javascript">
+  </script>
+  <script src="main.3f510ccfbe442138dcd3.js" type="text/javascript">
+  </script>
+ </body>
+</html>

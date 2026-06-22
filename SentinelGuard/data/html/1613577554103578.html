@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   Login on Rust-Servers.net
+  </title>
+  <meta content="" name="description"/>
+  <meta content="Listforge" name="author"/>
+  <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+  <link href="/assets/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="/assets/css/listforge.css?rev=1.15.001" rel="stylesheet"/>
+  <link href="/assets/css/font-awesome.min.css" rel="stylesheet"/>
+  <link href="/assets/css/flag-icon.min.css" rel="stylesheet"/>
+  <script src="/assets/js/jquery-3.3.1.min.js">
+  </script>
+  <script src="/assets/js/functions.js?revision=1.15.001">
+  </script>
+  <script async="" defer="" src="https://hcaptcha.com/1/api.js">
+  </script>
+  <script src="/assets/js/clipboard.min.js">
+  </script>
+  <script async="" data-cookiescript="accepted" src="https://www.googletagmanager.com/gtag/js?id=UA-27786588-32" type="text/plain">
+  </script>
+  <script>
+   window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-27786588-32', { 'anonymize_ip': true });
+  </script>
+  <script async="" data-cookiescript="accepted" src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" type="text/plain">
+  </script>
+  <script>
+   (adsbygoogle = window.adsbygoogle || []).push({
+          google_ad_client: "ca-pub-5285023748323139",
+          enable_page_level_ads: true
+     });
+  </script>
+ </head>
+ <body>
+  <div class="menu">
+   <nav class="navbar navbar-expand-xl navbar-dark bg-dark">
+    <a class="navbar-brand" href="/">
+     Rust Servers
+    </a>
+    <button aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler" data-target="#navbarMain" data-toggle="collapse" type="button">
+     <span class="navbar-toggler-icon">
+     </span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+     <ul class="navbar-nav mr-auto d-xl-flex flex-xl-row flex-xl-wrap">
+      <li class="nav-item yourserver">
+       <a class="btn btn-success" href="/your-server/" role="button">
+        <i class="fa fa-server">
+        </i>
+        Your Server
+       </a>
+      </li>
+      <li class="nav-item dropdown">
+       <a aria-expanded="false" aria-haspopup="true" class="nav-link dropdown-toggle" data-toggle="dropdown" href="/" id="drop1">
+        Servers
+       </a>
+       <div aria-labelledby="drop1" class="dropdown-menu">
+        <a class="dropdown-item" href="/">
+         Servers By Score
+        </a>
+        <a class="dropdown-item" href="/servers/updated/">
+         Recently Updated
+        </a>
+        <a class="dropdown-item" href="/servers/wiped/">
+         Recently Wiped
+        </a>
+        <a class="dropdown-item" href="/servers/latest/">
+         Latest Servers
+        </a>
+        <a class="dropdown-item" href="/servers/players/">
+         Most Played
+        </a>
+        <a class="dropdown-item" href="/servers/private/">
+         Private Servers
+        </a>
+        <a class="dropdown-item" href="/servers/uptime/">
+         Servers By Uptime
+        </a>
+        <a class="dropdown-item" href="/servers/random/">
+         Servers By Random
+        </a>
+        <a class="dropdown-item" href="/countries/">
+         Servers By Countries
+        </a>
+        <a class="dropdown-item" href="/versions/">
+         Servers By Versions
+        </a>
+        <a class="dropdown-item" href="/server-ping/">
+         Servers By Ping
+        </a>
+        <a class="dropdown-item" href="/tags/">
+         Servers By Tags
+        </a>
+        <a class="dropdown-item" href="/groups/">
+         Servers By Groups
+        </a>
+        <hr/>
+        <a class="dropdown-item" href="/your-server/">
+         Register Your Server
+        </a>
+       </div>
+      </li>
+      <li class="nav-item dropdown active">
+       <a aria-expanded="false" aria-haspopup="true" class="nav-link dropdown-toggle" data-toggle="dropdown" href="/login/" id="drop2">
+        <i class="fa fa-user">
+        </i>
+        Login/Register
+       </a>
+       <div aria-labelledby="drop2" class="dropdown-menu">
+        <a class="dropdown-item" href="/register/">
+         Register
+        </a>
+        <a class="dropdown-item" href="/login/">
+         Login
+        </a>
+        <a class="dropdown-item" href="/password-reset/">
+         Password Reset
+        </a>
+        <a class="dropdown-item" href="/activation/resend/">
+         Resend Activation email
+        </a>
+       </div>
+      </li>
+      <li class="nav-item">
+       <a class="nav-link" href="/blog/">
+        Blog
+       </a>
+      </li>
+      <li class="nav-item dropdown">
+       <a aria-expanded="false" aria-haspopup="true" class="nav-link dropdown-toggle" data-toggle="dropdown" href="/help/" id="drop3">
+        Help/FAQ
+       </a>
+       <div aria-labelledby="drop3" class="dropdown-menu">
+        <a class="dropdown-item" href="/help/">
+         Help/FAQ
+        </a>
+        <a class="dropdown-item" href="/help/api/">
+         API Documentation
+        </a>
+        <a class="dropdown-item" href="/help/ping/">
+         Ping FAQ
+        </a>
+        <a class="dropdown-item" href="/servers/premium/faq/">
+         Premium FAQ
+        </a>
+        <a class="dropdown-item" href="/achievements/">
+         Achievements
+        </a>
+        <a class="dropdown-item" href="/servers/hosting/">
+         Server Hosting
+        </a>
+        <hr/>
+        <a class="dropdown-item" href="https://rust.facepunch.com/" target="_blank">
+         Get Rust
+         <i class="fa fa-arrow-circle-o-down">
+         </i>
+        </a>
+        <a class="dropdown-item" href="https://steamcommunity.com/app/252490" target="_blank">
+         Rust Forum
+         <i class="fa fa-comments">
+         </i>
+        </a>
+        <a class="dropdown-item" href="https://rust.gamepedia.com/" target="_blank">
+         Rust Wiki
+         <i class="fa fa-info-circle">
+         </i>
+        </a>
+       </div>
+      </li>
+      <li class="nav-item dropdown">
+       <a aria-expanded="false" aria-haspopup="true" class="nav-link dropdown-toggle" data-toggle="dropdown" href="/about/" id="drop4">
+        About
+       </a>
+       <div aria-labelledby="drop4" class="dropdown-menu">
+        <a class="dropdown-item" href="/about/">
+         About
+        </a>
+        <a class="dropdown-item" href="/rust/">
+         Rust
+        </a>
+        <a class="dropdown-item" href="/stats/">
+         Statistics
+        </a>
+        <a class="dropdown-item" href="/partners/">
+         Partners
+        </a>
+       </div>
+      </li>
+      <li class="nav-item dropdown">
+       <a aria-expanded="false" aria-haspopup="true" class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" id="dropdownlistforge">
+        Other Games
+       </a>
+       <div aria-labelledby="dropdownlistforge" class="dropdown-menu">
+        <a class="dropdown-item" href="https://7daystodie-servers.com/" target="_blank">
+         7 Days To Die
+        </a>
+        <a class="dropdown-item" href="https://ark-servers.net/" target="_blank">
+         ARK : Survival Evolved
+        </a>
+        <a class="dropdown-item" href="https://arma3-servers.net/" target="_blank">
+         Arma3
+        </a>
+        <a class="dropdown-item" href="https://atlas-servers.io/" target="_blank">
+         Atlas
+        </a>
+        <a class="dropdown-item" href="https://conan-exiles.com/" target="_blank">
+         Conan Exiles
+        </a>
+        <a class="dropdown-item" href="https://counter-strike-servers.net/" target="_blank">
+         Counter Strike : Global Offensive
+        </a>
+        <a class="dropdown-item" href="https://cubeworld-servers.com/" target="_blank">
+         Cube World
+        </a>
+        <a class="dropdown-item" href="https://dayz-servers.org/" target="_blank">
+         DayZ
+        </a>
+        <a class="dropdown-item" href="https://ecoservers.io/" target="_blank">
+         ECO
+        </a>
+        <a class="dropdown-item" href="https://empyrion-servers.com/" target="_blank">
+         Empyrion
+        </a>
+        <a class="dropdown-item" href="https://gmod-servers.com/" target="_blank">
+         Garry's Mod
+        </a>
+        <a class="dropdown-item" href="https://hurtworld-servers.net/" target="_blank">
+         Hurtworld
+        </a>
+        <a class="dropdown-item" href="https://hytale-servers.io/" target="_blank">
+         Hytale
+        </a>
+        <a class="dropdown-item" href="https://life-is-feudal.org/" target="_blank">
+         Life is Feudal
+        </a>
+        <a class="dropdown-item" href="https://minecraft-mp.com/" target="_blank">
+         Minecraft
+        </a>
+        <a class="dropdown-item" href="https://minecraftpocket-servers.com/" target="_blank">
+         Minecraft Pocket
+        </a>
+        <a class="dropdown-item" href="https://miscreated-servers.com/" target="_blank">
+         Miscreated
+        </a>
+        <a class="dropdown-item" href="https://reign-of-kings.net/" target="_blank">
+         Reign of Kings
+        </a>
+        <a class="dropdown-item" href="https://space-engineers.com/" target="_blank">
+         Space Engineers
+        </a>
+        <a class="dropdown-item" href="https://squad-servers.com/" target="_blank">
+         Squad
+        </a>
+        <a class="dropdown-item" href="https://starbound-servers.net/" target="_blank">
+         Starbound
+        </a>
+        <a class="dropdown-item" href="https://tf2-servers.com/" target="_blank">
+         Team Fortress 2
+        </a>
+        <a class="dropdown-item" href="https://teamspeak-servers.org/" target="_blank">
+         Teamspeak
+        </a>
+        <a class="dropdown-item" href="https://terraria-servers.com/" target="_blank">
+         Terraria
+        </a>
+        <a class="dropdown-item" href="https://unturned-servers.net/" target="_blank">
+         Unturned
+        </a>
+        <a class="dropdown-item" href="https://wurm-unlimited.com/" target="_blank">
+         Wurm Unlimited
+        </a>
+       </div>
+      </li>
+     </ul>
+     <div class="d-xl-flex flex-xl-row-reverse flex-xl-wrap">
+      <form action="/search/" class="form-inline ml-2 my-2 my-xl-0" method="post">
+       <input aria-label="Search" class="form-control mr-sm-2" name="keyword" placeholder="Search" type="text"/>
+       <button class="btn btn-outline-info my-2 my-sm-0" type="submit">
+        Search
+       </button>
+      </form>
+      <ul class="navbar-nav d-flex flex-row">
+       <li class="nav-item">
+        <a aria-label="Facebook" class="nav-link p-2" href="https://www.facebook.com/rust.server.list" rel="noopener" target="_blank">
+         <i aria-hidden="true" class="fa fa-facebook-official fa-lg">
+         </i>
+        </a>
+       </li>
+       <li class="nav-item">
+        <a aria-label="Twitter" class="nav-link p-2" href="https://twitter.com/rust_servers_" rel="noopener" target="_blank">
+         <i aria-hidden="true" class="fa fa-twitter-square fa-lg">
+         </i>
+        </a>
+       </li>
+       <li class="nav-item">
+        <a aria-label="Steam" class="nav-link p-2" href="http://steamcommunity.com/groups/listforge" rel="noopener" target="_blank">
+         <i aria-hidden="true" class="fa fa-steam-square fa-lg">
+         </i>
+        </a>
+       </li>
+      </ul>
+     </div>
+    </div>
+   </nav>
+  </div>
+  <div class="d-none d-md-block">
+   <div class="header">
+    <div class="container">
+    </div>
+   </div>
+  </div>
+  <div class="content">
+   <div class="container">
+    <div class="row">
+     <div class="col-12">
+      <script type="text/javascript">
+       <!--
+function checkLoginEmail(str){
+	$.ajax({
+		type: 'POST',
+		url: '/ajax.php',
+		data: { action: "checkEmail", email: str },
+		success: function(data){
+			showState3("login", data.state, data.notice, true);
+			send_login_form();
+		},
+		dataType: 'json'
+	});
+}
+
+function checkLoginPassword(){
+
+	if ($('#login_password').val().length<4){
+		showState3("login", "error", "You need to enter your current password!", true);
+	}else{
+		showState3("login", "good", "");
+
+	}
+}
+
+function check_login_form(){
+
+	checkLoginPassword();
+	checkLoginEmail($('#login_email').val());
+
+}
+
+function send_login_form(){
+	if ($('#login_state').val()=="good"){
+		document.login_form.submit();
+	}
+}
+
+//-->
+      </script>
+      <h1>
+       <i class="fa fa-unlock-alt">
+       </i>
+       Login
+      </h1>
+      <div class="d-none d-md-block">
+       <div class="row">
+        <div class="col-6 col-md-3">
+         <center>
+          <div>
+           <a class="text-dark" href="/register/">
+            <span class="fa-stack fa-lg fa-3x">
+             <i class="fa fa-square-o fa-stack-2x">
+             </i>
+             <i class="fa fa-user fa-stack-1x">
+             </i>
+            </span>
+           </a>
+          </div>
+          <p>
+           <a class="btn btn-outline-dark" href="/register/">
+            Register
+            <i class="fa fa-user">
+            </i>
+           </a>
+          </p>
+         </center>
+        </div>
+        <div class="col-6 col-md-3">
+         <center>
+          <div>
+           <a class="text-dark" href="/login/">
+            <span class="fa-stack fa-lg fa-3x">
+             <i class="fa fa-square fa-stack-2x">
+             </i>
+             <i class="fa fa-unlock-alt fa-inverse fa-stack-1x">
+             </i>
+            </span>
+           </a>
+          </div>
+          <p>
+           <a class="btn btn-dark" href="/login/">
+            Login
+            <i class="fa fa-unlock-alt fa-inverse">
+            </i>
+           </a>
+          </p>
+         </center>
+        </div>
+        <div class="col-6 col-md-3">
+         <center>
+          <div>
+           <a class="text-dark" href="/password-reset/">
+            <span class="fa-stack fa-lg fa-3x">
+             <i class="fa fa-square-o fa-stack-2x">
+             </i>
+             <i class="fa fa-question fa-stack-1x">
+             </i>
+            </span>
+           </a>
+          </div>
+          <p>
+           <a class="btn btn-outline-dark" href="/password-reset/">
+            Lost your password
+            <i class="fa fa-question">
+            </i>
+           </a>
+          </p>
+         </center>
+        </div>
+        <div class="col-6 col-md-3">
+         <center>
+          <div>
+           <a class="text-dark" href="/activation/resend/">
+            <span class="fa-stack fa-lg fa-3x">
+             <i class="fa fa-square-o fa-stack-2x">
+             </i>
+             <i class="fa fa-envelope fa-stack-1x">
+             </i>
+            </span>
+           </a>
+          </div>
+          <p>
+           <a class="btn btn-outline-dark" href="/activation/resend/">
+            Activation email
+            <i class="fa fa-envelope">
+            </i>
+           </a>
+          </p>
+         </center>
+        </div>
+       </div>
+      </div>
+      <div style="height: 20px;">
+      </div>
+      <p>
+       Log in with your email and your password to get access to all "
+       <strong>
+        Rust-Servers.net
+       </strong>
+       " features.
+      </p>
+      <div class="alert alert-info" role="alert">
+       <i class="fa fa-info-circle">
+       </i>
+       If you don't have an account,
+       <a class="alert-link" href="/register/">
+        click here to create your account.
+       </a>
+      </div>
+      <div style="height: 15px;">
+      </div>
+      <form action="/login/action/" id="login_form" method="post" name="login_form">
+       <input id="login_state" name="login_state" type="hidden" value="error"/>
+       <div class="form-row">
+        <div class="form-group col-md-6">
+         <label for="login_email">
+          <strong>
+           Email Address
+          </strong>
+         </label>
+         <input class="form-control" id="login_email" name="login_email" placeholder="Enter your email" type="email" value=""/>
+        </div>
+       </div>
+       <div class="form-row">
+        <div class="form-group col-md-6">
+         <label for="login_password">
+          <strong>
+           Password
+          </strong>
+         </label>
+         <input class="form-control" id="login_password" name="login_password" placeholder="Enter your password" type="password"/>
+        </div>
+       </div>
+       <div class="mt-2" id="login_notice">
+       </div>
+       <a class="btn btn-primary" href="javascript:check_login_form();">
+        Login
+        <i class="fa fa-check">
+        </i>
+       </a>
+      </form>
+     </div>
+    </div>
+   </div>
+  </div>
+  <div class="footer">
+   <div class="container">
+    <div class="row">
+     <div class="col-12">
+      <div class="row">
+       <div class="col-12 col-md-4 mt-3">
+        <p class="footer_title">
+         FIND SERVERS BY
+        </p>
+        <ul>
+         <li>
+          <a href="/search/">
+           Search
+          </a>
+         </li>
+         <li>
+          <a href="/servers/latest/">
+           Latest
+          </a>
+         </li>
+         <li>
+          <a href="/servers/updated/">
+           Recently Updated
+          </a>
+         </li>
+         <li>
+          <a href="/servers/wiped/">
+           Recently Wiped
+          </a>
+         </li>
+         <li>
+          <a href="/servers/players/">
+           Most Played
+          </a>
+         </li>
+         <li>
+          <a href="/servers/uptime/">
+           Uptime
+          </a>
+         </li>
+         <li>
+          <a href="/servers/random/">
+           Random
+          </a>
+         </li>
+         <li>
+          <a href="/countries/">
+           Countries
+          </a>
+         </li>
+         <li>
+          <a href="/versions/">
+           Versions
+          </a>
+         </li>
+         <li>
+          <a href="/server-ping/">
+           Ping
+          </a>
+         </li>
+         <li>
+          <a href="/tags/">
+           Tags
+          </a>
+         </li>
+         <li>
+          <a href="/groups/">
+           Groups
+          </a>
+         </li>
+        </ul>
+       </div>
+       <div class="col-12 col-md-4 mt-3">
+        <p class="footer_title">
+         RUST LINKS
+        </p>
+        <ul>
+         <li>
+          <a href="https://rust.facepunch.com/" target="_blank">
+           Rust Website
+          </a>
+         </li>
+         <li>
+          <a href="https://steamcommunity.com/app/252490" target="_blank">
+           Rust Forum
+          </a>
+         </li>
+         <li>
+          <a href="https://rust.gamepedia.com/" target="_blank">
+           Rust Wiki
+          </a>
+         </li>
+         <li>
+          <a href="/servers/hosting/">
+           Rust Server Hosting
+          </a>
+         </li>
+         <li>
+          <a href="http://rusthost.net/" target="_blank">
+           Rust Host
+          </a>
+         </li>
+         <li>
+          <a href="http://rustguides.com/" target="_blank">
+           Rust Guides
+          </a>
+         </li>
+        </ul>
+       </div>
+       <div class="col-12 col-md-4 mt-3">
+        <p class="footer_title">
+         RUST-SERVERS.NET
+        </p>
+        <ul>
+         <li>
+          <a href="/about/">
+           About
+          </a>
+         </li>
+         <li>
+          <a href="/stats/">
+           Statistics
+          </a>
+         </li>
+         <li>
+          <a href="/blog/">
+           Blog
+          </a>
+         </li>
+         <li>
+          <a href="/rust/">
+           Rust
+          </a>
+         </li>
+         <li>
+          <a href="/partners/">
+           Partners
+          </a>
+         </li>
+         <li>
+          <a href="/achievements/">
+           Achievements
+          </a>
+         </li>
+         <li>
+          <a href="/terms/">
+           Terms Of Service
+          </a>
+         </li>
+         <li>
+          <a href="/privacy/">
+           Privacy Policy
+          </a>
+         </li>
+        </ul>
+       </div>
+      </div>
+      <div class="row">
+       <div class="col-12 col-md-4 mt-3">
+        <p class="footer_title">
+         LATEST SERVERS
+        </p>
+        <ul>
+         <li>
+          <a href="/server/161130/">
+           [ES/EU] HISPANIA La Purga...
+          </a>
+         </li>
+         <li>
+          <a href="/server/161129/">
+           8k Under Construction
+          </a>
+         </li>
+         <li>
+          <a href="/server/161128/">
+           network-gamer.de PvE Beginner Vanilla
+          </a>
+         </li>
+         <li>
+          <a href="/server/161127/">
+           Rusty-Craft
+          </a>
+         </li>
+         <li>
+          <a href="/server/161126/">
+           Nocturnal Gaming PVE
+          </a>
+         </li>
+        </ul>
+       </div>
+       <div class="col-12 col-md-4 mt-3">
+        <p class="footer_title">
+         LATEST ARTICLES
+        </p>
+        <ul>
+         <li>
+          <a href="/blog/215/lunar-new-year/">
+           Lunar New Year
+          </a>
+         </li>
+         <li>
+          <a href="/blog/214/lunar-new-year/">
+           Lunar New Year
+          </a>
+         </li>
+         <li>
+          <a href="/blog/213/softcore-update/">
+           Softcore Update
+          </a>
+         </li>
+         <li>
+          <a href="/blog/212/january-update/">
+           January Update
+          </a>
+         </li>
+         <li>
+          <a href="/blog/211/season-s-beatings/">
+           Season's Beatings
+          </a>
+         </li>
+        </ul>
+       </div>
+       <div class="col-12 col-md-4 mt-3">
+        <p class="footer_title">
+         PARTNERS
+        </p>
+        <ul>
+         <li>
+          <a href="http://www.pingperfect.com/aff.php?aff=83&amp;page=rust" target="_blank">
+           PingPerfect
+          </a>
+         </li>
+         <li>
+          <a href="http://rusthost.net/" target="_blank">
+           Rust Host
+          </a>
+         </li>
+         <li>
+          <a href="http://rustguides.com/" target="_blank">
+           Rust Guides
+          </a>
+         </li>
+        </ul>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div style="height: 30px;">
+    </div>
+    <div class="row">
+     <div class="col-12">
+      <center>
+       <div style="background: #333333; height: 1px; width: 90%;">
+       </div>
+      </center>
+     </div>
+    </div>
+    <div style="height: 30px;">
+    </div>
+    <div class="row">
+     <div class="col-12 col-md-6">
+      <p>
+       Copyright &copy; 2021
+       <a href="https://listforge.net/" target="_blank">
+        Listforge
+       </a>
+       <br/>
+       <small>
+        <em>
+         Rust and associated Rust images are copyright of Facepunch Studios LTD.
+        </em>
+       </small>
+       <br/>
+       <small>
+        <em>
+         Rust-Servers.net is not affiliated with Rust and Facepunch Studios LTD.
+        </em>
+       </small>
+      </p>
+     </div>
+     <div class="col-12 col-md-6 pull-right">
+      <div align="right">
+       Tracking:
+       <span class="footer_highlight">
+        3914 servers
+       </span>
+       <br/>
+       Version:
+       <span class="footer_highlight">
+        1.16.1
+       </span>
+       <br/>
+       <a href="/legal/">
+        Legal Notice
+       </a>
+      </div>
+     </div>
+     <div class="clearfix">
+     </div>
+    </div>
+   </div>
+  </div>
+  <script data-cookiescript="accepted" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-5abf8825b954a901" type="text/plain">
+  </script>
+  <script charset="UTF-8" src="//eu.cookie-script.com/s/10ce3c1c4a180a693435d4d9a25a323a.js" type="text/javascript">
+  </script>
+ </body>
+</html>

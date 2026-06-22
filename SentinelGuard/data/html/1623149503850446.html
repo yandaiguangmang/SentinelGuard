@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <base href="/"/>
+  <title>
+   Musicbed
+  </title>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,user-scalable=no" name="viewport"/>
+  <meta content="!" name="fragment"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-57x57.png" rel="apple-touch-icon" sizes="57x57"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-60x60.png" rel="apple-touch-icon" sizes="60x60"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-72x72.png" rel="apple-touch-icon" sizes="72x72"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-76x76.png" rel="apple-touch-icon" sizes="76x76"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-114x114.png" rel="apple-touch-icon" sizes="114x114"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-120x120.png" rel="apple-touch-icon" sizes="120x120"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/apple-icon-144x144.png" rel="apple-touch-icon" sizes="144x144"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550147/favicons/apple-icon-152x152.png" rel="apple-touch-icon" sizes="152x152"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550147/favicons/apple-icon-180x180.png" rel="apple-touch-icon" sizes="180x180"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/android-icon-192x192.png" rel="icon" sizes="192x192" type="image/png"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550147/favicons/favicon-32x32.png" rel="icon" sizes="32x32" type="image/png"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550147/favicons/favicon-96x96.png" rel="icon" sizes="96x96" type="image/png"/>
+  <link href="https://cdn.musicbed.com/image/upload/v1523550146/favicons/favicon-16x16.png" rel="icon" sizes="16x16" type="image/png"/>
+  <!-- Load Stripe v3 script -->
+  <script src="https://js.stripe.com/v3/">
+  </script>
+  <!-- Load Recurly v3 script -->
+  <script src="https://js.recurly.com/v4/recurly.js">
+  </script>
+  <!-- Optimize page hiding snippet -->
+  <style>
+   .async-hide { opacity: 0 !important}
+  </style>
+  <script>
+   (function(a,s,y,n,c,h,i,d,e){s.className+=' '+y;h.start=1*new Date;
+      h.end=i=function(){s.className=s.className.replace(RegExp(' ?'+y),'')};
+      (a[n]=a[n]||[]).hide=h;setTimeout(function(){i();h.end=null},c);h.timeout=c;
+      })(window,document.documentElement,'async-hide','dataLayer',3000,
+      {'GTM-KPNM69':true});
+  </script>
+  <!-- GTM -->
+  <noscript>
+  </noscript>
+ </head>
+ <body>
+  <iframe height="0" src="//www.googletagmanager.com/ns.html?id=GTM-KPNM69" style="display:none;visibility:hidden" width="0">
+  </iframe>
+  <script>
+   (function (w, d, s, l, i) {
+      w[l] = w[l] || [];
+      w[l].push({
+        "gtm.start": new Date().getTime(),
+        event: "gtm.js"
+      });
+      var f = d.getElementsByTagName(s)[0],
+        j = d.createElement(s),
+        dl = l != "dataLayer" ? "&l=" + l : "";
+      j.async = true;
+      j.src = "//www.googletagmanager.com/gtm.js?id=" + i + dl;
+      f.parentNode.insertBefore(j, f);
+    })(window, document, "script", "dataLayer", "GTM-KPNM69");
+  </script>
+  <script>
+   // Setup window App global
+    window.App = {};
+    window.csrf_token = null
+  </script>
+  <style>
+   body,
+    html {
+      margin: 0
+    }
+
+    body,
+    body * {
+      box-sizing: border-box;
+      /* Adjust font size */
+      font-size: 100%;
+      -webkit-text-size-adjust: 100%;
+      /* Font varient */
+      font-variant-ligatures: none;
+      -webkit-font-variant-ligatures: none;
+      /* Smoothing */
+      text-rendering: optimizeLegibility;
+      -moz-osx-font-smoothing: grayscale;
+      font-smoothing: antialiased;
+      -webkit-font-smoothing: antialiased;
+      text-shadow: rgba(0, 0, 0, .01) 0 0 1px;
+    }
+
+    img[width="1"][height="1"] {
+      display: none;
+    }
+
+    .ReactModal__Body--open,
+    .Menu--open {
+      overflow: hidden;
+    }
+
+    .ReactModalPortal>div {
+      opacity: 0;
+    }
+
+    .ReactModalPortal .ReactModal__Overlay {
+      transition: opacity 300ms ease-in-out;
+    }
+
+    .ReactModalPortal .ReactModal__Overlay--after-open {
+      opacity: 1;
+    }
+
+    .ReactModalPortal .ReactModal__Overlay--before-close {
+      opacity: 0;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    .ReactVirtualized__List:focus,
+    .ReactVirtualized__Grid:focus {
+      outline: none;
+    }
+
+    .cc-window.cc-floating {
+      border-radius: 2px;
+      max-width: 360px !important;
+      padding: 26px 20px 20px !important;
+    }
+
+    .cc-floating .cc-message {
+      color: #FFFFFF;
+      font-family: "Proxima Nova", sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 18px;
+      margin-bottom: 25px !important;
+      text-align: center;
+    }
+
+    .cc-link {
+      font-weight: 700;
+      opacity: 1;
+      padding: 0 !important;
+      transition: all .3s ease;
+    }
+
+    .cc-btn {
+      border-radius: 2px !important;
+      color: #FFFFFF;
+      font-family: "Proxima Nova", sans-serif;
+      font-size: 10.5px !important;
+      font-weight: bold;
+      letter-spacing: 0.44px;
+      line-height: 12px;
+      padding: 10px 16px !important;
+      text-align: center;
+      text-transform: uppercase;
+      transition: all .3s ease;
+    }
+
+    .cc-allow.cc-btn:hover {
+      background: #13a89e !important;
+    }
+
+    .cc-revoke {
+      z-index: -1 !important;
+    }
+
+    .cc-dismiss {
+      display: none !important
+    }
+
+    .cc-message a+a {
+      display: none;
+    }
+
+    @media only screen and (max-width: 570px) {
+      #operator_avatar {
+        display: none !important;
+      }
+    }
+
+    .grecaptcha-badge {
+      display: none;
+    }
+
+    div.embeddedServiceHelpButton {
+      display: none !important;
+    }
+
+    .embeddedServiceHelpButton .helpButton {
+      position: fixed;
+      bottom: 0px;
+      overflow: hidden;
+      visibility: visible;
+      z-index: 2147483639;
+      background: transparent;
+      border: 0px;
+      transition: transform 0.2s ease-in-out 0s;
+      backface-visibility: hidden;
+      opacity: 1;
+      transform: translateY(0%);
+      right: 14px !important;
+      height: 92px !important;
+      width: 56px !important;
+      padding: 0 !important;
+      display: flex;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .embeddedServiceHelpButton .helpButton .uiButton .helpButtonLabel .message {
+      color: transparent;
+    }
+    
+    .embeddedServiceHelpButton .helpButton .uiButton .helpButtonLabel .message:before {
+      content: "Live Chat";
+      width: 56px;
+      max-width: 56px !important;
+      color: #27282a;
+      font-size: 10px;
+      font-weight: bold;
+      position: absolute;
+      top: 2px;
+      left: 0;
+      text-align: center;
+      font-family: proxima-nova, "Proxima Nova", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    .embeddedServiceHelpButton .helpButton .uiButton .helpButtonLabel {
+      width: 56px;
+      overflow: visible;
+      height: 12px;
+      flex-grow: 0 !important;
+    }
+
+    .embeddedServiceHelpButton .helpButton .uiButton {
+      background: #fff !important;
+      box-shadow: none !important;
+      border-radius: 2px !important;
+      width: 56px !important;
+      height: 56px !important;
+      border: none;
+      color: #27282A !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-direction: column !important;
+      font-size: 4px !important;
+      padding: 0 !important;
+    }
+
+    .embeddedServiceHelpButton .embeddedServiceIcon::before {
+      font-size: 18px !important;
+    }
+
+    .embeddedServiceHelpButton .embeddedServiceIcon {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 18px;    
+          height: 18px;
+          font-size: 18px;
+          line-height: 18px;
+          margin: 0 !important;
+    }
+
+    .embeddedServiceHelpButton .helpButton .helpButtonEnabled:hover::before, .embeddedServiceHelpButton .helpButton .helpButtonEnabled:focus::before {
+      content: none !important;
+    }
+
+    .embeddedServiceSidebarHeader .minimizeButton {
+      visibility: hidden !important;
+    }
+
+    .embeddedServiceSidebarHeader {
+      background-color: #27282A !important;
+    }
+
+    .embeddedServiceSidebarButton {
+      background: #27282A !important;
+    }
+
+    .embeddedServiceSidebarButton:hover {
+      background: #27282A !important;
+    }
+
+    .embeddedServiceLiveAgentSidebarFeature .fieldList .inputText {
+      position: relative;
+    }
+
+    .embeddedServiceLiveAgentSidebarFeature .fieldList .inputText:first-child {
+      margin-top: 60px;
+      position: relative;
+    }
+    
+    .embeddedServiceLiveAgentSidebarFeature .fieldList .inputText:first-child:before {
+      content: "We are currently unavailable, please leave us a message and we will get back to you as soon as possible Mon-Fri between 9am-5pm CST";
+      color: #27282a;
+      font-size: 12px;
+      font-weight: bold;
+      position: absolute;
+      top: -47px;
+      left: 0;
+      text-align: left;
+      font-family: proxima-nova, "Proxima Nova", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      padding: 0px;
+    }
+    
+    .embeddedServiceLiveAgentSidebarFeature .fieldList .inputText:last-child:before {
+      content: "I agree for my personal data, provided via chat, to be processed by Musicbed, for the purpose of assisting me with my request.";
+      color: #27282a;
+      font-size: 10px;
+      font-weight: normal;
+      position: absolute;
+      bottom: -40px;
+      left: 0;
+      text-align: left;
+      font-family: proxima-nova, "Proxima Nova", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      padding: 0;
+    }
+
+    .embeddedServiceSidebarForm .fieldList {
+      margin-bottom: 30px;
+    }
+
+    .embeddedServiceLiveAgentStatePrechatDefaultUI .fieldList {
+      margin-top: 60px !important;
+      margin-bottom: 50px !important;
+      position: relative;
+    }
+    
+    .embeddedServiceLiveAgentStatePrechatDefaultUI .fieldList:before {
+      color: #27282a;
+      font-size: 12px;
+      font-weight: bold;
+      position: absolute;
+      top: -45px;
+      left: 0;
+      text-align: left;
+      font-family: proxima-nova, "Proxima Nova", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      padding: 0px 12px;
+    }
+    
+    .embeddedServiceLiveAgentStatePrechatDefaultUI .fieldList:after {
+      content: "I agree for my personal data, provided via chat, to be processed by Musicbed, for the purpose of assisting me with my request.";
+      color: #27282a;
+      font-size: 10px;
+      font-weight: normal;
+      position: absolute;
+      bottom: -40px;
+      left: 0;
+      text-align: left;
+      font-family: proxima-nova, "Proxima Nova", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      padding: 0px 12px;
+    }
+
+    .customHelpButton {
+      min-height: 56px;
+      min-width: 56px;
+      cursor: pointer;
+      position: absolute;
+      top: 18px;
+      display: none;
+    }
+
+    #dashboard {
+      overflow: hidden;
+    }
+  </style>
+  <link href="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.css" rel="stylesheet" type="text/css"/>
+  <div id="root">
+  </div>
+  <div id="embed">
+  </div>
+  <div id="dashboard">
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js" type="text/javascript">
+  </script>
+  <script src="https://mbsy.co/embed/v2/getcookie/musicbed" type="text/javascript">
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC0TkyZ7ZlRWrF61A00FA5vyxvEWhLmAYg&amp;libraries=places" type="text/javascript">
+  </script>
+  <!-- ReCaptcha-->
+  <script src="https://www.google.com/recaptcha/api.js?render=6Lf4n8cUAAAAAM7xaiXqhtsU4gE1gsMnq1kTP4wu">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenLite.min.js">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TimelineMax.min.js">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TimelineLite.min.js">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ScrollMagic/2.0.7/ScrollMagic.min.js">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ScrollMagic/2.0.7/plugins/animation.gsap.js">
+  </script>
+  <!-- TypeKit -->
+  <script src="https://use.typekit.net/hwd5tph.js">
+  </script>
+  <script>
+   try { Typekit.load({ async: true }); } catch (e) { }
+  </script>
+  <!-- Start of Live Agent Chat code -->
+  <script src="https://service.force.com/embeddedservice/5.0/esw.min.js" type="text/javascript">
+  </script>
+  <script type="text/javascript">
+   var initESW = function(gslbBaseURL) {
+      embedded_svc.settings.displayHelpButton = true; //Or false
+      embedded_svc.settings.language = 'en-US'; //For example, enter 'en' or 'en-US'
+      embedded_svc.settings.extraPrechatFormDetails = [{
+          "label":"Email", "transcriptFields": ["Email__c"]},
+         {"label":"First Name", "transcriptFields": ["First_Name__c"]},
+         {"label":"Last Name", "transcriptFields": ["Last_Name__c"]
+      }];
+      embedded_svc.settings.enabledFeatures = ['LiveAgent'];
+      embedded_svc.settings.entryFeature = 'LiveAgent';
+      embedded_svc.settings.autoOpenPostChat = true;
+      embedded_svc.init(
+        'https://musicbed.my.salesforce.com',
+        'https://musicbed.secure.force.com',
+        gslbBaseURL,
+        '00D1U0000014QJ8',
+        'Staging_Musicbed',
+        {
+          baseLiveAgentContentURL: 'https://c.la2-c1-ph2.salesforceliveagent.com/content',
+          deploymentId: '5721U000000603J',
+          buttonId: '5731U00000061Hq',
+          baseLiveAgentURL: 'https://d.la2-c1-ph2.salesforceliveagent.com/chat',
+          eswLiveAgentDevName: 'EmbeddedServiceLiveAgent_Parent04I1U000000L6OKUA0_16b56f746e7',
+          isOfflineSupportEnabled: true
+        }
+      );
+    };
+
+    if (!window.embedded_svc) {
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://musicbed.my.salesforce.com/embeddedservice/5.0/esw.min.js');
+      s.onload = function() {
+       initESW(null);
+      };
+      document.body.appendChild(s);
+    } else {
+      initESW('https://service.force.com');
+    }
+
+    
+    var openChatWindow
+
+    var FindHelpButton = setInterval(() => {
+      if (document.getElementsByClassName('helpButtonEnabled uiButton')[0] && document.getElementsByClassName('customHelpButton')[0]) {
+        openChatWindow = document.getElementsByClassName('helpButtonEnabled uiButton')[0].onclick
+        document.getElementsByClassName('helpButtonEnabled uiButton')[0].onclick = null
+        document.getElementsByClassName('helpButtonEnabled uiButton')[0].style.pointerEvents = 'none'
+        document.getElementsByClassName('customHelpButton')[0].style.display = 'block'
+        document.getElementsByClassName('helpButton')[0].appendChild(document.getElementsByClassName('customHelpButton')[0])
+        EndInterval()
+      }
+    }, 1000)
+
+    function EndInterval() {
+      clearInterval(FindHelpButton)
+    }
+    
+    function LiveAgentChat() {
+      openChatWindow()
+    }
+  </script>
+  <!-- End of Live Agent Chat code -->
+  <script src="/vendors~About~AccountFavorites~AccountProject~AccountProjects~Album~Artist~Browse~ExpandedPlayer~Gen~483b41c1.dad3d46b04004286cc42.js">
+  </script>
+  <script src="/vendors~AccountReports~AccountSettings~AccountSubscriptions~AccountTeams~CompleteProfile~DownloadSon~1e02866e.dad3d46b04004286cc42.js">
+  </script>
+  <script src="/vendors~Cart~SubscriptionCart~vendor.dad3d46b04004286cc42.js">
+  </script>
+  <script src="/vendors~app~vendor.dad3d46b04004286cc42.js">
+  </script>
+  <script src="/vendor.dad3d46b04004286cc42.js">
+  </script>
+  <script src="/vendors~app.dad3d46b04004286cc42.js">
+  </script>
+  <script src="/app.dad3d46b04004286cc42.js">
+  </script>
+ </body>
+</html>
