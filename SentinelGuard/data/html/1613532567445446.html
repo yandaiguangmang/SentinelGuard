@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/terms/" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:og="http://ogp.me/ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:sioc="http://rdfs.org/sioc/ns#" xmlns:sioct="http://rdfs.org/sioc/types#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+ <head profile="http://www.w3.org/1999/xhtml/vocab">
+  <meta content="IE=9; IE=8; IE=7; IE=EDGE" http-equiv="X-UA-Compatible"/>
+  <meta charset="utf-8"/>
+  <script type="text/javascript">
+   (window.NREUM||(NREUM={})).loader_config={licenseKey:"fe270b12c8",applicationID:"3267662"};window.NREUM||(NREUM={}),__nr_require=function(e,t,n){function r(n){if(!t[n]){var i=t[n]={exports:{}};e[n][0].call(i.exports,function(t){var i=e[n][1][t];return r(i||t)},i,i.exports)}return t[n].exports}if("function"==typeof __nr_require)return __nr_require;for(var i=0;i<n.length;i++)r(n[i]);return r}({1:[function(e,t,n){function r(){}function i(e,t,n){return function(){return o(e,[u.now()].concat(c(arguments)),t?null:this,n),t?void 0:this}}var o=e("handle"),a=e(6),c=e(7),f=e("ee").get("tracer"),u=e("loader"),s=NREUM;"undefined"==typeof window.newrelic&&(newrelic=s);var d=["setPageViewName","setCustomAttribute","setErrorHandler","finished","addToTrace","inlineHit","addRelease"],p="api-",l=p+"ixn-";a(d,function(e,t){s[t]=i(p+t,!0,"api")}),s.addPageAction=i(p+"addPageAction",!0),s.setCurrentRouteName=i(p+"routeName",!0),t.exports=newrelic,s.interaction=function(){return(new r).get()};var m=r.prototype={createTracer:function(e,t){var n={},r=this,i="function"==typeof t;return o(l+"tracer",[u.now(),e,n],r),function(){if(f.emit((i?"":"no-")+"fn-start",[u.now(),r,i],n),i)try{return t.apply(this,arguments)}catch(e){throw f.emit("fn-err",[arguments,this,e],n),e}finally{f.emit("fn-end",[u.now()],n)}}}};a("actionText,setName,setAttribute,save,ignore,onEnd,getContext,end,get".split(","),function(e,t){m[t]=i(l+t)}),newrelic.noticeError=function(e,t){"string"==typeof e&&(e=new Error(e)),o("err",[e,u.now(),!1,t])}},{}],2:[function(e,t,n){function r(){return c.exists&&performance.now?Math.round(performance.now()):(o=Math.max((new Date).getTime(),o))-a}function i(){return o}var o=(new Date).getTime(),a=o,c=e(8);t.exports=r,t.exports.offset=a,t.exports.getLastTimestamp=i},{}],3:[function(e,t,n){function r(e,t){var n=e.getEntries();n.forEach(function(e){"first-paint"===e.name?d("timing",["fp",Math.floor(e.startTime)]):"first-contentful-paint"===e.name&&d("timing",["fcp",Math.floor(e.startTime)])})}function i(e,t){var n=e.getEntries();n.length>0&&d("lcp",[n[n.length-1]])}function o(e){e.getEntries().forEach(function(e){e.hadRecentInput||d("cls",[e])})}function a(e){if(e instanceof m&&!g){var t=Math.round(e.timeStamp),n={type:e.type};t<=p.now()?n.fid=p.now()-t:t>p.offset&&t<=Date.now()?(t-=p.offset,n.fid=p.now()-t):t=p.now(),g=!0,d("timing",["fi",t,n])}}function c(e){d("pageHide",[p.now(),e])}if(!("init"in NREUM&&"page_view_timing"in NREUM.init&&"enabled"in NREUM.init.page_view_timing&&NREUM.init.page_view_timing.enabled===!1)){var f,u,s,d=e("handle"),p=e("loader"),l=e(5),m=NREUM.o.EV;if("PerformanceObserver"in window&&"function"==typeof window.PerformanceObserver){f=new PerformanceObserver(r);try{f.observe({entryTypes:["paint"]})}catch(v){}u=new PerformanceObserver(i);try{u.observe({entryTypes:["largest-contentful-paint"]})}catch(v){}s=new PerformanceObserver(o);try{s.observe({type:"layout-shift",buffered:!0})}catch(v){}}if("addEventListener"in document){var g=!1,w=["click","keydown","mousedown","pointerdown","touchstart"];w.forEach(function(e){document.addEventListener(e,a,!1)})}l(c)}},{}],4:[function(e,t,n){function r(e,t){if(!i)return!1;if(e!==i)return!1;if(!t)return!0;if(!o)return!1;for(var n=o.split("."),r=t.split("."),a=0;a<r.length;a++)if(r[a]!==n[a])return!1;return!0}var i=null,o=null,a=/Version\/(\S+)\s+Safari/;if(navigator.userAgent){var c=navigator.userAgent,f=c.match(a);f&&c.indexOf("Chrome")===-1&&c.indexOf("Chromium")===-1&&(i="Safari",o=f[1])}t.exports={agent:i,version:o,match:r}},{}],5:[function(e,t,n){function r(e){function t(){e(a&&document[a]?document[a]:document[i]?"hidden":"visible")}"addEventListener"in document&&o&&document.addEventListener(o,t,!1)}t.exports=r;var i,o,a;"undefined"!=typeof document.hidden?(i="hidden",o="visibilitychange",a="visibilityState"):"undefined"!=typeof document.msHidden?(i="msHidden",o="msvisibilitychange"):"undefined"!=typeof document.webkitHidden&&(i="webkitHidden",o="webkitvisibilitychange",a="webkitVisibilityState")},{}],6:[function(e,t,n){function r(e,t){var n=[],r="",o=0;for(r in e)i.call(e,r)&&(n[o]=t(r,e[r]),o+=1);return n}var i=Object.prototype.hasOwnProperty;t.exports=r},{}],7:[function(e,t,n){function r(e,t,n){t||(t=0),"undefined"==typeof n&&(n=e?e.length:0);for(var r=-1,i=n-t||0,o=Array(i<0?0:i);++r<i;)o[r]=e[t+r];return o}t.exports=r},{}],8:[function(e,t,n){t.exports={exists:"undefined"!=typeof window.performance&&window.performance.timing&&"undefined"!=typeof window.performance.timing.navigationStart}},{}],ee:[function(e,t,n){function r(){}function i(e){function t(e){return e&&e instanceof r?e:e?u(e,f,a):a()}function n(n,r,i,o,a){if(a!==!1&&(a=!0),!l.aborted||o){e&&a&&e(n,r,i);for(var c=t(i),f=v(n),u=f.length,s=0;s<u;s++)f[s].apply(c,r);var p=d[h[n]];return p&&p.push([b,n,r,c]),c}}function o(e,t){y[e]=v(e).concat(t)}function m(e,t){var n=y[e];if(n)for(var r=0;r<n.length;r++)n[r]===t&&n.splice(r,1)}function v(e){return y[e]||[]}function g(e){return p[e]=p[e]||i(n)}function w(e,t){s(e,function(e,n){t=t||"feature",h[n]=t,t in d||(d[t]=[])})}var y={},h={},b={on:o,addEventListener:o,removeEventListener:m,emit:n,get:g,listeners:v,context:t,buffer:w,abort:c,aborted:!1};return b}function o(e){return u(e,f,a)}function a(){return new r}function c(){(d.api||d.feature)&&(l.aborted=!0,d=l.backlog={})}var f="nr@context",u=e("gos"),s=e(6),d={},p={},l=t.exports=i();t.exports.getOrSetContext=o,l.backlog=d},{}],gos:[function(e,t,n){function r(e,t,n){if(i.call(e,t))return e[t];var r=n();if(Object.defineProperty&&Object.keys)try{return Object.defineProperty(e,t,{value:r,writable:!0,enumerable:!1}),r}catch(o){}return e[t]=r,r}var i=Object.prototype.hasOwnProperty;t.exports=r},{}],handle:[function(e,t,n){function r(e,t,n,r){i.buffer([e],r),i.emit(e,t,n)}var i=e("ee").get("handle");t.exports=r,r.ee=i},{}],id:[function(e,t,n){function r(e){var t=typeof e;return!e||"object"!==t&&"function"!==t?-1:e===window?0:a(e,o,function(){return i++})}var i=1,o="nr@id",a=e("gos");t.exports=r},{}],loader:[function(e,t,n){function r(){if(!x++){var e=b.info=NREUM.info,t=p.getElementsByTagName("script")[0];if(setTimeout(u.abort,3e4),!(e&&e.licenseKey&&e.applicationID&&t))return u.abort();f(y,function(t,n){e[t]||(e[t]=n)});var n=a();c("mark",["onload",n+b.offset],null,"api"),c("timing",["load",n]);var r=p.createElement("script");r.src="https://"+e.agent,t.parentNode.insertBefore(r,t)}}function i(){"complete"===p.readyState&&o()}function o(){c("mark",["domContent",a()+b.offset],null,"api")}var a=e(2),c=e("handle"),f=e(6),u=e("ee"),s=e(4),d=window,p=d.document,l="addEventListener",m="attachEvent",v=d.XMLHttpRequest,g=v&&v.prototype;NREUM.o={ST:setTimeout,SI:d.setImmediate,CT:clearTimeout,XHR:v,REQ:d.Request,EV:d.Event,PR:d.Promise,MO:d.MutationObserver};var w=""+location,y={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",agent:"js-agent.newrelic.com/nr-1198.min.js"},h=v&&g&&g[l]&&!/CriOS/.test(navigator.userAgent),b=t.exports={offset:a.getLastTimestamp(),now:a,origin:w,features:{},xhrWrappable:h,userAgent:s};e(1),e(3),p[l]?(p[l]("DOMContentLoaded",o,!1),d[l]("load",r,!1)):(p[m]("onreadystatechange",i),d[m]("onload",r)),c("mark",["firstbyte",a.getLastTimestamp()],null,"api");var x=0},{}],"wrap-function":[function(e,t,n){function r(e,t){function n(t,n,r,f,u){function nrWrapper(){var o,a,s,p;try{a=this,o=d(arguments),s="function"==typeof r?r(o,a):r||{}}catch(l){i([l,"",[o,a,f],s],e)}c(n+"start",[o,a,f],s,u);try{return p=t.apply(a,o)}catch(m){throw c(n+"err",[o,a,m],s,u),m}finally{c(n+"end",[o,a,p],s,u)}}return a(t)?t:(n||(n=""),nrWrapper[p]=t,o(t,nrWrapper,e),nrWrapper)}function r(e,t,r,i,o){r||(r="");var c,f,u,s="-"===r.charAt(0);for(u=0;u<t.length;u++)f=t[u],c=e[f],a(c)||(e[f]=n(c,s?f+r:r,i,f,o))}function c(n,r,o,a){if(!m||t){var c=m;m=!0;try{e.emit(n,r,o,t,a)}catch(f){i([f,n,r,o],e)}m=c}}return e||(e=s),n.inPlace=r,n.flag=p,n}function i(e,t){t||(t=s);try{t.emit("internal-error",e)}catch(n){}}function o(e,t,n){if(Object.defineProperty&&Object.keys)try{var r=Object.keys(e);return r.forEach(function(n){Object.defineProperty(t,n,{get:function(){return e[n]},set:function(t){return e[n]=t,t}})}),t}catch(o){i([o],n)}for(var a in e)l.call(e,a)&&(t[a]=e[a]);return t}function a(e){return!(e&&e instanceof Function&&e.apply&&!e[p])}function c(e,t){var n=t(e);return n[p]=e,o(e,n,s),n}function f(e,t,n){var r=e[t];e[t]=c(r,n)}function u(){for(var e=arguments.length,t=new Array(e),n=0;n<e;++n)t[n]=arguments[n];return t}var s=e("ee"),d=e(7),p="nr@original",l=Object.prototype.hasOwnProperty,m=!1;t.exports=r,t.exports.wrapFunction=c,t.exports.wrapInPlace=f,t.exports.argsToArray=u},{}]},{},["loader"]);
+  </script>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+  <link href="http://hdr.undp.org/sites/default/files/favicon_0.ico" rel="shortcut icon" type="image/vnd.microsoft.icon"/>
+  <meta content="Drupal 7 (https://www.drupal.org)" name="generator"/>
+  <link href="http://hdr.undp.org/en/2018-update" rel="canonical"/>
+  <link href="http://hdr.undp.org/en/2018-update" rel="shortlink"/>
+  <title>
+   | Human Development Reports
+  </title>
+  <link href="http://hdr.undp.org/sites/default/files/css/css_lQaZfjVpwP_oGNqdtWCSpJT1EMqXdMiU84ekLLxQnc4.css" media="all" rel="stylesheet" type="text/css"/>
+  <link href="http://hdr.undp.org/sites/default/files/css/css_cw4bnvRT32hUwV7sG1paGMXRZeTG6Wlq2d4j9aqT4vA.css" media="all" rel="stylesheet" type="text/css"/>
+  <link href="http://hdr.undp.org/sites/default/files/css/css_RpHX046MhihS_Lls_LFHs5Tbj4DacJ5JYycyQV05SNE.css" media="all" rel="stylesheet" type="text/css"/>
+  <link href="http://hdr.undp.org/sites/default/files/css/css_-Sv3G0LYl0E7p01Kz0cBzj4SLShBEO3YLrD6FyHv9-M.css" media="all" rel="stylesheet" type="text/css"/>
+  <!--[if IE 8]>
+<link type="text/css" rel="stylesheet" href="http://hdr.undp.org/sites/default/files/css/css_zwAkQee5UJB06pSx8DCJrpDsUbATWg00tbIIrXwTJtw.css" media="all" />
+<![endif]-->
+  <!--[if IE 7]>
+<link type="text/css" rel="stylesheet" href="http://hdr.undp.org/sites/default/files/css/css_p3GYPA1rignzTqzEQJVBiaJXx427RwKyd22GucfDJFQ.css" media="all" />
+<![endif]-->
+  <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+  <script src="http://hdr.undp.org/sites/default/files/js/js_KX_zgM1YXAdUt0mw8haByr5mvIJgwNgH1-DOas4eZtc.js">
+  </script>
+  <script src="http://hdr.undp.org/sites/default/files/js/js_tG5pNElF7jdZyW0ucRa0HM83XPmzKI51mC1EJoW5BK0.js">
+  </script>
+  <script src="http://hdr.undp.org/sites/default/files/js/js_6yfaaGYdcZAKqqwyGdqw4_NhYnhnisP4jPUVnNLrpbs.js">
+  </script>
+  <script>
+   (function(i,s,o,g,r,a,m){i["GoogleAnalyticsObject"]=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,"script","https://www.google-analytics.com/analytics.js","ga");ga("create", "UA-24131528-15", {"cookieDomain":"auto"});ga("send", "pageview");
+  </script>
+  <script>
+  </script>
+  <script src="http://hdr.undp.org/sites/default/files/js/js_9-oyZMdeTwuOtWJkYVx8B4NczrD3Yg_29E5qn2rVWTc.js">
+  </script>
+  <script>
+   jQuery.extend(Drupal.settings, {"basePath":"\/","pathPrefix":"en\/","ajaxPageState":{"theme":"hdr_theme","theme_token":"VP2YVTj8g6PdSxdWz1VpqkyORWKCAuh293ED4rL7gX4","js":{"sites\/all\/modules\/jquery_update\/replace\/jquery\/1.7\/jquery.js":1,"misc\/jquery-extend-3.4.0.js":1,"misc\/jquery-html-prefilter-3.5.0-backport.js":1,"misc\/jquery.once.js":1,"misc\/drupal.js":1,"sites\/all\/modules\/contrib\/contentanalysis\/contentanalysis.js":1,"sites\/all\/modules\/contrib\/contentoptimizer\/contentoptimizer.js":1,"sites\/all\/libraries\/colorbox\/jquery.colorbox-min.js":1,"modules\/colorbox\/js\/colorbox.js":1,"modules\/colorbox\/styles\/default\/colorbox_style.js":1,"modules\/colorbox\/js\/colorbox_load.js":1,"modules\/colorbox\/js\/colorbox_inline.js":1,"sites\/all\/modules\/custom\/hdr_util\/js\/hdr_util.js":1,"sites\/all\/modules\/google_analytics\/googleanalytics.js":1,"0":1,"1":1,"sites\/all\/themes\/hdr_theme\/js\/respond.min.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-affix.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-alert.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-button.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-carousel.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-collapse.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-dropdown.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-modal.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-tooltip.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-popover.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-scrollspy.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-transition.js":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/js\/bootstrap-typeahead.js":1},"css":{"modules\/system\/system.base.css":1,"sites\/all\/modules\/contrib\/date\/date_api\/date.css":1,"sites\/all\/modules\/contrib\/date\/date_popup\/themes\/datepicker.1.7.css":1,"modules\/field\/theme\/field.css":1,"sites\/all\/modules\/contrib\/views\/css\/views.css":1,"modules\/colorbox\/styles\/default\/colorbox_style.css":1,"sites\/all\/modules\/contrib\/ctools\/css\/ctools.css":1,"sites\/all\/modules\/contrib\/panels\/css\/panels.css":1,"sites\/all\/modules\/contrib\/panels\/plugins\/layouts\/onecol\/onecol.css":1,"modules\/locale\/locale.css":1,"sites\/all\/themes\/hdr_theme\/less\/style.less":1,"sites\/all\/themes\/hdr_theme\/bootstrap\/css\/bootstrap-responsive.css":1,"sites\/all\/themes\/hdr_theme\/less\/ie8.less":1,"sites\/all\/themes\/hdr_theme\/less\/ie7.less":1}},"colorbox":{"opacity":"0.85","current":"{current} of {total}","previous":"\u00ab Prev","next":"Next \u00bb","close":"Close","maxWidth":"98%","maxHeight":"98%","fixed":true,"mobiledetect":true,"mobiledevicewidth":"480px","specificPagesDefaultValue":"admin*\nimagebrowser*\nimg_assist*\nimce*\nnode\/add\/*\nnode\/*\/edit\nprint\/*\nprintpdf\/*\nsystem\/ajax\nsystem\/ajax\/*"},"googleanalytics":{"trackOutbound":1,"trackMailto":1,"trackDownload":1,"trackDownloadExtensions":"7z|aac|arc|arj|asf|asx|avi|bin|csv|doc(x|m)?|dot(x|m)?|exe|flv|gif|gz|gzip|hqx|jar|jpe?g|js|mp(2|3|4|e?g)|mov(ie)?|msi|msp|pdf|phps|png|ppt(x|m)?|pot(x|m)?|pps(x|m)?|ppam|sld(x|m)?|thmx|qtm?|ra(m|r)?|sea|sit|tar|tgz|torrent|txt|wav|wma|wmv|wpd|xls(x|m|b)?|xlt(x|m)|xlam|xml|z|zip","trackColorbox":1},"intel":{"script_domain":"http:\/\/hdr.undp.org\/","module_path":"sites\/all\/modules\/contrib\/intel","system_path":"2018-update","page_title":"","track_analytics":0,"track_adhoc_ctas":"track-cta","track_adhoc_events":"track-event","track_forms":1,"is_landingpage":0,"pushes":[],"scorings":{"disqus_comment":10,"addthis_social_share":5,"addthis_social_share_clickback":0}},"disqus":{"callback_onnewcomment":"l10iDisqus.trackComment"},"urlIsAjaxTrusted":{"\/en\/2018-update":true}});
+  </script>
+ </head>
+ <body class="html not-front not-logged-in no-sidebars page-2018-update i18n-en">
+  <div id="skip-link">
+   <a class="element-invisible element-focusable" href="#main-content">
+    Skip to main content
+   </a>
+  </div>
+  <header class="navbar navbar-static-top" id="navbar" role="banner">
+   <div class="navbar-inner">
+    <div class="container">
+     <div class="container-inner">
+      <div id="top-header">
+       <div class="region region-top-header">
+        <section class="block block-search clearfix" id="block-search-form">
+         <form accept-charset="UTF-8" action="/en/2018-update" class="form-search content-search" id="search-block-form--2" method="post">
+          <div>
+           <div class="container-inline">
+            <h2 class="element-invisible">
+             Search form
+            </h2>
+            <div class="input-append">
+             <input class="search-query span2 form-text" id="edit-search-block-form--4" maxlength="128" name="search_block_form" placeholder="Search" size="15" title="Enter the terms you wish to search for." type="text" value=""/>
+             <button class="btn" type="submit">
+              <i class="icon-search">
+              </i>
+              <span class="element-invisible">
+               Search
+              </span>
+             </button>
+            </div>
+            <button class="element-invisible btn btn-primary form-submit" id="edit-submit--2" name="op" type="submit" value="Search">
+             Search
+            </button>
+            <input name="form_build_id" type="hidden" value="form-wZFLFxCM2eCCk7fWkKSswBGqpVDiocL8RZ1kXjTOYmA"/>
+            <input name="form_id" type="hidden" value="search_block_form"/>
+           </div>
+          </div>
+         </form>
+        </section>
+        <section class="block block-locale clearfix" id="block-locale-language">
+         <ul class="language-switcher-locale-url">
+          <li class="en first last active">
+           <a class="language-link active" href="/en/2018-update" xml:lang="en">
+            English
+           </a>
+          </li>
+         </ul>
+        </section>
+       </div>
+      </div>
+      <a class="logo" href="/en" title="Home">
+       <img alt="Home" src="http://hdr.undp.org/sites/all/themes/hdr_theme/logo.png"/>
+      </a>
+      <div id="branding">
+       <p class="lead">
+        United Nations Development Programme
+       </p>
+       <h1 id="site-name">
+        <a class="brand" href="/en" title="Home">
+         Human Development Reports
+        </a>
+       </h1>
+      </div>
+     </div>
+    </div>
+    <a class="btn btn-navbar" data-target=".nav-collapse" data-toggle="collapse">
+     <span class="icon-bar">
+     </span>
+     <span class="icon-bar">
+     </span>
+     <span class="icon-bar">
+     </span>
+    </a>
+    <div class="nav-collapse collapse">
+     <nav role="navigation">
+      <div class="region region-navigation">
+       <section class="block block-menu-block clearfix" id="block-menu-block-2">
+        <div class="menu-block-wrapper menu-block-2 menu-name-main-menu parent-mlid-0 menu-level-1">
+         <ul class="menu nav">
+          <li class="first leaf menu-mlid-718">
+           <a href="/en/home">
+            Home
+           </a>
+          </li>
+          <li class="leaf has-children menu-mlid-1094">
+           <a href="/en/2020-report">
+            HDR 2020
+           </a>
+          </li>
+          <li class="leaf has-children menu-mlid-711">
+           <a href="/en/data">
+            Data Center
+           </a>
+          </li>
+          <li class="leaf menu-mlid-720">
+           <a href="/en/countries">
+            Country Profiles
+           </a>
+          </li>
+          <li class="leaf menu-mlid-617">
+           <a href="/en/blog">
+            Blog
+           </a>
+          </li>
+          <li class="leaf menu-mlid-1736">
+           <a href="/en/news">
+            News
+           </a>
+          </li>
+          <li class="leaf has-children menu-mlid-825">
+           <a href="/en/global-reports">
+            Publications
+           </a>
+          </li>
+          <li class="last leaf has-children menu-mlid-847">
+           <a href="/en/humandev" title="About Human Development">
+            About
+           </a>
+          </li>
+         </ul>
+        </div>
+       </section>
+      </div>
+     </nav>
+    </div>
+   </div>
+  </header>
+  <div class="main-container container">
+   <header id="page-header" role="banner">
+   </header>
+   <div class="row-fluid">
+    <section class="span12 trail-1-5">
+     <a id="main-content">
+     </a>
+     <div class="panel-display panel-1col clearfix">
+      <div class="panel-panel panel-col">
+       <div>
+        <div class="panel-pane pane-block pane-block-52">
+         <div class="pane-content">
+          <h1>
+           2018 Statistical Update: Human Development Indices and Indicators
+          </h1>
+          <p>
+           Human Development Indices and Indicators: 2018 Statistical update is being released to ensure consistency in reporting on key human development indices and statistics. It includes an analysis of the state of human development&mdash;snapshots of current conditions as well as long-term trends in human development indicators.
+          </p>
+          <p>
+           With a comprehensive statistical annex, our data gives an overview of the state of development across the world, looking at long-term trends in human development indicators across multiple dimensions and for every nation, the 2018 Update highlights the considerable progress, but also the persistent deprivations and disparities.
+          </p>
+          <p>
+           Looking at 2018 results, Norway, Switzerland, Australia, Ireland and Germany lead the HDI ranking of 189 countries and territories, while Niger, the Central African Republic, South Sudan, Chad and Burundi have the lowest scores in the HDI&rsquo;s measurement of national achievements in health, education and income.
+          </p>
+          <p>
+           The overall trend globally is toward continued human development improvements, with many countries moving up through the human development categories: out of the 189 countries for which the HDI is calculated, 59 countries are today in the very high human development group and only 38 countries fall in the low HDI group. Just eight years ago in 2010, the figures were 46 and 49 countries respectively.
+          </p>
+          <p>
+           Ireland enjoyed the highest increase in HDI rank between 2012 and 2017 moving up 13 places, while Turkey, the Dominican Republic and Botswana were also developing strongly, each moving up eight places. All three steepest declines in human development ranking were countries in conflict: the Syrian Arab Republic had the largest decrease in HDI rank, falling 27 places, followed by Libya (26 places), and Yemen (20 places).
+          </p>
+          <p>
+           Movements in the HDI are driven by changes in health, education and income. Health has improved considerably as shown by life expectancy at birth which has increased by almost seven years globally, with Sub-Saharan Africa and South Asia showing the greatest progress, each experiencing increases of about 11 years since 1990. And, today&rsquo;s school-age children can expect to be in school for 3.4 years longer than those in 1990.
+          </p>
+          <p>
+           Disparities between and within countries continue to stifle progress
+          </p>
+          <p>
+           Average HDI levels have risen significantly since 1990 &ndash; 22 percent globally and 51 percent in least developed countries &ndash; reflecting that on average people are living longer, are more educated and have greater income. But there remain massive differences across the world in people&rsquo;s well-being.
+          </p>
+          <p>
+           A child born today in Norway, the country with the highest HDI, can expect to live beyond 82 years old and spend almost 18 years in school. While a child born in Niger, the country with the lowest HDI, can expect only to live to 60 and spend just five years in school. Such striking differences can be seen again and again.
+          </p>
+          <p>
+           A closer look at the HDI&rsquo;s components sheds light on the unequal distribution of outcomes in education, life expectancy and income within countries. The Inequality-Adjusted Human Development Index allows one to compare levels of inequality within countries, and the greater the inequality, the more a country&rsquo;s HDI falls.
+          </p>
+          <p>
+           While significant inequality occurs in many countries, including in some of the wealthiest ones, on average it takes a bigger toll on countries with lower human development levels. Low and medium human development countries lose respectively 31 and 25 percent of their human development level from inequality, while for very high human development countries, the average loss is 11 percent.
+          </p>
+          <p>
+           Gender gaps in early years are closing, but inequalities persist in adulthood
+          </p>
+          <p>
+           One key source of inequality within countries is the gap in opportunities, achievements and empowerment between women and men. Worldwide the average HDI for women is six percent lower than for men, due to women&rsquo;s lower income and educational attainment in many countries.
+          </p>
+          <p>
+           Although there has been laudable progress in the number of girls attending school, there remain big differences between other key aspects of men and women&rsquo;s lives. Women&rsquo;s empowerment remains a particular challenge.
+          </p>
+          <p>
+           Global labor force participation rates for women are lower than for men &ndash; 49 percent versus 75 percent. And when women are in the labor market, their unemployment rates are 24 percent higher than their male counterparts. Women globally also do much more unpaid domestic and care work than men.
+          </p>
+          <p>
+           Overall, women&rsquo;s share of parliamentary seats remains low although it varies across regions, from 17.5 and 18 percent in South Asia and the Arab States, respectively; to 29 percent in Latin America and Caribbean and OECD countries. Violence against women affects all societies, and in some regions childhood marriage and high adolescence birth rates undermine the opportunities for many young women and girls. In South Asia, 29 percent of women between the ages of 20 and 24 were married before their 18th birthday.
+          </p>
+          <p>
+           High adolescent birth rates, early motherhood, and poor and unequal access to pre- and post-natal health services result in a high maternal mortality ratio. At 101 per 1,000 live births, Sub-Saharan Africa&rsquo;s adolescent birth rate is more than twice the world average of 44 per 1,000 live births. Latin America and the Caribbean follows with 62 per 1,000 live births. Even though Sub-Saharan Africa&rsquo;s maternal mortality ratio is 549 deaths per 100,000 live births, some countries in the region such as Cabo Verde have achieved a much lower rate (42 deaths per 100,000 live births).
+          </p>
+          <p>
+           Looking beyond the HDI at the Quality of Development
+          </p>
+          <p>
+           There is tremendous variation between countries in the quality of education, healthcare and many other key aspects of life.
+          </p>
+          <p>
+           In Sub-Saharan Africa there are on average 39 primary school pupils per teacher, followed by South Asia with 35 pupils per teacher. But in OECD countries, East Asia and the Pacific, and Europe and Central Asia there is an average of one teacher for every 16-18 primary school pupils. And, while in OECD countries and East Asia and the Pacific there are on average 29 and 28 physicians for every 10,000 people respectively, in South Asia there are only eight, and in Sub-Saharan Africa not even two.
+          </p>
+          <p>
+           New statistical dashboards
+          </p>
+          <p>
+           In addition to the standard HDR tables, statistical dashboards are included to draw attention to the relationship between human well-being and five topics: quality of human development, life-course gender gaps, women&rsquo;s empowerment, environmental sustainability and socioeconomic sustainability.
+          </p>
+          <p>
+          </p>
+          <center>
+           <img src="http://hdr.undp.org/sites/default/files/humandevreport2018.gif" width="80%"/>
+          </center>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </section>
+   </div>
+  </div>
+  <footer class="footer container">
+   <div class="footer-top">
+   </div>
+   <div class="footer-bottom">
+    <div class="region region-footer-bottom">
+     <section class="block block-menu clearfix" id="block-menu-menu-secondary">
+      <ul class="menu nav">
+       <li class="first leaf">
+        <a href="/en">
+         Home
+        </a>
+       </li>
+       <li class="leaf">
+        <a href="/en/content/contact-form" title="">
+         Contact us
+        </a>
+       </li>
+       <li class="leaf">
+        <a href="/en/user/login">
+         Sign in
+        </a>
+       </li>
+       <li class="leaf">
+        <a href="/en/content/copyright-and-terms-use">
+         Terms of use
+        </a>
+       </li>
+       <li class="last leaf">
+        <a href="https://visitor.r20.constantcontact.com/manage/optin?v=001uHIazSht99_SmsMvQ6fh7VDbVfe0kU0qRgc7Dsix0RqRJpTPO2HMS2-xOnzqaQUSgYQzHF_D8wHKMsLKYD3KcnbIectMQqQLXzaVY0akbmuV_r4MiP7uGavRZFAXupF30IdsLx84iMRaJRXR9tgcn6ZPJbsX6P6kMzkH1ikSOF8%3D">
+         Subscribe to HDRO Newsletter
+        </a>
+       </li>
+      </ul>
+     </section>
+     <section class="block block-search clearfix" id="block-search-form--2">
+      <form accept-charset="UTF-8" action="/en/2018-update" class="form-search content-search" id="search-block-form" method="post">
+       <div>
+        <div class="container-inline">
+         <h2 class="element-invisible">
+          Search form
+         </h2>
+         <div class="input-append">
+          <input class="search-query span2 form-text" id="edit-search-block-form--2" maxlength="128" name="search_block_form" placeholder="Search" size="15" title="Enter the terms you wish to search for." type="text" value=""/>
+          <button class="btn" type="submit">
+           <i class="icon-search">
+           </i>
+           <span class="element-invisible">
+            Search
+           </span>
+          </button>
+         </div>
+         <button class="element-invisible btn btn-primary form-submit" id="edit-submit" name="op" type="submit" value="Search">
+          Search
+         </button>
+         <input name="form_build_id" type="hidden" value="form-QnQGaXJGgzvjgX6IpXsq2fzcioS26mP7M-6sWj0_48I"/>
+         <input name="form_id" type="hidden" value="search_block_form"/>
+        </div>
+       </div>
+      </form>
+     </section>
+     <section class="block block-block clearfix" id="block-block-23">
+      <p>
+       <br/>
+      </p>
+      <p style="text-align:center;font-size:28px;">
+       <span style="width:33%;align:center;">
+        <a href="https://www.facebook.com/HumanDevelopmentReport">
+         <img height="40px" src="/sites/default/files/fb_icon.png" width="40px"/>
+        </a>
+       </span>
+       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+       <span style="width:33%;align:center;">
+        <a href="https://twitter.com/HDRUNDP">
+         <img height="40px" src="/sites/default/files/twitter_icon.png" width="40px"/>
+        </a>
+       </span>
+       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+       <span style="width:33%;align:center;">
+        <a href="https://www.youtube.com/channel/UC49v448-WnuNWJs4xmzT-QA">
+         <img height="40px" src="/sites/default/files/youtube_icon.png" width="40px"/>
+        </a>
+       </span>
+      </p>
+     </section>
+    </div>
+   </div>
+  </footer>
+  <script type="text/javascript">
+   window.NREUM||(NREUM={});NREUM.info={"beacon":"bam-cell.nr-data.net","licenseKey":"fe270b12c8","applicationID":"3267662","transactionName":"ZAAHMkVWD0IHVkZYWl1KMBReGE5YCFFXSRtDDRU=","queueTime":0,"applicationTime":34,"atts":"SEcERA1MHEw=","errorBeacon":"bam-cell.nr-data.net","agent":""}
+  </script>
+ </body>
+</html>

@@ -1,0 +1,2505 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+ <head>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+  <meta content="11 June 2014" http-equiv="Date Published"/>
+  <meta content="no-cache" http-equiv="Pragma"/>
+  <meta content="-1" http-equiv="Expires"/>
+  <meta content="NO-CACHE" http-equiv="CACHE-CONTROL"/>
+  <title>
+   Administrator Management
+  </title>
+  <link href="https://sc1.checkpoint.com/documents/CSS/stylesheet.css" rel="stylesheet" type="text/css"/>
+  <link href="https://sc1.checkpoint.com/documents/CSS/docsstylesheet.css" rel="stylesheet" type="text/css"/>
+  <script language="javascript" src="checkpoint_utils.js" type="text/javascript">
+  </script>
+  <script language="javascript" src="searchhighlight.js" type="text/javascript">
+  </script>
+ </head>
+ <body onload="check_frames();">
+  <!-- BEGIN TOP TOOLBAR -->
+  <!-- this is static toolbar -->
+  <div style="position: fixed; top: 0px; left: 0px; border: 0px solid;padding:0px; width:100%;">
+   <table border="0px" style="margin:0px;padding:0px;border-collapse:collapse;width:100%;">
+    <tbody>
+     <tr border="0px" style="margin:0px;padding:0px;border-collapse:collapse;">
+      <td class="top_tool_bar" colspan="2" nowrap="" valign="middle">
+       <img hspace="0" src="separator.gif" vspace="0"/>
+       &nbsp;
+       <a href="html_frameset.htm">
+        <img alt="Open Frames" border="0" src="framesetIcon.png" title="Open Frames"/>
+       </a>
+       <img hspace="0" src="separator.gif" vspace="0"/>
+       <a href="http://supportcontent.checkpoint.com/documentation_download?ID=24807" target="_blank">
+        <img alt="Download Complete PDF" border="0" src="pdf_icon.gif" title="Download Complete PDF"/>
+       </a>
+       <img hspace="0" src="separator.gif" vspace="0"/>
+       <a href="mailto:cp_techpub_feedback@checkpoint.com?subject=Feedback on Multi-Domain Security Management R77 Versions Administration Guide, Topic: 15612">
+        <img alt="Send Feedback" border="0" src="email_icon.gif" title="Send Feedback"/>
+       </a>
+       <img hspace="0" src="separator.gif" vspace="0"/>
+       <a href="javascript:printWindow()">
+        <img alt="Print This Page" border="0" src="print_icon.gif" title="Print This Page"/>
+       </a>
+      </td>
+     </tr>
+    </tbody>
+   </table>
+  </div>
+  <!-- END TOP TOOLBAR -->
+  <!-- BEGIN PAGE CONTENT -->
+  <table border="0px" style="margin:0px;padding:0px;border-collapse:collapse;height:100%;width:100%;">
+   <!-- BEGIN TOPIC SECTION -->
+   <tbody>
+    <tr>
+     <td colspan="2" id="main" style="padding-left:15px;" valign="top">
+      <table style="margin-top:20px;">
+       <tbody>
+        <tr>
+         <td align="left" nowrap="" width="600px">
+          <!-- BEGIN AUTOMATIC CONTENT -->
+          <table border="0" cellpadding="0" cellspacing="0" class="relatedtopics aboveheading">
+           <tbody>
+            <tr valign="top">
+             <td width="18">
+              <p class="tpbodytext">
+               <a href="15404.htm" target="_self">
+                <img align="bottom" alt="Previous" border="0" class="tpembeddedicon" height="22" hspace="0" id="f125" src="125.png" vspace="0" width="22"/>
+               </a>
+              </p>
+             </td>
+             <td width="18">
+              <p class="tpbodytext">
+               <a href="15408.htm" target="_self">
+                <img align="bottom" alt="Next" border="0" class="tpembeddedicon" height="22" hspace="0" id="f124" src="124.png" vspace="0" width="22"/>
+               </a>
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <h1 class="heading1" id="t15612">
+           Administrator Management
+          </h1>
+          <table border="0" cellpadding="0" cellspacing="0" class="relatedtopics belowheading">
+           <tbody>
+            <tr valign="top">
+             <td>
+              <blockquote class="relatedheading">
+               In This Section:
+              </blockquote>
+              <p class="relateditem">
+               <a href="15612.htm#o64616" target="_self">
+                Creating or Changing an Administrator Account
+               </a>
+              </p>
+              <p class="relateditem">
+               <a href="15612.htm#o71382" target="_self">
+                Deleting an Administrator
+               </a>
+              </p>
+              <p class="relateditem">
+               <a href="15612.htm#o71374" target="_self">
+                Defining Administrator Properties
+               </a>
+              </p>
+              <p class="relateditem">
+               <a href="15612.htm#o71385" target="_self">
+                Defining Administrator Groups - Flow
+               </a>
+              </p>
+              <p class="relateditem">
+               <a href="15612.htm#o64618" target="_self">
+                Managing Administrator Account Expiration
+               </a>
+              </p>
+              <p class="relateditem">
+               <a href="15612.htm#o70757" target="_self">
+                Working with Permission Profiles
+               </a>
+              </p>
+              <p class="relateditem">
+               <a href="15612.htm#o71039" target="_self">
+                Showing Connected Administrators
+               </a>
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p class="tpbodytext">
+           Multi-Domain Security Management Administrators use SmartDomain Manager and SmartConsole clients to manage the Multi-Domain Security Management deployment. Each administrator has permissions to manage different aspects of the environment.
+          </p>
+          <a name="o64616">
+          </a>
+          <h2 class="heading2" id="t64616">
+           Creating or Changing an Administrator Account
+          </h2>
+          <p class="tpbodytext">
+           This procedure lets you add a new administrator account or change an existing administrator account.
+          </p>
+          <p class="procedureheading">
+           To add a new administrator account:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            view.
+           </li>
+           <li class="listnumber">
+            Right-click an empty area in the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            pane.
+            <br/>
+            The
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add Administrator
+             </strong>
+            </strong>
+            window opens.
+           </li>
+           <li class="listnumber">
+            Continue to configure administrator properties as necessary.
+           </li>
+          </ol>
+          <p class="procedureheading">
+           To edit an existing new administrator account:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            view.
+           </li>
+           <li class="listnumber">
+            Double-click an existing administrator in the Administrators pane.
+            <br/>
+            The
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window opens.
+           </li>
+           <li class="listnumber">
+            Continue to configure administrator properties as necessary.
+           </li>
+          </ol>
+          <a name="o71292">
+          </a>
+          <h3 class="heading3" id="t71292">
+           Administrator - General Properties
+          </h3>
+          <p class="tpbodytext">
+           The administrator general properties include basic information such as the administrator name, type and the administrator expiration date.
+          </p>
+          <p class="procedureheading">
+           To configure administrator general properties:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              General Properties
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Enter a unique
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Name
+             </strong>
+            </strong>
+            .
+            <br/>
+            The administrator name cannot contain spaces or special characters.
+           </li>
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Launch Global SmartDashboard in Read Only mode
+             </strong>
+            </strong>
+            if this administrator can see but not change settings in the Global SmartDashboard.
+           </li>
+           <li class="listnumber">
+            Optionally, add an email address or comment to this administrator definition.
+           </li>
+          </ol>
+          <a name="o71366">
+          </a>
+          <h4 class="heading4" id="t71366">
+           Selecting an Administrator Type
+          </h4>
+          <p class="tablebodytext">
+           Multi-Domain Security Management uses different administrator types, each with a different scope of administrative authority. This table shows the different administrator types:
+          </p>
+          <table border="0" cellpadding="2" cellspacing="0" class="tableintopic" style="border-collapse:collapse" width="654">
+           <tbody>
+            <tr align="left" valign="top">
+             <th bgcolor="#E4F2FF" style="border:1px solid #BFBFBF;" width="114">
+              <p class="tableheading">
+               Administrator
+              </p>
+             </th>
+             <th bgcolor="#E4F2FF" style="border:1px solid #DDDDDD;" width="540">
+              <p class="tableheading">
+               Permissions
+              </p>
+             </th>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="114">
+              <p class="tablebodytext">
+               <strong class="menuoptions">
+                <strong class="menuoptions">
+                 Multi-Domain Superuser
+                </strong>
+               </strong>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="540">
+              <p class="tpbodytext">
+               Manages the Multi-Domain Security Management deployment, including all Domains, Multi-Domain Servers, Domain Management Servers, and administrator accounts.
+              </p>
+              <p class="tpbodytext">
+               Multi-Domain superusers can do these tasks for Multi-Domain Servers:
+              </p>
+              <ul class="listbullet">
+               <li class="listbullet">
+                Add, edit or delete Multi-Domain Servers and Multi-Domain Log Servers.
+               </li>
+               <li class="listbullet">
+                Allow or block access the SmartDomain Manager.
+               </li>
+              </ul>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="114">
+              <p class="tablebodytext">
+               <strong class="menuoptions">
+                Domain Superuser
+               </strong>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="540">
+              <p class="tpbodytext">
+               Manages networks for all Domains using the SmartDomain Manager and SmartConsole clients. Domain superusers can create, edit and delete Domains as well as see all Domain network objects.
+              </p>
+              <p class="tpbodytext">
+               Domain superusers can manage Global Managers, Domain Managers and
+               <strong class="menuoptions">
+                <strong class="menuoptions">
+                 None
+                </strong>
+               </strong>
+               administrators. They cannot configure the Multi-Domain Server environment or manage Multi-Domain Superusers.
+              </p>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="114">
+              <p class="tablebodytext">
+               <strong class="menuoptions">
+                <strong class="menuoptions">
+                 Global Manager
+                </strong>
+               </strong>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="540">
+              <p class="tpbodytext">
+               Manages global policies, global objects and specified Domain networks. Global managers can see information or do actions according to their permissions profile settings.
+              </p>
+              <p class="tablebodytext">
+               Global managers can manage Domain Managers and
+               <strong class="menuoptions">
+                <strong class="menuoptions">
+                 None
+                </strong>
+               </strong>
+               administrators. Global managers can only see network objects in their assigned Domains. They cannot create new Domains.
+              </p>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="114">
+              <p class="tablebodytext">
+               <strong class="menuoptions">
+                Domain Manager
+               </strong>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="540">
+              <p class="tpbodytext">
+               Manages specified Domain networks. Domain managers can use SmartConsole clients to see information or do actions according to their permissions profile settings.
+              </p>
+              <p class="tpbodytext">
+               Domain Managers can manage
+               <strong class="menuoptions">
+                <strong class="menuoptions">
+                 None
+                </strong>
+               </strong>
+               administrators. They cannot access the Global SmartDashboard to manage global objects and global policies.
+              </p>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="114">
+              <p class="tablebodytext">
+               <strong class="menuoptions">
+                <strong class="menuoptions">
+                 None
+                </strong>
+               </strong>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="540">
+              <p class="tpbodytext">
+               Do not have permissions to manage Multi-Domain Security Management or use the SmartDomain Manager. None administrators can manage specified Domain networks, using the SmartConsole clients.
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p class="procedureheading">
+           To select an administrator type:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              General Properties
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Launch Global SmartDashboard in Read Only mode
+             </strong>
+            </strong>
+            to prevent this administrator from changing global properties.
+           </li>
+           <li class="listnumber">
+            Select an administrator type.
+           </li>
+          </ol>
+          <a name="o71367">
+          </a>
+          <h4 class="heading4" id="t71367">
+           Configuring the Expiration Date
+          </h4>
+          <p class="tpbodytext">
+           You can assign an expiration date to each administrator account. After this expiration date, the administrator cannot:
+          </p>
+          <ul class="listbullet">
+           <li class="listbullet">
+            Log in to the SmartDomain Manager,
+           </li>
+           <li class="listbullet">
+            Do actions in the Multi-Domain Security Management environment.
+           </li>
+           <li class="listbullet">
+            Use the SmartConsole clients.
+           </li>
+          </ul>
+          <table border="0" cellpadding="2" cellspacing="0" class="tableintopic" style="border-collapse:collapse" width="576">
+           <tbody>
+            <tr align="left" valign="top">
+             <td width="72">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="33" hspace="0" id="f1423" src="1423.png" vspace="0" width="40"/>
+              </p>
+             </td>
+             <td width="504">
+              <p class="tablebodytext">
+               <strong class="bold">
+                Note
+               </strong>
+               - Multi-Domain Security Management account expiration has no effect on operating system administrators. Operating system administrators, which are different from Multi-Domain Security Management administrators, can always access the Multi-Domain Server command line.
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p class="tpbodytext">
+           Multi-Domain Security Management includes tools for managing expiration dates and warning administrators of impending expirations. Administrators can manage expiration dates for other administrators with a lower level administrator type. Typically, Multi-Domain Security Management or Domain superusers do these management tasks.
+          </p>
+          <p class="procedureheading">
+           To configure the expiration date:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              General Properties
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Do one of these steps to set the expiration date:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              Select
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Expire at
+               </strong>
+              </strong>
+              and then select an expiration date using the calendar control.
+              <p class="listcontinue2">
+               OR
+              </p>
+             </li>
+             <li class="listbullet2">
+              Select
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Never expires
+               </strong>
+              </strong>
+              to prevent this administrator account from expiring.
+             </li>
+            </ul>
+            <p class="listcontinue">
+             <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="146" hspace="0" id="f71371" src="71371.png" vspace="0" width="380"/>
+            </p>
+            <p class="listcontinue">
+             You can
+             <a class="tpjumpinternaltemplate" href="15612.htm#o70805" id="h71497" target="_self" title="Configuring Default Expiration Settings">
+              configure the default expiration dates
+             </a>
+             that appear in this window in the Multi-Domain Security Management window.
+            </p>
+           </li>
+          </ol>
+          <a name="o70739">
+          </a>
+          <h3 class="heading3" id="t70739">
+           Configuring Authentication
+          </h3>
+          <p class="tpbodytext">
+           All administrators must authenticate to log in to the SmartDomain Manager and manage the Multi-Domain Security Management deployment. Select and configure an authentication method for this administrator.
+          </p>
+          <p class="procedureheading">
+           To select and configure the authentication method:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, create a new administrator or double-click an existing administrator.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Authentication
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Select and configure one of these authentication methods:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="bold">
+               Undefined
+              </strong>
+              - Administrators are not authenticated or are authenticated by a certificate created in the
+              <strong class="bold">
+               Certificates
+              </strong>
+              pane.
+             </li>
+             <li class="listbullet2">
+              <strong class="bold">
+               SecurID
+              </strong>
+              - Administrators enter a one-time password as displayed on the SecurID smart card.
+             </li>
+             <li class="listbullet2">
+              <strong class="bold">
+               Check Point Password
+              </strong>
+              - Administrators enter the Check Point products password.
+              <br/>
+              Enter and confirm the password.
+             </li>
+             <li class="listbullet2">
+              <strong class="bold">
+               OS Password
+              </strong>
+              - Administrators authenticate using their operating system password.
+             </li>
+             <li class="listbullet2">
+              <strong class="bold">
+               RADIUS
+              </strong>
+              - Administrators authenticate by a password defined on the specified RADIUS server.
+             </li>
+             <li class="listbullet2">
+              <strong class="bold">
+               TACACS
+              </strong>
+              - Administrators authenticate by a password defined on the specified TACACS server.
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <a name="o70741">
+          </a>
+          <h3 class="heading3" id="t70741">
+           Configuring Certificates
+          </h3>
+          <p class="tpbodytext">
+           You can create a certificate that let administrators connect to the Multi-Domain Server and Domain Management Servers. You can also revoke an existing certificate.
+          </p>
+          <p class="procedureheading">
+           To create a certificate:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In SmartDomain Manager, create a new administrator or double-click an existing administrator.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Authentication
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Generate and save
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the message box, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              OK
+             </strong>
+            </strong>
+            to continue.
+           </li>
+           <li class="listnumber">
+            Enter and confirm the certificate password.
+           </li>
+           <li class="listnumber">
+            Save the certificate.
+           </li>
+          </ol>
+          <p class="procedureheading">
+           To revoke an existing certificate:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In SmartDomain Manager, create a new administrator or double-click an existing administrator.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Authentication
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Revoke
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the message box, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              OK
+             </strong>
+            </strong>
+            to confirm.
+           </li>
+          </ol>
+          <a name="o70753">
+          </a>
+          <h3 class="heading3" id="t70753">
+           Entering Administrator Properties - Flow
+          </h3>
+          <p class="tpbodytext">
+           The
+           <strong class="bold">
+            Administrator Properties
+           </strong>
+           pane contains optional information, typically contact information or other descriptive data. Administrators with applicable permissions (typically superusers)
+           <a class="tpjumpinternaltemplate" href="15612.htm#o71374" id="h71380" target="_self" title="Defining Administrator Properties">
+            define the fields
+           </a>
+           that show in the
+           <strong class="bold">
+            Administrator Properties
+           </strong>
+           pane.
+          </p>
+          <p class="procedureheading">
+           To enter administrator properties information:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In SmartDomain Manager, create a new administrator or double-click an existing administrator.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit Administrator
+             </strong>
+            </strong>
+            window, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Properties
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Enter information in the property fields as necessary.
+           </li>
+          </ol>
+          <a name="o71382">
+          </a>
+          <h2 class="heading2" id="t71382">
+           Deleting an Administrator
+          </h2>
+          <p class="procedureheading">
+           To delete an administrator:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Right-click an existing administrator and then select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Delete Administrator
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Click
+            <strong class="bold">
+             Yes
+            </strong>
+            in the confirmation window.
+           </li>
+          </ol>
+          <a name="o71374">
+          </a>
+          <h2 class="heading2" id="t71374">
+           Defining Administrator Properties
+          </h2>
+          <p class="tpbodytext">
+           The
+           <strong class="bold">
+            Administrator Properties
+           </strong>
+           pane includes optional information fields, typically contact information or other descriptive data. Administrators, with applicable permissions, define the fields that show in the
+           <strong class="bold">
+            Administrator Properties
+           </strong>
+           pane.
+          </p>
+          <p class="procedureheading">
+           To define the fields that show in the Administrator Properties pane:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             Multi-Domain Security Management Properties
+            </strong>
+            from the SmartDomain Manager menu.
+           </li>
+           <li class="listnumber">
+            Go to the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Fields
+             </strong>
+            </strong>
+            pane.
+           </li>
+           <li class="listnumber">
+            Do one or more of these actions:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              To add a new property field, click
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Add
+               </strong>
+              </strong>
+              and then enter the field name in the pop-up window.
+             </li>
+             <li class="listbullet2">
+              To delete a property field, select an existing field and then click
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Remove
+               </strong>
+              </strong>
+              .
+             </li>
+             <li class="listbullet2">
+              To change a property field name, click
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Edit
+               </strong>
+              </strong>
+              and then enter a new field name.
+             </li>
+             <li class="listbullet2">
+              To change the display order of a property field, select a field and then click the
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Up
+               </strong>
+              </strong>
+              or
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Down
+               </strong>
+              </strong>
+              arrow to move it.
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <a name="o71385">
+          </a>
+          <h2 class="heading2" id="t71385">
+           Defining Administrator Groups - Flow
+          </h2>
+          <p class="tpbodytext">
+           Administrator groups are related collections of administrator accounts. This lets you manage and do operations on many administrators simultaneously.
+          </p>
+          <a name="o71953">
+          </a>
+          <h3 class="heading3" id="t71953">
+           Creating a New Group
+          </h3>
+          <p class="procedureheading">
+           To create a new administrator selection group:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage &gt; Selection Groups &gt; Administrator Groups
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Selection Groups
+             </strong>
+            </strong>
+            window, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add Group
+             </strong>
+            </strong>
+            window, enter a unique group name.
+            <br/>
+            Group names cannot contain spaces or special characters.
+           </li>
+           <li class="listnumber">
+            Select administrators from the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Not in Group
+             </strong>
+            </strong>
+            list and then click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            .
+            <br/>
+            The administrators show in the
+            <strong class="bold">
+            </strong>
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              In Group
+             </strong>
+            </strong>
+            list.
+           </li>
+          </ol>
+          <a name="o71954">
+          </a>
+          <h3 class="heading3" id="t71954">
+           Changing or Deleting a Group
+          </h3>
+          <p class="procedureheading">
+           To change an administrator selection group:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage &gt; Selection Groups &gt; Administrator Groups
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Selection Groups
+             </strong>
+            </strong>
+            window, select a group and then click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Select administrators from the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Not in Group
+             </strong>
+            </strong>
+            list and then click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Add
+             </strong>
+            </strong>
+            .
+            <br/>
+            The administrators show in the
+            <strong class="bold">
+            </strong>
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              In Group
+             </strong>
+            </strong>
+            list.
+           </li>
+          </ol>
+          <p class="procedureheading">
+           To delete an administrator selection group:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage &gt; Selection Groups &gt; Administrator Groups
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Selection Groups
+             </strong>
+            </strong>
+            window, select a group and click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the confirmation window, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              OK
+             </strong>
+            </strong>
+            .
+           </li>
+          </ol>
+          <a name="o64618">
+          </a>
+          <h2 class="heading2" id="t64618">
+           Managing Administrator Account Expiration
+          </h2>
+          <p class="tpbodytext">
+           You can assign an expiration date to each administrator. After this expiration date, the administrator cannot log in to the SmartConsole clients or do actions in the Security Management Server environment.
+          </p>
+          <table border="0" cellpadding="2" cellspacing="0" class="tableintopic" style="border-collapse:collapse" width="642">
+           <tbody>
+            <tr align="left" valign="top">
+             <td width="72">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="33" hspace="0" id="f1423_1" src="1423.png" vspace="0" width="40"/>
+              </p>
+             </td>
+             <td width="570">
+              <p class="tablebodytext">
+               <strong class="bold">
+                Note
+               </strong>
+               - Account expiration has no effect on operating system administrators. Operating system administrators are different from administrators defined in SmartDomain Manager and can continue access the command line.
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p class="tpbodytext">
+           SmartDomain Manager includes tools for managing expiration dates and warning administrators of impending expirations.
+          </p>
+          <a name="o71309">
+          </a>
+          <h3 class="heading3" id="t71309">
+           Working with Expiration Warnings
+          </h3>
+          <p class="tpbodytext">
+           There are different methods to give warnings that administrator accounts will expire in a short time or have already expired. This section gives explanations for these warnings and procedures for correcting the issue.
+          </p>
+          <a name="o71466">
+          </a>
+          <h4 class="heading4" id="t71466">
+           Log In Warning
+          </h4>
+          <p class="tpbodytext">
+           This warning message opens after you log in to the SmartDomain Manager if your administrator account is about to expire.
+          </p>
+          <p class="tpbodytext">
+           <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="112.5" hspace="0" id="f71464" src="71464.png" vspace="0" width="382.5"/>
+          </p>
+          <p class="tpbodytext">
+           Speak to the administrator responsible for managing your administrator account to update the expiration date. If you have the applicable permissions, you can
+           <a class="tpjumpinternaltemplate" href="15612.htm#o71367" id="h71469" target="_self" title="Configuring the Expiration Date">
+            change the expiration date
+           </a>
+           in your own account.
+          </p>
+          <p class="tpbodytext">
+           The administrator can disable this warning message by selecting the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Do not show this again
+            </strong>
+           </strong>
+           option. She can re-enable the warning by selecting
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Enable
+            </strong>
+           </strong>
+           administrator expiration warning from the SmartDomain Manager
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Manage
+            </strong>
+           </strong>
+           menu.
+          </p>
+          <a name="o71470">
+          </a>
+          <h4 class="heading4" id="t71470">
+           Using the Expired Accounts Window
+          </h4>
+          <p class="tpbodytext">
+           The
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts window
+            </strong>
+           </strong>
+           shows all administrator accounts that have expired or are near their expiration date. If there are administrators in this condition, the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts
+            </strong>
+           </strong>
+           link shows in the SmartDomain Manager status bar.
+          </p>
+          <p class="tpbodytext">
+           <img align="bottom" alt="" border="0" class="tpembeddedicon" height="22" hspace="0" id="f72582" src="72582.png" vspace="0" width="667"/>
+          </p>
+          <p class="tpbodytext">
+           To use the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts
+            </strong>
+           </strong>
+           window, you must
+           <a class="tpjumpinternaltemplate" href="15612.htm#o70805" id="h71497_2" target="_self" title="Configuring Default Expiration Settings">
+            activate this feature
+           </a>
+           in the Administrator Global Properties pane in the
+           <strong class="menuoptions">
+            Multi-Domain Security Management Properties
+           </strong>
+           window. By default, the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts
+            </strong>
+           </strong>
+           window is activated.
+          </p>
+          <p class="tpbodytext">
+           To open the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired
+            </strong>
+           </strong>
+           Accounts window, click the link.
+          </p>
+          <p class="tpbodytext">
+           <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="295.5" hspace="0" id="f71471" src="71471.png" vspace="0" width="393.75"/>
+          </p>
+          <p class="tpbodytext">
+           These icons show the current status of each account.
+          </p>
+          <table border="1" cellpadding="2" cellspacing="0" class="tableintopic" style="border-collapse:collapse; border:1px solid #DDDDDD" width="390">
+           <tbody>
+            <tr align="left" valign="top">
+             <th bgcolor="#F5F6FB" style="border:1px solid #DDDDDD;" width="54">
+              <p class="tableheading">
+               Icon
+              </p>
+             </th>
+             <th bgcolor="#F5F6FB" style="border:1px solid #DDDDDD;" width="336">
+              <p class="tableheading">
+               Description
+              </p>
+             </th>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="54">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="15" hspace="0" id="f71316" src="71316.png" vspace="0" width="17"/>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="336">
+              <p class="tablebodytext">
+               Account is active.
+              </p>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="54">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="15" hspace="0" id="f71314" src="71314.png" vspace="0" width="17"/>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="336">
+              <p class="tablebodytext">
+               Account will expire soon.
+              </p>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="54">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="15" hspace="0" id="f71317" src="71317.png" vspace="0" width="15"/>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="336">
+              <p class="tablebodytext">
+               Account has expired.
+              </p>
+             </td>
+            </tr>
+            <tr align="left" valign="top">
+             <td style="border:1px solid #DDDDDD;" width="54">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="15" hspace="0" id="f71318" src="71318.png" vspace="0" width="18"/>
+              </p>
+             </td>
+             <td style="border:1px solid #DDDDDD;" width="336">
+              <p class="tablebodytext">
+               Expiration warning ignored.
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p class="tpbodytext">
+           By default, the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts
+            </strong>
+           </strong>
+           window is enabled.
+          </p>
+          <p class="tpbodytext">
+           To disable the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts
+            </strong>
+           </strong>
+           window, select the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Don't show this again
+            </strong>
+           </strong>
+           option. Alternatively, you can select
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Administrators
+            </strong>
+           </strong>
+           from the Selection bar and then select
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Manage
+            </strong>
+           </strong>
+           &gt;
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Cancel Administrators Expiration Warning
+            </strong>
+           </strong>
+           from the menu.
+          </p>
+          <p class="tpbodytext">
+           To re-enable the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Expired Accounts
+            </strong>
+           </strong>
+           window, select
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Administrators
+            </strong>
+           </strong>
+           from the Selection bar and then select
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Manage
+            </strong>
+           </strong>
+           &gt;
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Enable Administrators Expiration Warning
+            </strong>
+           </strong>
+           from the menu.
+          </p>
+          <p class="procedureheading">
+           To change the expiration date from this window:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            Select an administrator account and then click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Update
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Update Expiration Date
+             </strong>
+            </strong>
+            window, do one of these steps to change the expiration date:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              Select
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Expire at
+               </strong>
+              </strong>
+              and then select an expiration date from the calendar control.
+              <p class="listcontinue2">
+               OR
+              </p>
+             </li>
+             <li class="listbullet2">
+              Select
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Never expires
+               </strong>
+              </strong>
+              to prevent this administrator account from expiring.
+             </li>
+            </ul>
+            <p class="listcontinue">
+             <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="146" hspace="0" id="f71499" src="71499.png" vspace="0" width="380"/>
+            </p>
+           </li>
+          </ol>
+          <p class="tpbodytext">
+           To change administrator account settings, select an administrator and then click
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Edit
+            </strong>
+           </strong>
+           .
+          </p>
+          <p class="tpbodytext">
+           To deactivate expiration warnings for one administrator account, select the account and then click
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Ignore
+            </strong>
+           </strong>
+           .
+          </p>
+          <p class="tpbodytext">
+           To deactivate expiration warnings for all administrator accounts, do the procedure for setting default expiration parameters.
+          </p>
+          <a name="o71468">
+          </a>
+          <h4 class="heading4" id="t71468">
+           Add or Change Administrator Window Warning
+          </h4>
+          <p class="tpbodytext">
+           This warning shows in the administrator General Properties pane if the account is about to expire. Make sure that the expiration date is correct and update if necessary.
+          </p>
+          <p class="tpbodytext">
+           <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="144" hspace="0" id="f71404" src="71404.png" vspace="0" width="378"/>
+          </p>
+          <a name="o70805">
+          </a>
+          <h3 class="heading3" id="t70805">
+           Configuring Default Expiration Settings
+          </h3>
+          <p class="tpbodytext">
+           The default expiration settings show when you define a new administrator account. These settings include:
+          </p>
+          <ul class="listbullet">
+           <li class="listbullet">
+            The default expiration date.
+           </li>
+           <li class="listbullet">
+            The number of days before expiration that warnings show after log in.
+           </li>
+           <li class="listbullet">
+            The number of days before expiration that the administrator account shows in the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Expired Accounts
+             </strong>
+            </strong>
+            window.
+           </li>
+          </ul>
+          <p class="procedureheading">
+           To configure the default expiration parameters:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage &gt; Multi-Domain Security Management Properties
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             Multi-Domain Security Management Properties
+            </strong>
+            window, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Accounts
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Accounts
+             </strong>
+            </strong>
+            window, set the expiration date using one of these options:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Never Expires
+               </strong>
+              </strong>
+              - Select if this administrator account does not expire.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Expire at
+               </strong>
+              </strong>
+              - Select and then click the arrow on the text box. Select the expiration date using the calendar control.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Expire after
+               </strong>
+              </strong>
+              - Select and enter the number of days (from today) before this account expires.
+             </li>
+            </ul>
+           </li>
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Notify during login
+             </strong>
+            </strong>
+            to show an expiration warning message when an administrator logs in. Enter the number of days before expiration that a warning shows.
+           </li>
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Show indication on status bar
+             </strong>
+            </strong>
+            to activate the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Expired Account
+             </strong>
+            </strong>
+            s link. This link opens the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Expired Accounts
+             </strong>
+            </strong>
+            window.
+           </li>
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Allow Global and Domain Managers to create/edit permission
+             </strong>
+            </strong>
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              profiles
+             </strong>
+            </strong>
+            to let these administrators create or change other administrator accounts. Global and Domain managers must have the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Read_Write_All
+             </strong>
+            </strong>
+            permission profile assigned to them to be able to edit an administrator with a lower permission level. For example:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              A Global Manager can edit a Domain Manager and None administrators.
+             </li>
+             <li class="listbullet2">
+              A Domain Manager can only edit None administrators.
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <a name="o70757">
+          </a>
+          <h2 class="heading2" id="t70757">
+           Working with Permission Profiles
+          </h2>
+          <p class="tpbodytext">
+           A permissions profile is a predefined set of SmartConsole administrative permissions that you assign to administrators and Domains. This feature lets you manage complex, granular permissions for many administrators with one definition. Permission profiles do not apply to SmartDomain Manager activities.
+          </p>
+          <p class="tpbodytext">
+           When you assign an administrator account to a domain, you must
+           <a class="tpjumpinternaltemplate" href="15406.htm#o70759" id="h72488" target="_self" title="Assigning Permission Profiles">
+            assign a permissions profile
+           </a>
+           . You can assign a predefined permissions profile or you can create a unique, Domain-specific permissions profile for the administrator.
+          </p>
+          <p class="tpbodytext">
+           Administrators with applicable permissions can create and manage permissions profiles. By default, only superusers can create or configure permissions profiles. You can
+           <a class="tpjumpinternaltemplate" href="15612.htm#o94853" id="h72067" target="_self" title="Configuring Permissions">
+            change the global properties
+           </a>
+           to let global and Domain managers create and configure permission profiles for their assigned Domains.
+          </p>
+          <p class="tpbodytext">
+           Multi-Domain Security Management includes default permissions profiles:
+          </p>
+          <ul class="listbullet">
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              None_All_Profile
+             </strong>
+            </strong>
+            - Administrators cannot use SmartConsole applications to see or configure settings.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Read_Only_All_Profile
+             </strong>
+            </strong>
+            - Administrators can use SmartConsole only to see information. They cannot configure settings.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Read_Write_All_Profile
+             </strong>
+            </strong>
+            - Administrators can use SmartConsole applications to see and configure all settings.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Read_Write_All_Profile_no_dlp
+             </strong>
+            </strong>
+            - Administrators can use SmartConsole applications to see and configure all settings with the exception of DLP.
+           </li>
+          </ul>
+          <p class="tpbodytext">
+           You can assign one of the default permissions profiles to any administrator and domain.
+          </p>
+          <a name="o94853">
+          </a>
+          <h3 class="heading3" id="t94853">
+           Configuring Permissions
+          </h3>
+          <p class="tpbodytext">
+           This section includes procedures for creating, changing and deleting permission profiles. Administrators with the applicable permissions can create, edit or delete permissions profiles.
+          </p>
+          <p class="procedureheading">
+           To create or change a permissions profile:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            Select the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Menu
+             </strong>
+            </strong>
+            icon &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage Permissions Profiles
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profile
+             </strong>
+            </strong>
+            window, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              New
+             </strong>
+            </strong>
+            or select an existing
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profile
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profile Properties
+             </strong>
+            </strong>
+            window, configure permissions profile settings.
+            <p class="listcontinue">
+             <strong class="bold">
+              Note
+             </strong>
+             - You can also create a new permissions profile while assigning a profile to an administrator in a Domain.
+            </p>
+           </li>
+          </ol>
+          <p class="procedureheading">
+           To delete an existing permissions profile:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In SmartDashboard, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage Permissions Profiles
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profile
+             </strong>
+            </strong>
+            window, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Delete
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Yes
+             </strong>
+            </strong>
+            to confirm.
+           </li>
+          </ol>
+          <p class="procedureheading">
+           To configure permissions profile settings:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Allow access via
+             </strong>
+            </strong>
+            section, select one of these options:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Management Portal and SmartConsole Applications
+               </strong>
+              </strong>
+              - Permissions to use SmartConsole applications and the Management Portal to connect a Domain Management Server.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Management Portal only
+               </strong>
+              </strong>
+              - Permissions to connect to a Domain Management Server only with the Management Portal.
+             </li>
+            </ul>
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions
+             </strong>
+            </strong>
+            section, select one of these options:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read/Write All
+               </strong>
+              </strong>
+              - Full access to all Check Point products.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read DLP logs
+               </strong>
+              </strong>
+              - Permissions to:
+              <ul class="listbullet3">
+               <li class="listbullet3">
+                See all fields of DLP logs in SmartView Tracker.
+               </li>
+               <li class="listbullet3">
+                See incident messages and captured data. User emails can be read if they violate corporate Data Loss Prevention rules.
+               </li>
+               <li class="listbullet3">
+                Send or discard quarantined user emails from SmartView Tracker. With the
+                <strong class="menuoptions">
+                 <strong class="menuoptions">
+                  Customized
+                 </strong>
+                </strong>
+                option you can assign a subset of these permissions as necessary. For example, administrators can see the field content in DLP logs but not see the actual content of incidents.
+               </li>
+              </ul>
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read Only All
+               </strong>
+              </strong>
+              - Read-only access to all Check Point products.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Customized
+               </strong>
+              </strong>
+              - Configure access to specified Check Point products and select the access type for each product or blade.
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <a name="o94852">
+          </a>
+          <h4 class="heading4" id="t94852">
+           Configuring Customized Permissions
+          </h4>
+          <p class="tpbodytext">
+           If you select
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Customized Permissions
+            </strong>
+           </strong>
+           , you can define permissions for each Security Management Server
+           <em class="emphasis">
+            resource
+           </em>
+           (object, Policy and feature) separately. The resources show on four different panes in the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Administrators Permission Configuration
+            </strong>
+           </strong>
+           window. Each pane contains a list of related resources.
+          </p>
+          <p class="procedureheading">
+           To configure customized permissions:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions
+             </strong>
+            </strong>
+            section, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Customized
+             </strong>
+            </strong>
+            and then click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Edit
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Select a pane in the
+            <strong class="menuoptions">
+             Administrator Permissions Configuration
+            </strong>
+            window:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                General
+               </strong>
+              </strong>
+              - Security Policy, blades and features
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Monitoring and Logging
+               </strong>
+              </strong>
+              - Monitoring and logging options
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Events and Reports
+               </strong>
+              </strong>
+              - SmartEvent and SmartReporter features
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Provisioning
+               </strong>
+              </strong>
+              - SmartProvisioning features and scripting
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Endpoint
+               </strong>
+              </strong>
+              - Endpoint Security Policy management and Endpoint Security client deployment and management.
+             </li>
+            </ul>
+           </li>
+           <li class="listnumber">
+            Set permissions for the resources:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              To prevent an administrator from seeing or configuring a resource, clear its checkbox.
+             </li>
+             <li class="listbullet2">
+              To let the administrator see a resource (but not change it), select its checkbox and then select
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read only
+               </strong>
+              </strong>
+              .
+             </li>
+             <li class="listbullet2">
+              To let the administrator see and configure a resource, select its checkbox and then select
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read/Write
+               </strong>
+              </strong>
+              .
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <p class="procedureheading">
+           Notes:
+          </p>
+          <ul class="listbullet">
+           <li class="listbullet">
+            You cannot prevent administrators from seeing some resources. These resources options are disabled.
+           </li>
+           <li class="listbullet">
+            Some resources do not have permission selections. You can only select or clear them.
+           </li>
+          </ul>
+          <a name="o71038">
+          </a>
+          <h3 class="heading3" id="t71038">
+           Managing Permission Profiles
+          </h3>
+          <p class="tpbodytext">
+           By default, only Global and Domain superusers can create and configure permissions profiles. You can optionally let Global and Domain managers create and configure permissions profiles. Administrators with None permissions cannot manage permission profiles.
+          </p>
+          <p class="procedureheading">
+           To let Global and Domain administrators manage permissions profiles:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             Multi-Domain Security Management
+            </strong>
+            properties from the SmartDomain Manager menu.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             Multi-Domain Security Management Properties
+            </strong>
+            window, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Accounts
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator Accounts
+             </strong>
+            </strong>
+            pane, select the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Allow Global and Domain Managers to create/edit permissions profiles
+             </strong>
+            </strong>
+            option.
+           </li>
+          </ol>
+          <a name="o72062">
+          </a>
+          <h4 class="heading4" id="t72062">
+           To See the Latest Changes to Permissions Profiles
+          </h4>
+          <p class="procedureheading">
+           To see information about the latest changes to a permissions profile:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            (in the Selection Bar) &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profiles
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Select a permissions profile.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profiles
+             </strong>
+            </strong>
+            window, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Actions
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Last Modified
+             </strong>
+            </strong>
+            .
+            <br/>
+            The
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Last Modification
+             </strong>
+            </strong>
+            window opens.
+            <p class="listcontinue">
+             <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="151.5" hspace="0" id="f72053" src="72053.png" vspace="0" width="263.25"/>
+            </p>
+            <p class="listcontinue">
+             This window shows:
+            </p>
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              Date of the last change
+             </li>
+             <li class="listbullet2">
+              Administrator who made the change
+             </li>
+             <li class="listbullet2">
+              GUI client used to make the change
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <a name="o72063">
+          </a>
+          <h4 class="heading4" id="t72063">
+           Seeing Administrators Using a Permissions Profile
+          </h4>
+          <p class="procedureheading">
+           To see which administrators are using a permissions profile:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            (in the Selection bar)
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage Permissions Profiles
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Select a permissions profile.
+           </li>
+           <li class="listnumber">
+            In the
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Permissions Profiles
+             </strong>
+            </strong>
+            window, click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Actions
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Where used
+             </strong>
+            </strong>
+            .
+            <br/>
+            The
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Object Managers References
+             </strong>
+            </strong>
+            window opens.
+            <p class="listcontinue">
+             <img align="bottom" alt="" border="0" class="tpembeddedimagenotinhelp" height="205.5" hspace="0" id="f72054" src="72054.png" vspace="0" width="378.75"/>
+            </p>
+           </li>
+          </ol>
+          <a name="o72480">
+          </a>
+          <h4 class="heading4" id="t72480">
+           Merging Identical Permissions Profiles
+          </h4>
+          <p class="tpbodytext">
+           It is a security best practice to remove identical permissions profiles and to keep the number of permissions profiles to a minimum. This makes the maintenance of permissions profiles easier.
+          </p>
+          <p class="tpbodytext">
+           Multi-Domain Security Management lets you find identical permissions profiles and merge them into one profile.
+          </p>
+          <p class="procedureheading">
+           To find and merge identical permissions profiles:
+          </p>
+          <ol class="listnumber">
+           <li class="listnumber">
+            In the SmartDomain Manager, select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrators
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage
+             </strong>
+            </strong>
+            &gt;
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Manage Permissions
+             </strong>
+            </strong>
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Profiles
+             </strong>
+            </strong>
+            from the menu.
+           </li>
+           <li class="listnumber">
+            Select a permissions profile.
+           </li>
+           <li class="listnumber">
+            Click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Actions
+             </strong>
+            </strong>
+            and then select
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Find profiles identical to this
+             </strong>
+            </strong>
+            .
+           </li>
+           <li class="listnumber">
+            Click
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Unify (
+             </strong>
+            </strong>
+            or
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Unify to Default):
+             </strong>
+            </strong>
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              If the selected profile or profiles are identical to a default profile, they automatically merge with the default profile. Duplicate profiles are deleted.
+             </li>
+             <li class="listbullet2">
+              If the selected profile or profiles are
+              <strong class="bold">
+               not
+              </strong>
+              identical to a default profile, they automatically merge with the selected profile. Duplicate profiles are deleted.
+             </li>
+             <li class="listbullet2">
+              If you select the
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Unify Permission Profiles Name
+               </strong>
+              </strong>
+              option, enter a profile name (or accept the default name). The selected profile or profiles merge with the name you entered. Duplicate profiles are deleted.
+             </li>
+            </ul>
+           </li>
+          </ol>
+          <table border="0" cellpadding="2" cellspacing="0" class="tableintopic" style="border-collapse:collapse" width="642">
+           <tbody>
+            <tr align="left" valign="top">
+             <td width="72">
+              <p class="tablebodytext">
+               <img align="bottom" alt="" border="0" class="tpembeddedicon" height="33" hspace="0" id="f1423_2" src="1423.png" vspace="0" width="40"/>
+              </p>
+             </td>
+             <td width="570">
+              <p class="tablebodytext">
+               <strong class="bold">
+                Note
+               </strong>
+               - You cannot merge a default profile with an administrator-defined profile. If you try to do this, an error message shows.
+              </p>
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p class="tablebodytext">
+          </p>
+          <a name="o71039">
+          </a>
+          <h2 class="heading2" id="t71039">
+           Showing Connected Administrators
+          </h2>
+          <p class="tpbodytext">
+           In the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Connected Administrators
+            </strong>
+           </strong>
+           view, you can see all administrators currently connected to Multi-Domain Security Management. To show connected administrators information, select
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Connected Administrators
+            </strong>
+           </strong>
+           in the SmartDomain Manager Selection bar.
+          </p>
+          <p class="tpbodytext">
+           This information shows in the
+           <strong class="menuoptions">
+            <strong class="menuoptions">
+             Connected Administrators
+            </strong>
+           </strong>
+           pane:
+          </p>
+          <ul class="listbullet">
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Management
+             </strong>
+            </strong>
+            - Type of GUI Client connected to the SmartDomain Manager.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             Domain
+            </strong>
+            - Domain that the administrator connects to.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Administrator
+             </strong>
+            </strong>
+            - Administrator name.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Application
+             </strong>
+            </strong>
+            - Type of GUI client that the administrator is using.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              GUI Client
+             </strong>
+            </strong>
+            - GUI client IP address or DNS host name.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Login Time
+             </strong>
+            </strong>
+            - Date and time that the administrator logged in.
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Database
+             </strong>
+            </strong>
+            - Database status:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Locked
+               </strong>
+              </strong>
+              - The administrator is using SmartDashboard and has exclusive
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read/Write
+               </strong>
+              </strong>
+              access permissions to the Domain Management Server. The database is locked.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                No Status
+               </strong>
+              </strong>
+              - The administrator is using SmartDashboard with
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Read Only
+               </strong>
+              </strong>
+              access permissions or is using a different GUI client.
+             </li>
+            </ul>
+           </li>
+           <li class="listbullet">
+            <strong class="menuoptions">
+             <strong class="menuoptions">
+              Action Status
+             </strong>
+            </strong>
+            - Status of requests to disconnect a GUI client:
+            <ul class="listbullet2">
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Disconnection Request
+               </strong>
+              </strong>
+              <strong class="bold">
+              </strong>
+              - Disconnection request is being processed. This status shows only to the user who is disconnecting.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Disconnect on
+               </strong>
+              </strong>
+              <strong class="bold">
+              </strong>
+              - Shows the date and time when the GUI client is to be disconnected.
+             </li>
+             <li class="listbullet2">
+              <strong class="menuoptions">
+               <strong class="menuoptions">
+                Cancellation Request
+               </strong>
+              </strong>
+              - Request to cancel a disconnection request. The disconnection request can occur up to 60 minutes from the current time. Administrators can only disconnect connections for other administrators.
+             </li>
+            </ul>
+           </li>
+          </ul>
+          <!-- END AUTOMATIC CONTENT -->
+         </td>
+         <td>
+          &nbsp;
+         </td>
+        </tr>
+       </tbody>
+      </table>
+     </td>
+    </tr>
+    <!-- END TOPIC SECTION -->
+    <!-- BEGIN BOTTOM TOOLBAR -->
+    <tr>
+     <td colspan="2" nowrap="" style="padding:0 0 0 15px">
+      <table style="margin:0px;padding:0px;border-collapse:collapse;width:100%;">
+       <tbody>
+        <tr>
+         <td align="left" class="bottom_tool_bar">
+          <a href="#top">
+           Top of Page
+          </a>
+         </td>
+         <td align="center" class="bottom_tool_bar">
+          <a href="http://www.checkpoint.com/copyright.html" target="_blank">
+           &copy;2014 Check Point Software Technologies Ltd. All rights reserved.
+          </a>
+         </td>
+         <td align="right" class="bottom_tool_bar" nowrap="" style="padding-right:3px;">
+          <a href="http://supportcontent.checkpoint.com/documentation_download?ID=24807" target="_blank">
+           Download Complete PDF
+          </a>
+          <img align="bottom" hspace="0" src="separator.gif" vspace="0"/>
+          <a href="mailto:cp_techpub_feedback@checkpoint.com?subject=Feedback on Multi-Domain Security Management R77 Versions Administration Guide, Topic: 15612">
+           Send Feedback
+          </a>
+          <img align="bottom" hspace="0" src="separator.gif" vspace="0"/>
+          <a href="javascript:printWindow()">
+           Print
+          </a>
+         </td>
+        </tr>
+       </tbody>
+      </table>
+     </td>
+    </tr>
+    <!-- END BOTTOM TOOLBAR -->
+   </tbody>
+  </table>
+  <!-- END PAGE CONTENT -->
+ </body>
+</html>

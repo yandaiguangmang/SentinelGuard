@@ -15,6 +15,16 @@ from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_fr
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import tiktoken
+from typing import List, Tuple
+
+ENCODING_NAME = "o200k_base"
+
+# 提取关键标签的正则
+RE_TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+RE_FORM = re.compile(r"<form[\s>].*?</form>", re.IGNORECASE | re.DOTALL)
+RE_A_TAG = re.compile(r"<a\s[^>]*href\s*=\s*['\"]([^'\"]*)['\"][^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL)
+
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
 
@@ -35,23 +45,49 @@ ROLE_DEFAULT_MODELS = {
 }
 
 
+OFFLINE_INTEL_ANALYST_SYSTEM_PROMPT = """You are the intelligence analyst in a malicious webpage analysis system operating in **offline mode**.
+No external threat intelligence (WHOIS, certificate transparency logs, DNS, blacklists) is available for this analysis session.
+Your job is to transparently reflect this limitation while still providing a valuable cross-check for the other analysts.
+
+**CRITICAL: The input JSON contains a top-level field called `external_intel`. In offline mode this field will always be an empty object `{}`. You must NOT fabricate any intelligence data. If `external_intel` is empty, you must explicitly state that no external intelligence was available and therefore attribution or infrastructure analysis cannot be performed.**
+
+1. **Claim and Confidence**: Because you have no external data to corroborate or refute the findings of other analysts, your `claim` must be **`uncertain`** and your `confidence` should be **0.0**. This signals to the moderator that the intelligence analyst has no additional evidence to contribute.
+2. **Opinion**: Clearly state: "当前处于离线评估模式，未获取任何外部威胁情报（WHOIS、证书日志、黑名单等），无法进行域名归因或基础设施分析。本角色仅能基于其他分析员的结论进行逻辑交叉验证。"
+3. **Cross-validation**: Even without external intel, you may point out if the static/behavior analysts' conclusions are logically consistent with common phishing or benign patterns. For example, if the static analyst found many high-risk signals (e.g., brand impersonation, password form, IP direct access), you can note that "these signals are commonly associated with phishing, but without external intel we cannot confirm the domain's reputation." This cross-check should be reflected in your `opinion` field.
+4. **Risk Hint**: Your `risk_hint` should reflect the **maximum** risk level indicated by the other analysts (static, behavior). Do not independently assign a risk hint. Use the highest `risk_hint` from the other roles' outputs present in the input. If you cannot determine that, default to `medium`.
+5. **Additional Findings**: You may add one finding (rule_id: `INTEL_OFFLINE_MODE`) with severity `low` indicating that the analysis was performed without external intelligence. This records the limitation for audit trails.
+
+**All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values should remain in English.**
+
+Output strict JSON:
+{
+  "opinion": "...",
+  "claim": "uncertain",
+  "confidence": 0.0,
+  "risk_hint": "low|medium|high|critical",
+  "additional_findings": [
+    {"rule_id":"INTEL_OFFLINE_MODE","title":"离线模式无外部情报","severity":"low","description":"本次分析未接入 WHOIS、证书透明度等外部情报，域名归因和基础设施信誉评估缺失。","evidence":"external_intel is empty","recommendation":"若需更精准研判，请开启网络连接并启用外部情报查询。"}
+  ]
+}
+"""
+
 ROLE_SYSTEM_PROMPTS = {
-    "主持人": """You are the moderator for in-depth malicious webpage analysis.
+    "主持人": """You are the moderator for in-depth malicious webpage analysis.Think step by step inside your mind.
 Your responsibility is to synthesize the opinions of four experts, deliver a final conclusive summary, and organize all conclusions into a structured JSON that can be directly inserted into a report.
 
 **All output text (including summary, opinions, descriptions, evidence, recommendations) must be in Simplified Chinese. Only field names and enum values should remain in English.**
 
 Requirements:
 1. You must base your summary on the static detection results, the browser evidence package (browser_evidence), and the opinions of each expert. Do not deviate from the evidence chain.
-2. If external intelligence is insufficient, you must explicitly state that the current conclusion relies solely on offline evidence.
-3. You must explicitly verify whether the claims and confidence levels of the four experts are consistent: if there are directional conflicts (e.g., some experts judge malicious_lean while others judge benign_lean), or if the risk_hint spans more than two levels, you must clearly point out this disagreement in the summary, explain which side you ultimately adopt and on what grounds — do not quietly average conflicting opinions into a compromise score. If the input contains precomputed_claim_conflict as true, you must include at least one explanation in conflicting_signals; you cannot return an empty array.
-4. expert_opinions must retain the original opinions or summarized excerpts of all five roles.
-5. The output must be strict JSON, containing the fields risk_level, score, summary, consensus_check, expert_models, expert_opinions, additional_findings. The consensus_check must include agreement_level (high|partial|conflicting) and conflicting_signals (a list of conflict points; an empty array if there are no conflicts).
+2. You must explicitly verify whether the claims and confidence levels of the four experts are consistent: if there are directional conflicts (e.g., some experts judge malicious_lean while others judge benign_lean), or if the risk_hint spans more than two levels, you must clearly point out this disagreement in the summary, explain which side you ultimately adopt and on what grounds — do not quietly average conflicting opinions into a compromise score. If the input contains precomputed_claim_conflict as true, you must include at least one explanation in conflicting_signals; you cannot return an empty array.
+3. expert_opinions must retain the original opinions or summarized excerpts of all five roles.
+4. The output must be strict JSON, containing the fields risk_level, score, summary, consensus_check, expert_models, expert_opinions, additional_findings. The consensus_check must include agreement_level (high|partial|conflicting) and conflicting_signals (a list of conflict points; an empty array if there are no conflicts).
+5. When you reference static findings in your additional_findings, re‑evaluate their severity based on expert opinions. Do not copy the original severity if the consensus suggests otherwise.
 """,
-    "静态分析员": """You are the static analyst in the in-depth malicious webpage analysis.
+    "静态分析员": """You are the static analyst in the in-depth malicious webpage analysis.Think step by step inside your mind.
 Focus on domain structure, URL parameters, suspicious keywords, encoding obfuscation, redirect parameters, host characteristics, as well as the page summary, HTML summary, visible text snapshot, and form/download/script clues from the browser evidence package.
 Do not repeat the areas already covered by the behavior analyst and intelligence analyst (redirect chain behavior, brand/external intelligence attribution); concentrate on whether the static structure alone can support a conclusion.
-If the evidence is insufficient to make a clear judgment, honestly mark claim as uncertain. Do not over-infer just to produce a conclusion.
+If the evidence is insufficient to make a clear judgment, honestly mark claim as uncertain. Do not over-infer just to produce a conclusion.If you believe a static finding should be re‑evaluated after your analysis, assign a new severity in additional_findings that reflects your final judgment. Do not copy the input severity verbatim unless you fully agree with it.
 
 **All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values like claim, risk_hint, severity should remain in English.**
 
@@ -66,10 +102,10 @@ Output strict JSON:
   ]
 }
 """,
-    "行为分析员": """You are the behavior analyst in the in-depth malicious webpage analysis.
+    "行为分析员": """You are the behavior analyst in the in-depth malicious webpage analysis.Think step by step inside your mind.
 Focus on redirect chains, automatic redirects, form submissions, script loading, download targets, page clues from the browser evidence package, HTML summary, and behavioral inducements.
 Do not repeat the static URL/HTML characteristics already covered by the static analyst; concentrate on whether the behavior chain alone can support a conclusion.
-If the evidence is insufficient to make a clear judgment, honestly mark claim as uncertain.
+If the evidence is insufficient to make a clear judgment, honestly mark claim as uncertain.If you believe a static finding should be re‑evaluated after your analysis, assign a new severity in additional_findings that reflects your final judgment. Do not copy the input severity verbatim unless you fully agree with it.
 
 **All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values should remain in English.**
 
@@ -84,11 +120,15 @@ Output strict JSON:
   ]
 }
 """,
-    "情报分析员": """You are the intelligence analyst in the in-depth malicious webpage analysis.
-Your duty is to perform attribution and correlation analysis based on externally known information, not to repeat the structural and behavioral evidence already covered by the static and behavior analysts:
+    "情报分析员": """You are the intelligence analyst in the in-depth malicious webpage analysis .Think step by step inside your mind.
+Your duty is to perform attribution and correlation analysis based on externally known information, not to repeat the structural and behavioral evidence already covered by the static and behavior analysts.
+
+**CRITICAL: The input JSON contains a top-level field called `external_intel`. This field holds the only external intelligence available. You MUST examine it and explicitly reference every non-null attribute (e.g., domain registration date, WHOIS age, registrar, country, certificate age, certificate total count) in your analysis. If any attribute is missing or null, you may note that that specific piece of intelligence is unavailable, but you must NOT say "external intelligence is missing" when other attributes ARE present. For example, if `whois_age_days` is 607, you must mention that the domain is about 607 days old and discuss its implications (not extremely new, but still relatively young).**
+
 1. Target and brand intelligence: Is the page/domain impersonating a specific identifiable brand or organization? If no clear impersonation target can be identified, state this explicitly — it is a valuable conclusion in itself.
-2. Infrastructure and external reputation intelligence: Combine available external data such as domain registration time, certificate information, hosting/ASN reputation, and blacklist hits for attribution; if the intelligence sources do not cover the target, state this clearly rather than avoiding it.
+2. Infrastructure and external reputation intelligence: Use the data from `external_intel` as well as any other external data you have. Comment on domain registration time, certificate information, hosting/ASN reputation, and blacklist hits if available. If a data point is missing or not provided, state so only for that data point.
 3. Evidence coverage boundary: Explain whether there are content differences caused by geographic location or network environment (e.g., suspected cloaking), as well as differences between offline evidence and browser-rendered evidence, and point out the impact on the confidence of the current judgment.
+4. If you believe a static finding should be re‑evaluated after your analysis, assign a new severity in additional_findings that reflects your final judgment. Do not copy the input severity verbatim unless you fully agree with it.
 
 **All text content in the output (opinion, description, evidence, recommendation, title) must be in Simplified Chinese. Only field names and enum values should remain in English.**
 
@@ -114,9 +154,6 @@ Output strict JSON:
   "opinion": "处置建议（中文）",
   "recommended_action": "block|sandbox_review|monitor|allow",
   "risk_hint": "low|medium|high|critical",
-  "additional_findings": [
-    {"rule_id":"DEEP_ADVICE_*","title":"...","severity":"...","description":"...","evidence":"...","recommendation":"..."}
-  ]
 }
 """,
 }
@@ -298,6 +335,7 @@ class URLDeepAnalyzer:
                 "expert_opinions": static_report.expert_opinions,
             },
             "browser_evidence": browser_evidence,
+            "external_intel": browser_evidence.get("external_intel", {}),
             "expert_models": self.role_models,
             "proxy_enabled": False,
         }
@@ -308,15 +346,20 @@ class URLDeepAnalyzer:
     )
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         start = time.perf_counter()
+
         try:
             messages = self._build_messages(role, payload)
             response = self._get_client(role).chat.completions.create(
                 model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
                 messages=messages,
-                temperature=0.3,
+                temperature=0.2,
                 top_p=0.9,
                 response_format={"type": "json_object"},
             )
+             # ★ 调试输出：打印原始响应类型和内容
+            #print(f"[DEBUG] {role} response type: {type(response)}")
+            #print(f"[DEBUG] {role} response: {response}")
+
             elapsed = time.perf_counter() - start
             content = response.choices[0].message.content if response.choices else ""
 
@@ -339,8 +382,33 @@ class URLDeepAnalyzer:
 
     def _build_messages(self, role: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         text_content = json.dumps(payload, ensure_ascii=False, indent=2)
+        # 默认使用线上 prompt
+        system_prompt = ROLE_SYSTEM_PROMPTS[role]
+
+        if role == "情报分析员":
+            ext = payload.get("external_intel", {})
+            if ext:
+                lines = ["【重要：以下外部情报已获取，必须在分析中引用】"]
+                for key, label in [
+                    ("whois_registrar", "注册商"),
+                    ("whois_country", "注册国家"),
+                    ("whois_creation_date", "域名创建时间"),
+                    ("whois_age_days", "域名存在天数"),
+                    ("crt_earliest_cert_date", "最早证书签发时间"),
+                    ("crt_age_days", "证书历史天数"),
+                    ("crt_total_certs", "证书总数"),
+                ]:
+                    val = ext.get(key)
+                    if val is not None and val != "":
+                        lines.append(f"- {label}：{val}")
+                if len(lines) > 1:   # 确实有情报才追加到 user content
+                    text_content = "\n".join(lines) + "\n\n" + text_content
+            else:
+                # 离线模式：切换到离线专用提示词
+                system_prompt = OFFLINE_INTEL_ANALYST_SYSTEM_PROMPT
+
         return [
-            {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": text_content},
         ]
 
@@ -365,6 +433,7 @@ class URLDeepAnalyzer:
                 "expert_opinions": static_report.expert_opinions,
             },
             "browser_evidence": browser_evidence,
+            "external_intel": browser_evidence.get("external_intel", {}),
             "expert_models": self.role_models,
             "role_outputs": self._serialize_role_outputs(role_outputs),
             "proxy_enabled": False,
@@ -578,6 +647,14 @@ class URLDeepAnalyzer:
             "conflicting_signals": [str(x) for x in conflicting_signals]
         }
 
+        # --- 专家共识硬兜底：零恶意信号且至少两位明确良性时，强制限制风险上限 ---
+        consensus_vote = _expert_consensus_vote(role_outputs)
+        if consensus_vote["malicious_count"] == 0 and consensus_vote["benign_count"] >= 2:
+            # 没有任何专家给出恶意倾向，且至少两位明确判断良性
+            score = min(score, 48)
+            if risk_level in {"high", "critical"}:
+                risk_level = "medium"
+
         return {
             "risk_level": risk_level,
             "score": score,
@@ -648,30 +725,30 @@ def _risk_level_from_score(score: int) -> str:
 
 
 def _score_from_findings(findings: List[DetectionFinding]) -> int:
+    # 先按 rule_id 去重，避免同一底层信号被重复计数
+    findings = _dedupe_findings(findings)
     if not findings:
         return 0
 
-    severity_weights = {
-        "low": 1,
-        "medium": 3,
-        "high": 6,
-        "critical": 8,
-    }
-    severity_base_scores = {
-        "low": 5,
-        "medium": 25,
-        "high": 60,
-        "critical": 75,
-    }
+    severity_weights = {"low": 1, "medium": 3, "high": 6, "critical": 8}
+    severity_base_scores = {"low": 5, "medium": 25, "high": 60, "critical": 75}
 
     severity_counts: Dict[str, int] = {}
     for finding in findings:
         severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
 
-    base_score = max(severity_base_scores.get(finding.severity, 0) for finding in findings)
-    bonus_score = sum(severity_counts.get(severity, 0) * weight for severity, weight in severity_weights.items())
-    return min(100, base_score + min(20, bonus_score))
+    total_weight = sum(severity_counts.get(s, 0) * severity_weights[s] for s in severity_weights)
+    if total_weight == 0:
+        return 0
 
+    # 加权平均 base_score，使单条 high/critical 不会完全淹没大量 low/medium 证据
+    weighted_base = sum(
+        severity_counts.get(s, 0) * severity_weights[s] * severity_base_scores[s]
+        for s in severity_weights
+    ) / total_weight
+
+    bonus_score = total_weight
+    return min(100, round(weighted_base) + min(20, bonus_score))
 
 def _blend_score(evidence_score: int, model_score: int, model_risk_level: str) -> int:
     risk_profile = {
@@ -860,6 +937,9 @@ def _build_browser_evidence(static_report: DetectionReport) -> Dict[str, Any]:
                 "height": screenshot.get("height"),
             })
 
+    full_html = page_summary.get("full_html", "")
+    truncated_html = truncate_html_by_tokens(full_html, max_tokens=100_000) if full_html else ""
+
     evidence = {
         "has_page_fetch": bool(page_summary),
         "final_url": page_summary.get("final_url") or (redirect_chain[-1] if redirect_chain else ""),
@@ -881,8 +961,11 @@ def _build_browser_evidence(static_report: DetectionReport) -> Dict[str, Any]:
             "external_script_count": page_summary.get("external_script_count", 0),
             "form_actions": page_summary.get("form_actions", []),
             "script_srcs": page_summary.get("script_srcs", []),
+             # ★ 新增：截断后的完整 HTML
+            "full_html_truncated": truncated_html,
         },
         "browser_observation": _summarize_page_observation(page_summary, redirect_chain),
+        "external_intel": page_summary.get("external_intel", {}),
     }
     return evidence
 
@@ -944,7 +1027,7 @@ def _build_httpx_client(proxy_map: Dict[str, str]) -> httpx.Client:
 
     client_kwargs: Dict[str, Any] = {
         "trust_env": False,
-        "timeout": httpx.Timeout(60.0, connect=20.0),
+        "timeout": httpx.Timeout(180.0, connect=30.0),
     }
 
     proxy_value = _select_proxy_value(proxy_map)
@@ -990,3 +1073,197 @@ def _select_proxy_value(proxy_map: Dict[str, str]) -> str:
         if value:
             return value
     return ""
+
+_SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+# 跨 rule_id 合并映射：所有键会被规范化为同一个主键
+CROSS_RULE_MERGE_MAP: Dict[str, str] = {
+    # 证书时间相关
+    "INTEL_INFRA_2": "CERT_RECENT",          # 情报分析员的证书分析合并到静态 CERT_RECENT
+    # 密码框密度相关
+    "DEEP_STATIC_HIGH_PASSWORD_DENSITY": "PAGE_PASSWORD_FORM",
+    # 脚本泄漏 / 粗糙构建（如果未来有其他重复可继续添加）
+    # "BEHAVIOR_JAVASCRIPT_RENDERING_ISSUE_REEVALUATED": "DEEP_BEHAVIOR_SCRIPT_LEAKAGE",
+}
+import re
+from collections import defaultdict
+from typing import List, Dict
+
+def _dedupe_findings(findings: List[DetectionFinding]) -> List[DetectionFinding]:
+    # 第一步：基于 rule_id 去重（含 _REEVALUATED 映射）
+    best: Dict[str, DetectionFinding] = {}
+    for f in findings:
+        rid = f.rule_id
+        base_id = rid
+        if rid.endswith("_REEVALUATED"):
+            base_id = re.sub(r"^(STATIC_|BEHAVIOR_|INTEL_)?", "", rid)
+            base_id = re.sub(r"_REEVALUATED$", "", base_id) or rid
+        existing = best.get(base_id)
+        if existing is None or _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
+            best[base_id] = f
+    first_pass = list(best.values())
+
+    # 第二步：基于完全相同的 evidence 字符串去重（非空）
+    evidence_best: Dict[str, DetectionFinding] = {}
+    for f in first_pass:
+        ev = (f.evidence or "").strip()
+        if not ev:
+            evidence_best[f"__empty__{f.rule_id}__{id(f)}"] = f
+            continue
+        existing = evidence_best.get(ev)
+        if existing is None:
+            evidence_best[ev] = f
+        else:
+            if _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
+                evidence_best[ev] = f
+
+    second_pass = list(evidence_best.values())
+
+    # 第三步：规范化证据去重（处理中英文同义、格式差异）
+    # 定义关键词组：如果描述中包含这些关键词，且数字相同，则视为同类证据
+    KEYWORD_GROUPS = [
+        {"密码", "password", "密码框", "口令"},  # 密码相关
+        {"证书", "cert", "certificate"},         # 证书相关
+        {"脚本", "script", "javascript", "js"},  # 脚本相关
+        # 可按需扩展
+    ]
+
+    def _normalize_evidence_key(finding: DetectionFinding) -> str:
+        """生成规范化键：从 evidence 中提取所有数字，并结合描述关键词分组"""
+        ev = (finding.evidence or "") + " " + (finding.description or "")
+        # 提取所有数字（整数或小数）
+        numbers = re.findall(r'\d+\.?\d*', ev)
+        numbers_str = ",".join(sorted(set(numbers))) if numbers else "NO_NUM"
+        # 确定关键词组
+        group = "other"
+        for g in KEYWORD_GROUPS:
+            if any(kw in ev.lower() for kw in g):
+                group = "-".join(sorted(g))
+                break
+        return f"{group}|{numbers_str}"
+
+    # 合并规范化键相同的 finding
+    norm_best: Dict[str, DetectionFinding] = {}
+    for f in second_pass:
+        key = _normalize_evidence_key(f)
+        existing = norm_best.get(key)
+        if existing is None:
+            norm_best[key] = f
+        else:
+            if _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
+                norm_best[key] = f
+
+    return list(norm_best.values())
+
+
+def _expert_consensus_vote(role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """统计静态/行为/情报三位带 claim 的专家投票方向。"""
+    malicious_count = 0
+    benign_count = 0
+    for role in ("静态分析员", "行为分析员", "情报分析员"):
+        claim = role_outputs.get(role, {}).get("claim")
+        if claim == "malicious_lean":
+            malicious_count += 1
+        elif claim == "benign_lean":
+            benign_count += 1
+    return {"malicious_count": malicious_count, "benign_count": benign_count}
+
+def token_count(text: str, encoding_name: str = ENCODING_NAME) -> int:
+    """返回文本的 token 数量"""
+    enc = tiktoken.get_encoding(encoding_name)
+    return len(enc.encode(text))
+
+def _extract_key_parts(html: str) -> List[Tuple[str, int]]:
+    """
+    提取关键 HTML 片段，返回 (片段, 优先级) 列表。
+    优先级：title=1, form=2, a=3 （数字越小越优先）
+    """
+    parts = []
+    # title
+    for m in RE_TITLE.finditer(html):
+        parts.append((m.group(0), 1))  # 整个 <title>...</title>
+    # forms（最多保留前 3 个，避免过多）
+    for i, m in enumerate(RE_FORM.finditer(html)):
+        if i >= 3:
+            break
+        parts.append((m.group(0), 2))
+    # links（最多保留前 20 个）
+    for i, m in enumerate(RE_A_TAG.finditer(html)):
+        if i >= 20:
+            break
+        href = m.group(1)
+        text = m.group(2).strip()
+        # 只保留有实际文本的链接，且 href 不为空
+        if href and text:
+            parts.append((f'<a href="{href}">{text}</a>', 3))
+        elif href:
+            parts.append((f'<a href="{href}">link</a>', 3))
+    return parts
+
+def truncate_html_by_tokens(
+    html: str,
+    max_tokens: int = 120_000,
+    encoding_name: str = ENCODING_NAME,
+) -> str:
+    """
+    安全截断 HTML 文本，优先保留 <title>、<form>、<a> 标签，
+    然后用剩余 token 预算填充原始 HTML 的前部内容。
+
+    参数:
+        html: 原始 HTML 字符串
+        max_tokens: 最大 token 数量
+        encoding_name: tiktoken 编码名称
+
+    返回:
+        截断后的 HTML 文本（不保证完美结构，但保留关键线索）
+    """
+    if not html:
+        return html
+
+    # 如果不超限，直接返回
+    total = token_count(html, encoding_name)
+    if total <= max_tokens:
+        return html
+
+    # 提取关键部分，按优先级排序
+    key_parts = _extract_key_parts(html)
+    key_parts.sort(key=lambda x: x[1])  # 优先级从高到低
+
+    # 构建包含关键内容的字符串
+    selected_key = ""
+    key_tokens = 0
+    for part, _ in key_parts:
+        part_tokens = token_count(part, encoding_name)
+        if key_tokens + part_tokens > max_tokens * 0.5:  # 最多用一半的 token 给关键内容
+            break
+        selected_key += part + "\n"
+        key_tokens += part_tokens
+
+    # 剩余 token 预算
+    remaining_budget = max_tokens - key_tokens
+    if remaining_budget <= 0:
+        # 关键内容本身就已经超过预算了，直接返回关键内容的截断
+        # 注意：可能需要进一步截断 selected_key 到 max_tokens，这里简单处理
+        enc = tiktoken.get_encoding(encoding_name)
+        tokens = enc.encode(selected_key)
+        if len(tokens) > max_tokens:
+            tokens = tokens[:max_tokens]
+            selected_key = enc.decode(tokens)
+        return selected_key
+
+    # 从原始 HTML 的前部取字符，尽可能填满剩余预算
+    # 注意：直接按 token 数截取字节数不一定准确，这里用字符数比例估算
+    # 更准确的做法：先取前部 2倍剩余预算的字符，再编码裁剪
+    front_chars = int(len(html) * (remaining_budget / total)) + 5000
+    front_chars = min(front_chars, len(html))
+    front_html = html[:front_chars]
+
+    # 精确裁剪到剩余 token 数
+    enc = tiktoken.get_encoding(encoding_name)
+    tokens = enc.encode(front_html)
+    if len(tokens) > remaining_budget:
+        tokens = tokens[:remaining_budget]
+    front_html = enc.decode(tokens)
+
+    # 拼接结果：关键内容在前，让模型优先看到；然后是原始前部内容
+    result = f"{selected_key}\n<!-- key parts above -->\n{front_html}"
+    return result

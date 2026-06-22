@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<!-- HTML5 Boilerplate -->
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js">
+ <!--<![endif]-->
+ <head>
+  <meta charset="utf-8"/>
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame -->
+  <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible"/>
+  <title>
+   Jess Homes Guelph - Login
+  </title>
+  <meta content="We are a home building and custom renovations company led by Jess Lacoursiere based in Guelph, Ontario serving Wellington County and South Western Ontario including Cambridge and Kitchener/Waterloo. We have more than 40 years of experience in helping our clients build their dream projects." name="description"/>
+  <meta content="Contact Us, home building, renovations, contractor, Guelph, Jess Lacoursiere, Wellington County, South Western Ontario, Cambridge, Kitchener/Waterloo, kitchens, bathrooms, decks, additions, extensions, project management" name="keywords"/>
+  <script src="jquery.js" type="text/javascript">
+  </script>
+  <!--                                                            //-->
+  <!--  � 2003 - 2008 MotionsMedia Technology and Communications  //-->
+  <!--  Author: Edward Anthony Gal                                //-->
+  <!--  All rights reserved                                       //-->
+  <!--                                                            //-->
+  <!--  2008-11-30 change - conversion to the new template        //-->
+  <!--                      based on 88 Redpath                   //-->
+  <script language="JavaScript">
+   <!--
+
+// ROLL OVER
+
+var imageOn = new Array();
+var imageOff = new Array();
+var imageDirectory;
+
+function initRollovers()
+{
+	if (document.images)
+	{
+		for (var i = 0; i < imageOnFiles.length; i++)
+		{
+			currentName = imageTagNames[i];
+			imageOff[currentName] = new Image();
+			imageOn[currentName] = new Image();
+			imageOff[currentName].src = imageDirectory + imageOffFiles[i];
+			imageOn[currentName].src = imageDirectory + imageOnFiles[i];
+		}
+	}
+}
+
+function rollon(img)
+{
+	if (document.images && imageOn[img])
+	{
+		document.images[img].src = imageOn[img].src;
+	}
+}
+
+function rolloff(img)
+{
+	if (document.images && imageOff[img])
+	{
+		document.images[img].src = imageOff[img].src;
+	}
+}
+
+var indeximages=new Array()
+//SET IMAGE PATHS. Extend or contract array as needed
+indeximages[0]=["flash/index0.gif", "#", ""] //plain image syntax
+indeximages[1]=["flash/index1.jpg", "#", ""] //plain image syntax
+indeximages[2]=["flash/index2.jpg", "#", ""] //image with link syntax
+indeximages[3]=["flash/index3.jpg", "#", ""] //image with link syntax
+
+var fadeimages=new Array()
+//SET IMAGE PATHS. Extend or contract array as needed
+fadeimages[0]=["images/pic_inourp.jpg", "#", ""] //plain image syntax
+fadeimages[1]=["images/pic_inourp2.jpg", "#", ""] //image with link syntax
+fadeimages[2]=["images/pic_inourp3.jpg", "#", ""] //image with link syntax
+fadeimages[3]=["images/pic_inourp4.jpg", "#", ""] //image with link syntax
+fadeimages[4]=["images/pic_inourp5.jpg", "#", ""] //image with link syntax
+fadeimages[5]=["images/pic_inourp6.jpg", "#", ""] //image with link syntax
+fadeimages[6]=["images/pic_inourp7.jpg", "#", ""] //image with link syntax
+fadeimages[7]=["images/pic_inourp8.jpg", "#", ""] //image with link syntax
+ 
+var fadeimages2=new Array() //2nd array set example. Remove or add more sets as needed.
+//SET IMAGE PATHS. Extend or contract array as needed
+fadeimages2[0]=["logos1.gif", "", ""] //plain image syntax
+fadeimages2[1]=["logos2.gif", "http://www.cssdrive.com", ""] //image with link syntax
+ 
+var fadebgcolor="white"
+ 
+////NO need to edit beyond here/////////////
+ 
+var fadearray=new Array() //array to cache fadeshow instances
+var fadeclear=new Array() //array to cache corresponding clearinterval pointers
+ 
+var dom=(document.getElementById) //modern dom browsers
+var iebrowser=document.all
+ 
+function fadeshow(theimages, fadewidth, fadeheight, borderwidth, delay, pause, onetime, displayorder){
+this.flag=0
+this.onetime=onetime
+this.pausecheck=pause
+this.mouseovercheck=0
+this.delay=delay
+this.degree=10 //initial opacity degree (10%)
+this.curimageindex=0
+this.nextimageindex=1
+fadearray[fadearray.length]=this
+this.slideshowid=fadearray.length-1
+this.canvasbase="canvas"+this.slideshowid
+this.curcanvas=this.canvasbase+"_0"
+if (typeof displayorder!="undefined")
+theimages.sort(function() {return 0.5 - Math.random();}) //thanks to Mike (aka Mwinter) :)
+this.theimages=theimages
+this.imageborder=parseInt(borderwidth)
+this.postimages=new Array() //preload images
+for (p=0;p<theimages.length;p++){
+this.postimages[p]=new Image()
+this.postimages[p].src=theimages[p][0]
+}
+ 
+var fadewidth=fadewidth+this.imageborder*2
+var fadeheight=fadeheight+this.imageborder*2
+ 
+if (iebrowser&&dom||dom) //if IE5+ or modern browsers (ie: Firefox)
+document.write('<div id="master'+this.slideshowid+'" style="position:relative;width:'+fadewidth+'px;height:'+fadeheight+'px;overflow:hidden;"><div id="'+this.canvasbase+'_0" style="position:absolute;width:'+fadewidth+'px;height:'+fadeheight+'px;top:0;left:0;filter:progid:DXImageTransform.Microsoft.alpha(opacity=10);-moz-opacity:10;-khtml-opacity:10;background-color:'+fadebgcolor+'"></div><div id="'+this.canvasbase+'_1" style="position:absolute;width:'+fadewidth+'px;height:'+fadeheight+'px;top:0;left:0;filter:progid:DXImageTransform.Microsoft.alpha(opacity=10);-moz-opacity:10;background-color:'+fadebgcolor+'"></div></div>')
+else
+document.write('<div><img name="defaultslide'+this.slideshowid+'" src="'+this.postimages[0].src+'"></div>')
+ 
+if (iebrowser&&dom||dom) //if IE5+ or modern browsers such as Firefox
+this.startit()
+else{
+this.curimageindex++
+setInterval("fadearray["+this.slideshowid+"].rotateimage()", this.delay)
+}
+}
+
+function fadepic(obj){
+if (obj.degree<100){
+obj.degree+=10
+if (obj.tempobj.filters&&obj.tempobj.filters[0]){
+if (typeof obj.tempobj.filters[0].opacity=="number") //if IE6+
+obj.tempobj.filters[0].opacity=obj.degree
+else //else if IE5.5-
+obj.tempobj.style.filter="alpha(opacity="+obj.degree+")"
+}
+else if (obj.tempobj.style.MozOpacity)
+obj.tempobj.style.MozOpacity=obj.degree/101
+else if (obj.tempobj.style.KhtmlOpacity)
+obj.tempobj.style.KhtmlOpacity=obj.degree/100
+}
+else{
+clearInterval(fadeclear[obj.slideshowid])
+obj.nextcanvas=(obj.curcanvas==obj.canvasbase+"_0")? obj.canvasbase+"_0" : obj.canvasbase+"_1"
+obj.tempobj=iebrowser? iebrowser[obj.nextcanvas] : document.getElementById(obj.nextcanvas)
+if(obj.flag&&obj.onetime)
+return;
+if(obj.nextimageindex==obj.postimages.length-1)
+obj.flag=1
+obj.populateslide(obj.tempobj, obj.nextimageindex)
+obj.nextimageindex=(obj.nextimageindex<obj.postimages.length-1)? obj.nextimageindex+1 : 0
+setTimeout("fadearray["+obj.slideshowid+"].rotateimage()", obj.delay)
+}
+}
+
+ 
+fadeshow.prototype.populateslide=function(picobj, picindex){
+var slideHTML=""
+if (this.theimages[picindex][1]!="") //if associated link exists for image
+slideHTML='<a href="'+this.theimages[picindex][1]+'" target="'+this.theimages[picindex][2]+'">'
+slideHTML+='<img src="'+this.postimages[picindex].src+'" border="'+this.imageborder+'px">'
+if (this.theimages[picindex][1]!="") //if associated link exists for image
+slideHTML+='</a>'
+picobj.innerHTML=slideHTML
+}
+ 
+ 
+fadeshow.prototype.rotateimage=function(){
+if (this.pausecheck==1) //if pause onMouseover enabled, cache object
+var cacheobj=this
+if (this.mouseovercheck==1)
+setTimeout(function(){cacheobj.rotateimage()}, 100)
+else if (iebrowser&&dom||dom){
+this.resetit()
+var crossobj=this.tempobj=iebrowser? iebrowser[this.curcanvas] : document.getElementById(this.curcanvas)
+crossobj.style.zIndex++
+fadeclear[this.slideshowid]=setInterval("fadepic(fadearray["+this.slideshowid+"])",50)
+this.curcanvas=(this.curcanvas==this.canvasbase+"_0")? this.canvasbase+"_1" : this.canvasbase+"_0"
+}
+else{
+var ns4imgobj=document.images['defaultslide'+this.slideshowid]
+ns4imgobj.src=this.postimages[this.curimageindex].src
+}
+this.curimageindex=(this.curimageindex<this.postimages.length-1)? this.curimageindex+1 : 0
+}
+ 
+fadeshow.prototype.resetit=function(){
+this.degree=10
+var crossobj=iebrowser? iebrowser[this.curcanvas] : document.getElementById(this.curcanvas)
+if (crossobj.filters&&crossobj.filters[0]){
+if (typeof crossobj.filters[0].opacity=="number") //if IE6+
+crossobj.filters(0).opacity=this.degree
+else //else if IE5.5-
+crossobj.style.filter="alpha(opacity="+this.degree+")"
+}
+else if (crossobj.style.MozOpacity)
+crossobj.style.MozOpacity=this.degree/101
+else if (crossobj.style.KhtmlOpacity)
+crossobj.style.KhtmlOpacity=obj.degree/100
+}
+ 
+ 
+fadeshow.prototype.startit=function(){
+var crossobj=iebrowser? iebrowser[this.curcanvas] : document.getElementById(this.curcanvas)
+this.populateslide(crossobj, this.curimageindex)
+if (this.pausecheck==1){ //IF SLIDESHOW SHOULD PAUSE ONMOUSEOVER
+var cacheobj=this
+var crossobjcontainer=iebrowser? iebrowser["master"+this.slideshowid] : document.getElementById("master"+this.slideshowid)
+crossobjcontainer.onmouseover=function(){cacheobj.mouseovercheck=1}
+crossobjcontainer.onmouseout=function(){cacheobj.mouseovercheck=0}
+}
+this.rotateimage()
+}
+
+function original() {
+document.emp.src = Image0.src; return true; 
+}
+
+function p1() {
+document.emp.src = Image1.src; return true;
+}
+
+function p2() {
+document.emp.src = Image2.src; return true;
+}
+
+function p3() {
+document.emp.src = Image3.src; return true;
+}
+
+function p4() {
+document.emp.src = Image4.src; return true;
+}
+
+function p5() {
+document.emp.src = Image5.src; return true;
+}
+
+function p6() {
+document.emp.src = Image6.src; return true;
+}
+
+function p7() {
+document.emp.src = Image7.src; return true;
+}
+
+function p8() {
+document.emp.src = Image8.src; return true;
+}
+
+function p9() {
+document.emp.src = Image9.src; return true;
+}
+
+function p10() {
+document.emp.src = Image10.src; return true;
+}
+
+function p11() {
+document.emp.src = Image11.src; return true;
+}
+
+function p12() {
+document.emp.src = Image12.src; return true;
+}
+
+function p13() {
+document.emp.src = Image13.src; return true;
+}
+
+function p14() {
+document.emp.src = Image14.src; return true;
+}
+
+function p15() {
+document.emp.src = Image15.src; return true;
+}
+
+function p16() {
+document.emp.src = Image16.src; return true;
+}
+
+function p17() {
+document.emp.src = Image17.src; return true;
+}
+
+function p18() {
+document.emp.src = Image18.src; return true;
+}
+
+function MM_swapImgRestore() { //v3.0
+  var i,x,a=document.MM_sr; for(i=0;a&&i<a.length&&(x=a[i])&&x.oSrc;i++) x.src=x.oSrc;
+}
+
+function MM_preloadImages() { //v3.0
+  var d=document; if(d.images){ if(!d.MM_p) d.MM_p=new Array();
+    var i,j=d.MM_p.length,a=MM_preloadImages.arguments; for(i=0; i<a.length; i++)
+    if (a[i].indexOf("#")!=0){ d.MM_p[j]=new Image; d.MM_p[j++].src=a[i];}}
+}
+
+function MM_swapImage() { //v3.0
+  var i,j=0,x,a=MM_swapImage.arguments; document.MM_sr=new Array; for(i=0;i<(a.length-2);i+=3)
+   if ((x=MM_findObj(a[i]))!=null){document.MM_sr[j++]=x; if(!x.oSrc) x.oSrc=x.src; x.src=a[i+2];}
+}
+
+function MM_findObj(n, d) { //v4.01
+  var p,i,x;  if(!d) d=document; if((p=n.indexOf("?"))>0&&parent.frames.length) {
+    d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);}
+  if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i<d.forms.length;i++) x=d.forms[i][n];
+  for(i=0;!x&&d.layers&&i<d.layers.length;i++) x=MM_findObj(n,d.layers[i].document);
+  if(!x && d.getElementById) x=d.getElementById(n); return x;
+}
+
+function createWindow(cUrl,cName,cFeatures) {
+var xWin = window.open(cUrl,cName,cFeatures)
+}
+
+function goto(page) {
+ var location=(page);
+ this.location.href = location;
+    }
+
+function go(aMenu){
+if (aMenu.options.value!="none")
+{
+location=aMenu.options[aMenu.selectedIndex].value
+} 
+else
+aMenu.options[0].selected=true;
+}
+
+function validatefrm1() {
+
+    var errormsg = ""
+    var thisform = document.forms[0]
+    var emailFilter=/^.+@.+\..{2,3}$/;
+
+    if (thisform.Last_Name.value.indexOf("'")!==-1) {
+        errormsg = errormsg + "\r Last Name cannot contain an apostrophe"
+        }
+    if (thisform.Last_Name.value=="") {
+        errormsg = errormsg + "\r Last Name must be entered"
+        }
+
+    if (thisform.First_Name.value.indexOf("'")!==-1) {
+        errormsg = errormsg + "\r First Name cannot contain an apostrophe"
+        }
+    if (thisform.First_Name.value=="") {
+        errormsg = errormsg + "\r First Name must be entered"
+        }
+
+    if (thisform.Telephone.value.indexOf("'")!==-1) {
+        errormsg = errormsg + "\r Telephone cannot contain an apostrophe"
+        }
+    if (thisform.Telephone.value=="") {
+        errormsg = errormsg + "\r Telephone must be entered"
+        }
+
+    if (thisform.Email_Address.value.indexOf("'")!==-1) {
+        errormsg = errormsg + "\r Email cannot contain an apostrophe"
+        }
+    if (thisform.Email_Address.value=="") {
+        errormsg = errormsg + "\r Email must be entered"
+        }
+    else
+    {
+    if (!(emailFilter.test(thisform.Email_Address.value))) { 
+        errormsg = errormsg + "\r Please enter a valid email address";
+        }
+    }
+
+    if (errormsg == "") {
+        document.forms[0].action=("sendemail.asp");
+        document.forms[0].submit()
+        }
+    else {
+        alert(errormsg)
+        }
+ }
+
+<!--
+// -----------------------------------------------------------------------------
+// Globals
+// Major version of Flash required
+var requiredMajorVersion = 7;
+// Minor version of Flash required
+var requiredMinorVersion = 0;
+// Revision of Flash required
+var requiredRevision = 0;
+// the version of javascript supported
+var jsVersion = 1.0;
+// -----------------------------------------------------------------------------
+// -->
+  </script>
+  <script language="VBScript" type="text/vbscript">
+   <!-- // Visual basic helper required to detect Flash Player ActiveX control version information
+Function VBGetSwfVer(i)
+  on error resume next
+  Dim swControl, swVersion
+  swVersion = 0
+  
+  set swControl = CreateObject("ShockwaveFlash.ShockwaveFlash." + CStr(i))
+  if (IsObject(swControl)) then
+    swVersion = swControl.GetVariable("$version")
+  end if
+  VBGetSwfVer = swVersion
+End Function
+// -->
+  </script>
+  <script language="JavaScript1.1" type="text/javascript">
+   <!-- // Detect Client Browser type
+var isIE  = (navigator.appVersion.indexOf("MSIE") != -1) ? true : false;
+var isWin = (navigator.appVersion.toLowerCase().indexOf("win") != -1) ? true : false;
+var isOpera = (navigator.userAgent.indexOf("Opera") != -1) ? true : false;
+jsVersion = 1.1;
+// JavaScript helper required to detect Flash Player PlugIn version information
+function JSGetSwfVer(i){
+	// NS/Opera version >= 3 check for Flash plugin in plugin array
+	if (navigator.plugins != null && navigator.plugins.length > 0) {
+		if (navigator.plugins["Shockwave Flash 2.0"] || navigator.plugins["Shockwave Flash"]) {
+			var swVer2 = navigator.plugins["Shockwave Flash 2.0"] ? " 2.0" : "";
+      		var flashDescription = navigator.plugins["Shockwave Flash" + swVer2].description;
+			descArray = flashDescription.split(" ");
+			tempArrayMajor = descArray[2].split(".");
+			versionMajor = tempArrayMajor[0];
+			versionMinor = tempArrayMajor[1];
+			if ( descArray[3] != "" ) {
+				tempArrayMinor = descArray[3].split("r");
+			} else {
+				tempArrayMinor = descArray[4].split("r");
+			}
+      		versionRevision = tempArrayMinor[1] > 0 ? tempArrayMinor[1] : 0;
+            flashVer = versionMajor + "." + versionMinor + "." + versionRevision;
+      	} else {
+			flashVer = -1;
+		}
+	}
+	// MSN/WebTV 2.6 supports Flash 4
+	else if (navigator.userAgent.toLowerCase().indexOf("webtv/2.6") != -1) flashVer = 4;
+	// WebTV 2.5 supports Flash 3
+	else if (navigator.userAgent.toLowerCase().indexOf("webtv/2.5") != -1) flashVer = 3;
+	// older WebTV supports Flash 2
+	else if (navigator.userAgent.toLowerCase().indexOf("webtv") != -1) flashVer = 2;
+	// Can't detect in all other cases
+	else {
+		
+		flashVer = -1;
+	}
+	return flashVer;
+} 
+// If called with no parameters this function returns a floating point value 
+// which should be the version of the Flash Player or 0.0 
+// ex: Flash Player 7r14 returns 7.14
+// If called with reqMajorVer, reqMinorVer, reqRevision returns true if that version or greater is available
+function DetectFlashVer(reqMajorVer, reqMinorVer, reqRevision) 
+{
+ 	reqVer = parseFloat(reqMajorVer + "." + reqRevision);
+   	// loop backwards through the versions until we find the newest version	
+	for (i=25;i>0;i--) {	
+		if (isIE && isWin && !isOpera) {
+			versionStr = VBGetSwfVer(i);
+		} else {
+			versionStr = JSGetSwfVer(i);		
+		}
+		if (versionStr == -1 ) { 
+			return false;
+		} else if (versionStr != 0) {
+			if(isIE && isWin && !isOpera) {
+				tempArray         = versionStr.split(" ");
+				tempString        = tempArray[1];
+				versionArray      = tempString .split(",");				
+			} else {
+				versionArray      = versionStr.split(".");
+			}
+			versionMajor      = versionArray[0];
+			versionMinor      = versionArray[1];
+			versionRevision   = versionArray[2];
+			
+			versionString     = versionMajor + "." + versionRevision;   // 7.0r24 == 7.24
+			versionNum        = parseFloat(versionString);
+        	// is the major.revision >= requested major.revision AND the minor version >= requested minor
+			if ( (versionMajor > reqMajorVer) && (versionNum >= reqVer) ) {
+				return true;
+			} else {
+				return ((versionNum >= reqVer && versionMinor >= reqMinorVer) ? true : false );	
+			}
+		}
+	}	
+	return (reqVer ? false : 0.0);
+}
+
+//-->
+  </script>
+  <script src="slideshow.js" type="text/javascript">
+  </script>
+  <meta content="www.motionsmedia.com" name="author"/>
+  <meta content="on" http-equiv="cleartype"/>
+  <link href="images/basman.ico" rel="shortcut icon" type="image/x-icon"/>
+  <link href="images/jessh.ico" rel="icon" type="image/x-icon"/>
+  <!-- Responsive and mobile friendly stuff -->
+  <meta content="True" name="HandheldFriendly"/>
+  <meta content="320" name="MobileOptimized"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <!-- mm Stylesheet -->
+  <link href="style.css" media="all" rel="stylesheet"/>
+  <!-- menu Stylesheet -->
+  <link href="menu-cssjs/main.css" rel="stylesheet" type="text/css"/>
+  <link href="menu-cssjs/options.css" rel="stylesheet" type="text/css"/>
+  <link href="menu-cssjs/style.css" rel="stylesheet" type="text/css"/>
+  <script src="menu-cssjs/jquery.js" type="text/javascript">
+  </script>
+  <script src="menu-cssjs/custom.js" type="text/javascript">
+  </script>
+  <script src="menu-cssjs/css3-mediaqueries.js" type="text/javascript">
+  </script>
+  <!-- rgs Stylesheets -->
+  <link href="css/html5reset.css" media="all" rel="stylesheet"/>
+  <link href="css/responsivegridsystem.css" media="all" rel="stylesheet"/>
+  <link href="css/col.css" media="all" rel="stylesheet"/>
+  <link href="css/2cols.css" media="all" rel="stylesheet"/>
+  <link href="css/3cols.css" media="all" rel="stylesheet"/>
+  <link href="css/4cols.css" media="all" rel="stylesheet"/>
+  <link href="css/5cols.css" media="all" rel="stylesheet"/>
+  <link href="css/6cols.css" media="all" rel="stylesheet"/>
+  <link href="css/7cols.css" media="all" rel="stylesheet"/>
+  <link href="css/8cols.css" media="all" rel="stylesheet"/>
+  <link href="css/9cols.css" media="all" rel="stylesheet"/>
+  <link href="css/10cols.css" media="all" rel="stylesheet"/>
+  <link href="css/11cols.css" media="all" rel="stylesheet"/>
+  <link href="css/12cols.css" media="all" rel="stylesheet"/>
+  <!-- Responsive Stylesheets -->
+  <link href="css/1024.css" media="only screen and (max-width: 1024px) and (min-width: 769px)" rel="stylesheet"/>
+  <link href="css/768.css" media="only screen and (max-width: 768px) and (min-width: 481px)" rel="stylesheet"/>
+  <link href="/css/480.css" media="only screen and (max-width: 480px)" rel="stylesheet"/>
+  <!-- mm2 Stylesheet -->
+  <link href="style2.css" media="all" rel="stylesheet"/>
+  <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements and feature detects -->
+  <script src="js/modernizr-2.5.3-min.js">
+  </script>
+  <script src="m-js/jquery.min.js">
+  </script>
+  <script>
+   jQuery( document ).ready( function( $ ) {
+	
+		$('body').addClass('js');
+		  var $menu = $('#menu'),
+		  	  $menulink = $('.menu-link'),
+		  	  $menuTrigger = $('.has-submenu > a');
+
+		$menulink.click(function(e) {
+			e.preventDefault();
+			$menulink.toggleClass('active');
+			$menu.toggleClass('active');
+		});
+
+		$menuTrigger.click(function(e) {
+			e.preventDefault();
+			var $this = $(this);
+			$this.toggleClass('active').next('ul').toggleClass('active');
+		});
+
+		
+});
+  </script>
+ </head>
+ <body class="xbody">
+  <div id="skiptomain">
+   <a href="#maincontent">
+    skip to main content
+   </a>
+  </div>
+  <div id="wrapper">
+   <div id="maincontentcontainer">
+    <div id="maincontent">
+     <div class="xbigsquare">
+      <div class="login">
+       <div class="section group">
+        <div class="xcol span_1_of_1">
+         <img alt="basman smith llp toronto" class="floatleft" src="images/logo.jpg"/>
+        </div>
+       </div>
+      </div>
+      <div class="section group">
+       <!-- NAV Start -->
+       <div class="container">
+        <div class="menu_container green full_width" id="menu1">
+         <label class="mobile_collapser" for="hidden_menu_collapser">
+          Menu
+         </label>
+         <!-- Mobile menu title -->
+         <input id="hidden_menu_collapser" type="checkbox"/>
+         <ul>
+          <li>
+           <a href="index.php">
+            Home
+           </a>
+          </li>
+          <li>
+           <a href="inabout.php">
+            About Us
+           </a>
+          </li>
+          <li>
+           <a href="#">
+            What We Do
+           </a>
+           <div class="menu_dropdown_block">
+            <ul class="menu_submenu_block">
+             <li>
+              <a href="inhome.php">
+               New Home Construction
+              </a>
+             </li>
+             <li>
+              <a href="inreno.php">
+               Kitchens and Bathrooms
+              </a>
+             </li>
+             <li>
+              <a href="inreno.php">
+               Basement Renovations and Additions
+              </a>
+             </li>
+             <li>
+              <a href="indeck.php">
+               Decks and Outdoor Additions
+              </a>
+             </li>
+             <li>
+              <a href="inmgmt.php">
+               Project Management
+              </a>
+             </li>
+            </ul>
+           </div>
+          </li>
+          <li>
+           <a href="inphot.php">
+            Photo Gallery
+           </a>
+          </li>
+          <li>
+           <a href="intest.php">
+            Testimonials
+           </a>
+          </li>
+          <li>
+           <a href="incont.php">
+            Contact Us
+           </a>
+          </li>
+          <li>
+           <a href="login.php">
+            Login
+           </a>
+          </li>
+         </ul>
+        </div>
+        <!-- /menu -->
+       </div>
+       <!-- NAV End -->
+      </div>
+      <div class="section group">
+       <div class="col xspan_1_of_1_right">
+        <img alt="" class="ximg" src="images/icon-phone.png"/>
+        &nbsp;
+        <a href="mailto:jesslacoursierehomes@gmail.com">
+         <img alt="" class="ximg" src="images/icon-email.png"/>
+        </a>
+       </div>
+      </div>
+      <div class="section group">
+       <div class="col span_3_of_3">
+        <h1 class="xh1">
+         Login
+        </h1>
+        <!-- Login Page -->
+        <div style="color:#333;margin:1em auto;text-align:center;">
+         <div style="display:inline-block;max-width:355px;padding-right:1em;text-align:left;">
+          <h1>
+           Online Access for Homeowners
+          </h1>
+          Our simple online system makes it possible to access your project from any computer, tablet, or smartphone.
+          <br/>
+          <iframe frameborder="0" src="https://buildertrend.net/NewLoginFrame.aspx?builderID=22628" style="border:0px;height:180px;width:100%;margin-top:1em;">
+          </iframe>
+         </div>
+         <div style="display:inline-block;width:100%;max-width:500px;vertical-align:top;padding-top:20px;">
+          <div style="position:relative;padding-bottom:51.25%;padding-top:25px;height: 0;">
+           <iframe allowfullscreen="" frameborder="0" src="https://www.youtube.com/embed/wRDxGHotVJ8?rel=0" style="position:absolute;top:0;left:0;width:100%;height:100%;">
+           </iframe>
+          </div>
+         </div>
+         <div style="color:#999;font-size:.8em;font-style:italic;margin-top:1em;width:100%;">
+          To access your account please contact Buildertrend at
+          <span style="white-space:nowrap;">
+           1-888-415-7179.
+          </span>
+         </div>
+        </div>
+        <!-- /Login Page -->
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div id="footercontainer">
+    <footer class="group">
+     <div class="col span_1_of_3">
+      <h4 class="h4footer">
+       About Jess Homes (Guelph)
+      </h4>
+      <p class="pfooter">
+       Jess Lacoursiere has more than 40 years of experience in the construction and renovation business and is a proud member of his community. With a reputation for being honest and approachable, Jess has built a solid team of experienced professionals who are dedicated to excellence.
+      </p>
+     </div>
+     <div class="col span_1_of_3">
+      <h4 class="h4footer">
+       Our Philosophy
+      </h4>
+      <p class="pfooter">
+       We are inspired by the ideas and imagination of our clients. We see our relationship with our clients as a partnership of mutual respect, one in which we collaborate together in building something great. Our motto is "THINK BIG" and "ALL THINGS ARE POSSIBLE" !!
+      </p>
+     </div>
+     <div class="col span_1_of_3">
+      <h4 class="h4footer">
+       Contact Us
+      </h4>
+      <p class="pfooter">
+       Feel free to
+       <a class="afooter" href="incont.php">
+        contact us
+       </a>
+       , we would be happy to meet with you free of charge at your convenience to discuss your project and help evaluate what is required to build your dream.
+      </p>
+     </div>
+     <br class="breaker"/>
+     <div id="smallprint">
+      <a href="http://www.motionsmedia.com/">
+       Site Created by MotionsMedia
+      </a>
+     </div>
+    </footer>
+   </div>
+  </div>
+  <!-- JavaScript at the bottom for fast page loading -->
+  <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+  <script src="js/jquery-1.7.2.min.js">
+  </script>
+  <!--[if (lt IE 9) & (!IEMobile)]>
+<script src="js/selectivizr-min.js"></script>
+<![endif]-->
+  <!-- More Scripts-->
+  <script src="js/responsivegridsystem.js">
+  </script>
+  <script type="text/javascript">
+   var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3725830-38']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+  </script>
+ </body>
+</html>

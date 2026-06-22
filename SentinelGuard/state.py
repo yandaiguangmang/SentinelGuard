@@ -19,8 +19,8 @@ def _safe_to_dict(value: Any) -> Any:
 
 @dataclass
 class AnalysisRuntimeConfig:
-    llm_api_key: str = "sk-hFs40fFuY5B9HkA76sD8R9P60uxYUQIuI7LEYfjxz0tMwG1N"
-    llm_base_url: str = "https://api.chatanywhere.tech"
+    llm_api_key: str = "sk-xeSxZRmQN98b2QkBZ6gR725sbVjht9yS9BXU3AQ0J0E289xz"
+    llm_base_url: str = "https://yunwu.ai/v1"
     proxy_http: str = "http://127.0.0.1:7897"
     proxy_https: str = "http://127.0.0.1:7897"
     proxy_all: str = "http://127.0.0.1:7897"

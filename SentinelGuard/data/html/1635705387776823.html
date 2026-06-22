@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html class="hasSidebar hasPageActions hasBreadcrumb conceptual has-default-focus theme-light" data-auth-status-determined="false" data-authenticated="false" data-css-variable-support="true" data-target="docs" dir="ltr" lang="en-us" x-ms-format-detection="none">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="Database normalization description - Office" property="og:title"/>
+  <meta content="website" property="og:type"/>
+  <meta content="https://docs.microsoft.com/en-us/office/troubleshoot/access/database-normalization-description" property="og:url"/>
+  <meta content="Describe the method to normalize the database and gives several alternatives to normalize forms. You need to master the database principles to understand them or you can follow the steps listed in the article." property="og:description"/>
+  <meta content="https://docs.microsoft.com/en-us/media/logos/logo-ms-social.png" property="og:image"/>
+  <meta content="Microsoft Logo" property="og:image:alt"/>
+  <meta content="summary" name="twitter:card"/>
+  <meta content="@docsmsft" name="twitter:site"/>
+  <meta content="light dark" name="color-scheme"/>
+  <meta content="ITPro" name="audience"/>
+  <meta content="MaryQiu1987" name="author"/>
+  <meta content="/office/troubleshoot/breadcrumb/toc.json" name="breadcrumb_path"/>
+  <meta content="office.OfficeDocs-Support-Office" name="depot_name"/>
+  <meta content="Describe the method to normalize the database and gives several alternatives to normalize forms. You need to master the database principles to understand them or you can follow the steps listed in the article." name="description"/>
+  <meta content="2cd6dedf-a161-f49c-3a9f-f5a7bafafb41" name="document_id"/>
+  <meta content="180356f6-6484-19bd-3efe-79682a1152c1" name="document_version_independent_id"/>
+  <meta content="https://github.com/MicrosoftDocs/OfficeDocs-Support-pr/blob/fb14bef97dd84a563f36888ad5932040d968ae93/Office/Client/access/database-normalization-description.md" name="gitcommit"/>
+  <meta content="en-us" name="locale"/>
+  <meta content="Normal" name="localization_priority"/>
+  <meta content="dcscontentpm" name="manager"/>
+  <meta content="v-maqiu" name="ms.author"/>
+  <meta content="CI 114797" name="ms.custom"/>
+  <meta content="CSSTroubleshoot" name="ms.custom"/>
+  <meta content="office-perpetual-itpro" name="ms.prod"/>
+  <meta content="rioj" name="ms.reviewer"/>
+  <meta content="article" name="ms.topic"/>
+  <meta content="https://github.com/MicrosoftDocs/OfficeDocs-Support-pr/blob/live/Office/Client/access/database-normalization-description.md" name="original_content_git_url"/>
+  <meta content="true" name="recommendations"/>
+  <meta content="Conceptual" name="schema"/>
+  <meta content="MET150" name="search.appverid"/>
+  <meta content="Docs" name="site_name"/>
+  <meta content="2021-05-17 05:22 AM" name="updated_at"/>
+  <meta content="conceptual" name="page_type"/>
+  <meta content="../clienttoc/toc.json" name="toc_rel"/>
+  <meta content="https://docs.microsoft.com/pdfstore/en-us/office.OfficeDocs-Support-Office/{branchName}{pdfName}" name="pdf_url_template"/>
+  <meta content="1165" name="word_count"/>
+  <meta content="Office Support" name="scope"/>
+  <link href="https://docs.microsoft.com/en-us/office/troubleshoot/access/database-normalization-description" rel="canonical"/>
+  <title>
+   Database normalization description - Office | Microsoft Docs
+  </title>
+  <link href="/_themes/docs.theme/master/en-US/_themes/styles/46dad2a9.site-ltr.css " rel="stylesheet"/>
+  <script id="msdocs-script">
+   var msDocs = {
+		data: {
+			timeOrigin: Date.now(),
+			contentLocale: 'en-us',
+			contentDir: 'ltr',
+			userLocale: 'en-us',
+			userDir: 'ltr',
+			pageTemplate: 'Conceptual',
+			brand: '',
+			context: {
+
+			},
+			hasBinaryRating: true,
+			hasGithubIssues: false,
+			showFeedbackReport: false,
+			enableTutorialFeedback: false,
+			feedbackSystem: 'None',
+			feedbackGitHubRepo: '',
+			feedbackProductUrl: '',
+			contentGitUrl: 'https://github.com/MicrosoftDocs/OfficeDocs-Support/blob/public/Office/Client/access/database-normalization-description.md',
+			extendBreadcrumb: true,
+			isEditDisplayable: false,
+			hideViewSource: false,
+			hasPageActions: true,
+			hasBookmark: true,
+			hasShare: true,
+			hasRecommendations: true,
+			contributors: [
+						{ name: "MaryQiu1987", url: "https://github.com/MaryQiu1987" },
+						{ name: "helenclu", url: "https://github.com/helenclu" },
+						{ name: "dariomws", url: "https://github.com/dariomws" },
+						{ name: "simonxjx", url: "https://github.com/simonxjx" }
+],
+		},
+		functions:{}
+	};
+  </script>
+  <script src="https://wcpstatic.microsoft.com/mscc/lib/v2/wcp-consent.js">
+  </script>
+  <script src="https://js.monitor.azure.com/scripts/c/ms.jsll-3.min.js">
+  </script>
+  <script src="/_themes/docs.theme/master/en-US/_themes/global/5cce29c0.deprecation.js">
+  </script>
+  <script src="/_themes/docs.theme/master/en-US/_themes/scripts/bb2ae21c.index-docs.js">
+  </script>
+ </head>
+ <body dir="ltr" lang="en-us">
+  <div class="header-holder has-default-focus">
+   <a class="skip-to-main-link has-outline-color-text visually-hidden-until-focused position-fixed has-inner-focus focus-visible top-0 left-0 right-0 padding-xs has-text-centered has-body-background" href="#main" tabindex="1">
+    Skip to main content
+   </a>
+   <div hidden="" id="cookie-consent-holder">
+   </div>
+   <div hidden="" id="unsupported-browser" style="
+			background-color: white;
+			color: black;
+			padding: 16px;
+			border-bottom: 1px solid grey;">
+    <div style="max-width: 800px; margin: 0 auto;">
+     <p style="font-size: 24px">
+      This browser is no longer supported.
+     </p>
+     <p style="font-size: 16px; margin-top: 16px;">
+      Upgrade to Microsoft Edge to take advantage of the latest features, security updates, and technical support.
+     </p>
+     <div style="margin-top: 12px;">
+      <a href="https://go.microsoft.com/fwlink/p/?LinkID=2092881 " style="
+						background-color: #0078d4;
+						border: 1px solid #0078d4;
+						color: white;
+						padding: 6px 12px;
+						border-radius: 2px;
+						display: inline-block;
+						">
+       Download Microsoft Edge
+      </a>
+      <a href="https://docs.microsoft.com/en-US/lifecycle/faq/internet-explorer-microsoft-edge" style="
+							background-color: white;
+							padding: 6px 12px;
+							border: 1px solid #505050;
+							color: #171717;
+							border-radius: 2px;
+							display: inline-block;
+							">
+       More info
+      </a>
+     </div>
+    </div>
+   </div>
+   <!-- liquid-tag banners global -->
+   <div data-bi-name="header" id="headerAreaHolder">
+    <header itemscope="itemscope" itemtype="http://schema.org/Organization" role="banner">
+     <div class="nav-bar">
+      <div class="nav-bar-brand">
+       <a aria-label="Microsoft" class="nav-bar-button" href="https://www.microsoft.com" itemprop="url">
+        <div aria-hidden="true" class="nav-bar-logo has-background-image theme-display is-light" itemprop="logo" itemscope="itemscope" role="presentation">
+        </div>
+        <div aria-hidden="true" class="nav-bar-logo has-background-image theme-display is-dark is-high-contrast" itemprop="logo" itemscope="itemscope" role="presentation">
+        </div>
+       </a>
+      </div>
+     </div>
+     <div class="is-hidden">
+     </div>
+    </header>
+   </div>
+   <div class="content-header uhf-container has-padding has-default-focus border-bottom-none" data-bi-name="content-header">
+    <nav aria-label="Breadcrumb" class="breadcrumb-holder has-padding-none has-padding-left-medium-tablet has-padding-right-medium-tablet has-padding-left-none-uhf-tablet has-padding-left-none-uhf-tablet has-padding-none-desktop flex-grow-1" data-bi-name="breadcrumb" itemscope="" itemtype="http://schema.org/BreadcrumbList" role="navigation">
+     <ul class="breadcrumbs" id="page-breadcrumbs">
+     </ul>
+    </nav>
+    <div class="content-header-controls">
+     <button aria-haspopup="true" class="contents-button button" data-bi-name="contents-expand" type="button">
+      <span class="icon">
+       <span aria-hidden="true" class="docon docon-menu">
+       </span>
+      </span>
+      <span class="contents-expand-title">
+       Contents
+      </span>
+     </button>
+     <button aria-controls="action-panel" class="ap-collapse-behavior ap-expanded button" data-bi-name="ap-collapse" type="button">
+      <span class="icon">
+       <span aria-hidden="true" class="docon docon-exit-mode">
+       </span>
+      </span>
+      <span>
+       Exit focus mode
+      </span>
+     </button>
+    </div>
+    <div class="has-padding-none-tablet padding-xs font-size-sm display-flex justify-content-space-between flex-grow-1 page-action-holder">
+     <ul class="is-hidden-mobile action-list justify-content-flex-start has-flex-justify-content-end-tablet display-flex flex-wrap-wrap flex-grow-1 is-unstyled">
+      <li hidden="">
+       <a class="button button button-clear button-sm" data-bi-name="language-toggle" id="lang-link" title="Read in English">
+        <span aria-hidden="true" class="icon docon docon-locale-globe" id="lang-link-icon">
+        </span>
+        <span class="is-visually-hidden-touch is-hidden-portrait" id="lang-link-text">
+        </span>
+       </a>
+      </li>
+      <li>
+       <button class="collection button button-clear button-sm has-inner-focus" data-bi-name="collection" data-list-type="collection" title="Add to collection" type="button">
+        <span aria-hidden="true" class="icon">
+         <span class="docon docon-circle-addition has-text-primary">
+         </span>
+        </span>
+        <span class="collection-status is-visually-hidden-touch is-hidden-portrait">
+         Save
+        </span>
+       </button>
+      </li>
+      <li>
+       <div class="sharing dropdown has-caret">
+        <button aria-controls="sharing-menu" aria-expanded="false" class="dropdown-trigger button button-clear button-sm button-block justify-content-flex-start has-inner-focus" data-bi-name="share" title="Share This Document">
+         <span aria-hidden="true" class="icon">
+          <span class="docon docon-sharing">
+          </span>
+         </span>
+         <span class="is-visually-hidden-touch is-hidden-portrait">
+          Share
+         </span>
+        </button>
+        <div class="dropdown-menu has-padding-small" id="sharing-menu">
+         <ul data-bi-name="share-links">
+          <li>
+           <a class="button button-clear button-sm button-block justify-content-flex-start has-inner-focus share-twitter" data-bi-name="twitter">
+            <span class="icon">
+             <span aria-hidden="true" class="docon docon-brand-twitter has-text-primary">
+             </span>
+            </span>
+            <span>
+             Twitter
+            </span>
+           </a>
+          </li>
+          <li>
+           <a class="button button-clear button-sm button-block justify-content-flex-start has-inner-focus share-linkedin" data-bi-name="linkedin">
+            <span class="icon">
+             <span aria-hidden="true" class="docon docon-brand-linkedin has-text-primary">
+             </span>
+            </span>
+            <span>
+             LinkedIn
+            </span>
+           </a>
+          </li>
+          <li>
+           <a class="button button-clear button-sm button-block justify-content-flex-start has-inner-focus share-facebook" data-bi-name="facebook">
+            <span class="icon">
+             <span aria-hidden="true" class="docon docon-brand-facebook has-text-primary">
+             </span>
+            </span>
+            <span>
+             Facebook
+            </span>
+           </a>
+          </li>
+          <li>
+           <a class="button button-clear button-sm button-block justify-content-flex-start has-inner-focus share-email" data-bi-name="email">
+            <span class="icon">
+             <span aria-hidden="true" class="docon docon-mail-message-fill has-text-primary">
+             </span>
+            </span>
+            <span>
+             Email
+            </span>
+           </a>
+          </li>
+         </ul>
+        </div>
+       </div>
+      </li>
+     </ul>
+     <button aria-label="Contents" class="border contents-button button button-clear button-sm is-hidden-tablet has-inner-focus" data-bi-name="contents-expand" type="button">
+      <span class="icon">
+       <span aria-hidden="true" class="docon docon-editor-list-bullet">
+       </span>
+      </span>
+      <span class="contents-expand-title">
+       Table of contents
+      </span>
+     </button>
+     <div class="is-invisible">
+     </div>
+     <div class="is-hidden-tablet level-item is-flexible level-right">
+      <button aria-label="Page Actions" class="page-actions-button button button-clear button-sm is-hidden-tablet has-inner-focus border is-full-height has-margin-left-small" data-bi-name="pageactions" type="button">
+       <span class="icon">
+        <span aria-hidden="true" class="docon docon-more-vertical">
+        </span>
+       </span>
+      </button>
+     </div>
+    </div>
+   </div>
+   <div class="has-overflow-hidden has-default-focus" id="disclaimer-holder">
+    <!-- liquid-tag banners sectional -->
+   </div>
+  </div>
+  <div class="mainContainer uhf-container has-top-padding has-default-focus" data-bi-name="body">
+   <div class="columns has-large-gaps is-gapless-mobile">
+    <div class="left-container is-hidden-mobile column is-one-third-tablet is-one-quarter-desktop" id="left-container">
+     <nav aria-label="Primary" class="position-fixed display-flex flex-direction-column" id="affixed-left-container" role="navigation">
+     </nav>
+    </div>
+    <!-- .primary-holder -->
+    <section class="primary-holder column is-two-thirds-tablet is-three-quarters-desktop">
+     <!--div.columns -->
+     <div class="columns is-gapless-mobile has-large-gaps">
+      <div class="column is-full is-8-desktop" id="main-column">
+       <main class="content" data-bi-name="content" dir="ltr" id="main" lang="en-us" role="main">
+        <h1 id="description-of-the-database-normalization-basics">
+         Description of the database normalization basics
+        </h1>
+        <ul class="metadata page-metadata" data-bi-name="page info" dir="ltr" lang="en-us">
+         <li>
+          <time aria-label="Article review date" class="is-invisible" data-article-date="" data-article-date-source="git" datetime="2021-05-17T05:22:00Z">
+           05/17/2021
+          </time>
+         </li>
+         <li class="readingTime">
+          5 minutes to read
+         </li>
+         <li class="contributors-holder">
+          <ul class="facepile has-margin-left-none is-small" data-bi-name="contributors">
+           <li class="facepile-item">
+            <a aria-label="MaryQiu1987Github profile" class="facepile-item-coin" data-contributor-name="MaryQiu1987" data-src="https://github.com/MaryQiu1987.png?size=32" href="https://github.com/MaryQiu1987" title="MaryQiu1987">
+             <img aria-hidden="true" class="facepile-item-coin-image durable-image" onerror="this.className='facepile-item-coin-image durable-image has-error';" role="presentation" src="https://github.com/MaryQiu1987.png?size=32"/>
+             <span aria-hidden="true" class="facepile-item-coin-text durable-image-fallback facepile-item-teal">
+              M
+             </span>
+            </a>
+           </li>
+           <li class="facepile-item">
+            <a aria-label="helencluGithub profile" class="facepile-item-coin" data-contributor-name="helenclu" data-src="https://github.com/helenclu.png?size=32" href="https://github.com/helenclu" title="helenclu">
+             <img aria-hidden="true" class="facepile-item-coin-image durable-image" onerror="this.className='facepile-item-coin-image durable-image has-error';" role="presentation" src="https://github.com/helenclu.png?size=32"/>
+             <span aria-hidden="true" class="facepile-item-coin-text durable-image-fallback facepile-item-red">
+              h
+             </span>
+            </a>
+           </li>
+           <li class="facepile-item">
+            <a aria-label="dariomwsGithub profile" class="facepile-item-coin" data-contributor-name="dariomws" data-src="https://github.com/dariomws.png?size=32" href="https://github.com/dariomws" title="dariomws">
+             <img aria-hidden="true" class="facepile-item-coin-image durable-image" onerror="this.className='facepile-item-coin-image durable-image has-error';" role="presentation" src="https://github.com/dariomws.png?size=32"/>
+             <span aria-hidden="true" class="facepile-item-coin-text durable-image-fallback facepile-item-blue">
+              d
+             </span>
+            </a>
+           </li>
+           <li class="facepile-item">
+            <a aria-label="simonxjxGithub profile" class="facepile-item-coin" data-contributor-name="simonxjx" data-src="https://github.com/simonxjx.png?size=32" href="https://github.com/simonxjx" title="simonxjx">
+             <img aria-hidden="true" class="facepile-item-coin-image durable-image" onerror="this.className='facepile-item-coin-image durable-image has-error';" role="presentation" src="https://github.com/simonxjx.png?size=32"/>
+             <span aria-hidden="true" class="facepile-item-coin-text durable-image-fallback facepile-item-teal">
+              s
+             </span>
+            </a>
+           </li>
+          </ul>
+         </li>
+         <li class="attributeList-holder">
+          <dl class="attributeList">
+           <dt>
+            Applies to:
+           </dt>
+           <dd>
+            Microsoft Office Access 2007, Microsoft Office Access 2003
+           </dd>
+          </dl>
+         </li>
+        </ul>
+        <nav aria-label="Article Outline" class="doc-outline is-hidden-desktop" data-bi-name="intopic toc" id="center-doc-outline" role="navigation">
+         <h3>
+          In this article
+         </h3>
+        </nav>
+        <!-- <content> -->
+        <div class="NOTE">
+         <p>
+          Note
+         </p>
+         <p>
+          <strong>
+           Office 365 ProPlus
+          </strong>
+          is being renamed to
+          <strong>
+           Microsoft 365 Apps for enterprise
+          </strong>
+          . For more information about this change,
+          <a data-linktype="external" href="https://go.microsoft.com/fwlink/p/?linkid=2120533">
+           read this blog post
+          </a>
+          .
+         </p>
+        </div>
+        <p>
+         <em>
+          Original KB number:
+         </em>
+         &Acirc;&nbsp; 283878
+        </p>
+        <p>
+         This article explains database normalization terminology for beginners. A basic understanding of this terminology is helpful when discussing the design of a relational database.
+        </p>
+        <h2 id="description-of-normalization">
+         Description of normalization
+        </h2>
+        <p>
+         Normalization is the process of organizing data in a database. This includes creating tables and establishing relationships between those tables according to rules designed both to protect the data and to make the database more flexible by eliminating redundancy and inconsistent dependency.
+        </p>
+        <p>
+         Redundant data wastes disk space and creates maintenance problems. If data that exists in more than one place must be changed, the data must be changed in exactly the same way in all locations. A customer address change is much easier to implement if that data is stored only in the Customers table and nowhere else in the database.
+        </p>
+        <p>
+         What is an "inconsistent dependency"? While it is intuitive for a user to look in the Customers table for the address of a particular customer, it may not make sense to look there for the salary of the employee who calls on that customer. The employee's salary is related to, or dependent on, the employee and thus should be moved to the Employees table. Inconsistent dependencies can make data difficult to access because the path to find the data may be missing or broken.
+        </p>
+        <p>
+         There are a few rules for database normalization. Each rule is called a "normal form." If the first rule is observed, the database is said to be in "first normal form." If the first three rules are observed, the database is considered to be in "third normal form." Although other levels of normalization are possible, third normal form is considered the highest level necessary for most applications.
+        </p>
+        <p>
+         As with many formal rules and specifications, real world scenarios do not always allow for perfect compliance. In general, normalization requires additional tables and some customers find this cumbersome. If you decide to violate one of the first three rules of normalization, make sure that your application anticipates any problems that could occur, such as redundant data and inconsistent dependencies.
+        </p>
+        <p>
+         The following descriptions include examples.
+        </p>
+        <h2 id="first-normal-form">
+         First normal form
+        </h2>
+        <ul>
+         <li>
+          Eliminate repeating groups in individual tables.
+         </li>
+         <li>
+          Create a separate table for each set of related data.
+         </li>
+         <li>
+          Identify each set of related data with a primary key.
+         </li>
+        </ul>
+        <p>
+         Do not use multiple fields in a single table to store similar data. For example, to track an inventory item that may come from two possible sources, an inventory record may contain fields for Vendor Code 1 and Vendor Code 2.
+        </p>
+        <p>
+         What happens when you add a third vendor? Adding a field is not the answer; it requires program and table modifications and does not smoothly accommodate a dynamic number of vendors. Instead, place all vendor information in a separate table called Vendors, then link inventory to vendors with an item number key, or vendors to inventory with a vendor code key.
+        </p>
+        <h2 id="second-normal-form">
+         Second normal form
+        </h2>
+        <ul>
+         <li>
+          Create separate tables for sets of values that apply to multiple records.
+         </li>
+         <li>
+          Relate these tables with a foreign key.
+         </li>
+        </ul>
+        <p>
+         Records should not depend on anything other than a table's primary key (a compound key, if necessary). For example, consider a customer's address in an accounting system. The address is needed by the Customers table, but also by the Orders, Shipping, Invoices, Accounts Receivable, and Collections tables. Instead of storing the customer's address as a separate entry in each of these tables, store it in one place, either in the Customers table or in a separate Addresses table.
+        </p>
+        <h2 id="third-normal-form">
+         Third normal form
+        </h2>
+        <ul>
+         <li>
+          Eliminate fields that do not depend on the key.
+         </li>
+        </ul>
+        <p>
+         Values in a record that are not part of that record's key do not belong in the table. In general, anytime the contents of a group of fields may apply to more than a single record in the table, consider placing those fields in a separate table.
+        </p>
+        <p>
+         For example, in an Employee Recruitment table, a candidate's university name and address may be included. But you need a complete list of universities for group mailings. If university information is stored in the Candidates table, there is no way to list universities with no current candidates. Create a separate Universities table and link it to the Candidates table with a university code key.
+        </p>
+        <p>
+         EXCEPTION: Adhering to the third normal form, while theoretically desirable, is not always practical. If you have a Customers table and you want to eliminate all possible interfield dependencies, you must create separate tables for cities, ZIP codes, sales representatives, customer classes, and any other factor that may be duplicated in multiple records. In theory, normalization is worth pursing. However, many small tables may degrade performance or exceed open file and memory capacities.
+        </p>
+        <p>
+         It may be more feasible to apply third normal form only to data that changes frequently. If some dependent fields remain, design your application to require the user to verify all related fields when any one is changed.
+        </p>
+        <h2 id="other-normalization-forms">
+         Other normalization forms
+        </h2>
+        <p>
+         Fourth normal form, also called Boyce Codd Normal Form (BCNF), and fifth normal form do exist, but are rarely considered in practical design. Disregarding these rules may result in less than perfect database design, but should not affect functionality.
+        </p>
+        <h2 id="normalizing-an-example-table">
+         Normalizing an example table
+        </h2>
+        <p>
+         These steps demonstrate the process of normalizing a fictitious student table.
+        </p>
+        <ol>
+         <li>
+          <p>
+           Unnormalized table:
+          </p>
+          <table>
+           <thead>
+            <tr>
+             <th>
+              Student#
+             </th>
+             <th>
+              Advisor
+             </th>
+             <th>
+              Adv-Room
+             </th>
+             <th>
+              Class1
+             </th>
+             <th>
+              Class2
+             </th>
+             <th>
+              Class3
+             </th>
+            </tr>
+           </thead>
+           <tbody>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              Jones
+             </td>
+             <td>
+              412
+             </td>
+             <td>
+              101-07
+             </td>
+             <td>
+              143-01
+             </td>
+             <td>
+              159-02
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              Smith
+             </td>
+             <td>
+              216
+             </td>
+             <td>
+              101-07
+             </td>
+             <td>
+              143-01
+             </td>
+             <td>
+              179-04
+             </td>
+            </tr>
+           </tbody>
+          </table>
+         </li>
+         <li>
+          <p>
+           First normal form: No repeating groups
+          </p>
+          <p>
+           Tables should have only two dimensions. Since one student has several classes, these classes should be listed in a separate table. Fields Class1, Class2, and Class3 in the above records are indications of design trouble.
+          </p>
+          <p>
+           Spreadsheets often use the third dimension, but tables should not. Another way to look at this problem is with a one-to-many relationship, do not put the one side and the many side in the same table. Instead, create another table in first normal form by eliminating the repeating group (Class#), as shown below:
+          </p>
+          <table>
+           <thead>
+            <tr>
+             <th>
+              Student#
+             </th>
+             <th>
+              Advisor
+             </th>
+             <th>
+              Adv-Room
+             </th>
+             <th>
+              Class#
+             </th>
+            </tr>
+           </thead>
+           <tbody>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              Jones
+             </td>
+             <td>
+              412
+             </td>
+             <td>
+              101-07
+             </td>
+            </tr>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              Jones
+             </td>
+             <td>
+              412
+             </td>
+             <td>
+              143-01
+             </td>
+            </tr>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              Jones
+             </td>
+             <td>
+              412
+             </td>
+             <td>
+              159-02
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              Smith
+             </td>
+             <td>
+              216
+             </td>
+             <td>
+              101-07
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              Smith
+             </td>
+             <td>
+              216
+             </td>
+             <td>
+              143-01
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              Smith
+             </td>
+             <td>
+              216
+             </td>
+             <td>
+              179-04
+             </td>
+            </tr>
+           </tbody>
+          </table>
+         </li>
+         <li>
+          <p>
+           Second normal form: Eliminate redundant data
+          </p>
+          <p>
+           Note the multiple Class# values for each Student# value in the above table. Class# is not functionally dependent on Student# (primary key), so this relationship is not in second normal form.
+          </p>
+          <p>
+           The following tables demonstrate second normal form:
+          </p>
+          <p>
+           Students:
+          </p>
+          <table>
+           <thead>
+            <tr>
+             <th>
+              Student#
+             </th>
+             <th>
+              Advisor
+             </th>
+             <th>
+              Adv-Room
+             </th>
+            </tr>
+           </thead>
+           <tbody>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              Jones
+             </td>
+             <td>
+              412
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              Smith
+             </td>
+             <td>
+              216
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p>
+           Registration:
+          </p>
+          <table>
+           <thead>
+            <tr>
+             <th>
+              Student#
+             </th>
+             <th>
+              Class#
+             </th>
+            </tr>
+           </thead>
+           <tbody>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              101-07
+             </td>
+            </tr>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              143-01
+             </td>
+            </tr>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              159-02
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              101-07
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              143-01
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              179-04
+             </td>
+            </tr>
+           </tbody>
+          </table>
+         </li>
+         <li>
+          <p>
+           Third normal form: Eliminate data not dependent on key
+          </p>
+          <p>
+           In the last example, Adv-Room (the advisor's office number) is functionally dependent on the Advisor attribute. The solution is to move that attribute from the Students table to the Faculty table, as shown below:
+          </p>
+          <p>
+           Students:
+          </p>
+          <table>
+           <thead>
+            <tr>
+             <th>
+              Student#
+             </th>
+             <th>
+              Advisor
+             </th>
+            </tr>
+           </thead>
+           <tbody>
+            <tr>
+             <td>
+              1022
+             </td>
+             <td>
+              Jones
+             </td>
+            </tr>
+            <tr>
+             <td>
+              4123
+             </td>
+             <td>
+              Smith
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <p>
+           Faculty:
+          </p>
+          <table>
+           <thead>
+            <tr>
+             <th>
+              Name
+             </th>
+             <th>
+              Room
+             </th>
+             <th>
+              Dept
+             </th>
+            </tr>
+           </thead>
+           <tbody>
+            <tr>
+             <td>
+              Jones
+             </td>
+             <td>
+              412
+             </td>
+             <td>
+              42
+             </td>
+            </tr>
+            <tr>
+             <td>
+              Smith
+             </td>
+             <td>
+              216
+             </td>
+             <td>
+              42
+             </td>
+            </tr>
+           </tbody>
+          </table>
+         </li>
+        </ol>
+        <!-- </content> -->
+       </main>
+       <!-- page rating section -->
+       <div class="is-hidden-desktop border-top has-margin-top-large has-padding-top-large binary-rating-holder">
+        <div class="feedback-verbatim border-bottom has-padding-bottom-large has-margin-bottom-small" data-bi-name="rating">
+         <div class="binary-rating">
+          <div class="binary-rating-buttons">
+           <h3 class="font-weight-semibold has-margin-top-none font-size-h4 margin-bottom-xs">
+            Is this page helpful?
+           </h3>
+           <div>
+            <button aria-controls="rating-container-desktop" aria-expanded="false" class="thumb-rating like has-inner-focus" data-bi-name="rating-yes" data-bi-sat="1" title="Yes">
+             <span aria-hidden="true" class="icon docon docon-like">
+             </span>
+             <span>
+              Yes
+             </span>
+            </button>
+            <button aria-controls="rating-container-desktop" aria-expanded="false" class="thumb-rating dislike has-inner-focus" data-bi-name="rating-no" data-bi-sat="0" title="No">
+             <span aria-hidden="true" class="icon docon docon-dislike">
+             </span>
+             <span>
+              No
+             </span>
+            </button>
+           </div>
+          </div>
+          <form class="feedback-verbatim-form is-hidden" id="rating-container-desktop">
+           <div class="verbatim-textarea box position-relative box-shadow-none border has-margin-top-small has-padding-extra-small font-size-xs">
+            <label class="visually-hidden" for="rating-textarea-desktop">
+             Any additional feedback?
+            </label>
+            <textarea class="textarea border-none box-shadow-none has-inner-focus" id="rating-textarea-desktop" maxlength="999" placeholder="Any additional feedback?" required="" rows="4"></textarea>
+           </div>
+           <p class="font-size-xs has-line-height-reset">
+            Feedback will be sent to Microsoft: By pressing the submit button, your feedback will be used to improve Microsoft products and services.
+            <a href="https://privacy.microsoft.com/en-us/privacystatement">
+             Privacy policy.
+            </a>
+           </p>
+           <div class="buttons buttons-right margin-top-xs has-margin-right-extra-small">
+            <button class="skip-rating button button-clear button-primary button-sm" type="button">
+             Skip
+            </button>
+            <button class="submit-rating button button-primary button-filled button-sm" data-bi-name="rating-verbatim" disabled="" type="submit">
+             Submit
+            </button>
+           </div>
+          </form>
+         </div>
+         <div class="thankyou-rating is-hidden" tabindex="-1">
+          <p>
+           Thank you.
+          </p>
+         </div>
+        </div>
+       </div>
+       <!-- end page rating section -->
+       <!-- recommendations section -->
+       <section data-bi-name="recommendations" id="recommendations-section">
+       </section>
+       <!-- end recommendations section -->
+       <!-- feedback section -->
+       <!-- end feedback section -->
+       <!-- feedback report section -->
+       <!-- end feedback report section -->
+       <div class="border-top is-visible-interactive has-default-focus has-margin-top-large">
+        <footer class="footer-layout" data-bi-name="footer" id="footer-interactive">
+         <div class="display-flex is-full-height has-padding-right-extra-large-desktop">
+          <a class="locale-selector-link button button-clear flex-shrink-0" data-bi-name="select-locale" data-mscc-ic="false" href="#">
+           <span aria-hidden="true" class="icon">
+            <span class="docon docon-world">
+            </span>
+           </span>
+           <span class="local-selector-link-text">
+           </span>
+          </a>
+          <div class="margin-inline-xs flex-shrink-0">
+           <div class="dropdown has-caret-up">
+            <button aria-controls="theme-menu-interactive" aria-expanded="false" class="dropdown-trigger button button-clear button-sm has-inner-focus theme-dropdown-trigger" data-bi-name="theme" title="Theme">
+             <span class="icon">
+              <span aria-hidden="true" class="docon docon-sun">
+              </span>
+             </span>
+             <span>
+              Theme
+             </span>
+            </button>
+            <div class="dropdown-menu" id="theme-menu-interactive" role="menu">
+             <ul class="theme-selector has-padding-small">
+              <li class="theme is-block">
+               <button class="button button-clear button-sm theme-control button-block justify-content-flex-start" data-theme-to="light">
+                <span class="theme-light has-margin-right-small">
+                 <span aria-hidden="true" class="theme-selector-icon css-variable-support border is-inline-block has-body-background">
+                  <svg class="svg" viewBox="0 0 22 14" xmlns="http://www.w3.org/2000/svg">
+                   <rect class="has-fill-body-background" height="14" width="22">
+                   </rect>
+                   <rect class="has-fill-secondary" height="4" width="12" x="5" y="5">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="2" x="5" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="2" x="8" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="3" x="11" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="2" width="2" x="1" y="1">
+                   </rect>
+                   <rect class="has-fill-primary" height="2" rx="0.3" width="7" x="5" y="10">
+                   </rect>
+                   <rect class="has-fill-secondary" height="2" rx="1" width="2" x="19" y="1">
+                   </rect>
+                  </svg>
+                 </span>
+                </span>
+                <span role="menuitem">
+                 Light
+                </span>
+               </button>
+              </li>
+              <li class="theme is-block">
+               <button class="button button-clear button-sm theme-control button-block justify-content-flex-start" data-theme-to="dark">
+                <span class="theme-dark has-margin-right-small">
+                 <span aria-hidden="true" class="border theme-selector-icon css-variable-support is-inline-block has-body-background">
+                  <svg class="svg" viewBox="0 0 22 14" xmlns="http://www.w3.org/2000/svg">
+                   <rect class="has-fill-body-background" height="14" width="22">
+                   </rect>
+                   <rect class="has-fill-secondary" height="4" width="12" x="5" y="5">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="2" x="5" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="2" x="8" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="3" x="11" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="2" width="2" x="1" y="1">
+                   </rect>
+                   <rect class="has-fill-primary" height="2" rx="0.3" width="7" x="5" y="10">
+                   </rect>
+                   <rect class="has-fill-secondary" height="2" rx="1" width="2" x="19" y="1">
+                   </rect>
+                  </svg>
+                 </span>
+                </span>
+                <span role="menuitem">
+                 Dark
+                </span>
+               </button>
+              </li>
+              <li class="theme is-block">
+               <button class="button button-clear button-sm theme-control button-block justify-content-flex-start" data-theme-to="high-contrast">
+                <span class="theme-high-contrast has-margin-right-small">
+                 <span aria-hidden="true" class="border theme-selector-icon css-variable-support is-inline-block has-body-background">
+                  <svg class="svg" viewBox="0 0 22 14" xmlns="http://www.w3.org/2000/svg">
+                   <rect class="has-fill-body-background" height="14" width="22">
+                   </rect>
+                   <rect class="has-fill-secondary" height="4" width="12" x="5" y="5">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="2" x="5" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="2" x="8" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="1" width="3" x="11" y="2">
+                   </rect>
+                   <rect class="has-fill-secondary" height="2" width="2" x="1" y="1">
+                   </rect>
+                   <rect class="has-fill-primary" height="2" rx="0.3" width="7" x="5" y="10">
+                   </rect>
+                   <rect class="has-fill-secondary" height="2" rx="1" width="2" x="19" y="1">
+                   </rect>
+                  </svg>
+                 </span>
+                </span>
+                <span role="menuitem">
+                 High contrast
+                </span>
+               </button>
+              </li>
+             </ul>
+            </div>
+           </div>
+          </div>
+         </div>
+         <ul class="links" data-bi-name="footerlinks">
+          <li class="manage-cookies-holder" hidden="">
+          </li>
+          <li>
+           <a data-bi-name="archivelink" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/previous-versions/">
+            Previous Version Docs
+           </a>
+          </li>
+          <li>
+           <a data-bi-name="bloglink" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/teamblog">
+            Blog
+           </a>
+          </li>
+          <li>
+           <a data-bi-name="contributorGuide" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/contribute">
+            Contribute
+           </a>
+          </li>
+          <li>
+           <a data-bi-name="privacy" data-mscc-ic="false" href="https://go.microsoft.com/fwlink/?LinkId=521839">
+            Privacy &amp; Cookies
+           </a>
+          </li>
+          <li>
+           <a data-bi-name="termsofuse" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/legal/termsofuse">
+            Terms of Use
+           </a>
+          </li>
+          <li>
+           <a data-bi-name="trademarks" data-mscc-ic="false" href="https://www.microsoft.com/en-us/legal/intellectualproperty/Trademarks/EN-US.aspx">
+            Trademarks
+           </a>
+          </li>
+          <li>
+           &copy; Microsoft 2021
+          </li>
+         </ul>
+        </footer>
+       </div>
+      </div>
+      <div aria-label="Page Actions" class="font-size-sm right-container column is-4-desktop display-none display-block-desktop" data-bi-name="pageactions" role="complementary">
+       <div class="doc-outline is-vertically-scrollable" id="affixed-right-container">
+        <div class="feedback-verbatim border-bottom has-padding-bottom-small has-margin-bottom-small" data-bi-name="rating">
+         <div class="binary-rating">
+          <div class="binary-rating-buttons">
+           <h3 class="font-weight-semibold has-margin-top-none has-margin-bottom-small">
+            Is this page helpful?
+           </h3>
+           <div>
+            <button aria-controls="rating-container-mobile" aria-expanded="false" class="thumb-rating like has-inner-focus" data-bi-name="rating-yes" data-bi-sat="1" title="Yes">
+             <span aria-hidden="true" class="icon docon docon-like">
+             </span>
+             <span>
+              Yes
+             </span>
+            </button>
+            <button aria-controls="rating-container-mobile" aria-expanded="false" class="thumb-rating dislike has-inner-focus" data-bi-name="rating-no" data-bi-sat="0" title="No">
+             <span aria-hidden="true" class="icon docon docon-dislike">
+             </span>
+             <span>
+              No
+             </span>
+            </button>
+           </div>
+          </div>
+          <form class="feedback-verbatim-form is-hidden" id="rating-container-mobile">
+           <div class="verbatim-textarea box position-relative box-shadow-none border has-margin-top-small has-padding-extra-small font-size-xs">
+            <label class="visually-hidden" for="rating-textarea-mobile">
+             Any additional feedback?
+            </label>
+            <textarea class="textarea border-none box-shadow-none has-inner-focus" id="rating-textarea-mobile" maxlength="999" placeholder="Any additional feedback?" required="" rows="4"></textarea>
+           </div>
+           <p class="font-size-xs has-line-height-reset">
+            Feedback will be sent to Microsoft: By pressing the submit button, your feedback will be used to improve Microsoft products and services.
+            <a href="https://privacy.microsoft.com/en-us/privacystatement">
+             Privacy policy.
+            </a>
+           </p>
+           <div class="buttons buttons-right margin-top-xs has-margin-right-extra-small">
+            <button class="skip-rating button button-clear button-primary button-sm" type="button">
+             Skip
+            </button>
+            <button class="submit-rating button button-primary button-filled button-sm" data-bi-name="rating-verbatim" disabled="" type="submit">
+             Submit
+            </button>
+           </div>
+          </form>
+         </div>
+         <div class="thankyou-rating is-hidden" tabindex="-1">
+          <p>
+           Thank you.
+          </p>
+         </div>
+        </div>
+        <nav aria-label="Article Outline" data-bi-name="intopic toc" id="side-doc-outline" role="navigation">
+         <h3>
+          In this article
+         </h3>
+        </nav>
+       </div>
+      </div>
+     </div>
+     <!--end of div.columns -->
+    </section>
+    <!--end of .primary-holder -->
+    <!-- interactive container -->
+    <aside class="interactive-container is-visible-interactive column has-body-background-dark" id="interactive-container">
+    </aside>
+    <!-- end of interactive container -->
+   </div>
+  </div>
+  <!--end of .mainContainer -->
+  <section class="border-top has-default-focus is-hidden-interactive has-margin-top-large">
+   <footer class="footer-layout uhf-container has-padding" data-bi-name="footer" id="footer" role="contentinfo">
+    <div class="display-flex is-full-height has-padding-right-extra-large-desktop">
+     <a class="locale-selector-link button button-clear flex-shrink-0" data-bi-name="select-locale" data-mscc-ic="false" href="#">
+      <span aria-hidden="true" class="icon">
+       <span class="docon docon-world">
+       </span>
+      </span>
+      <span class="local-selector-link-text">
+      </span>
+     </a>
+     <div class="margin-inline-xs flex-shrink-0">
+      <div class="dropdown has-caret-up">
+       <button aria-controls="theme-menu" aria-expanded="false" class="dropdown-trigger button button-clear button-sm has-inner-focus theme-dropdown-trigger" data-bi-name="theme" title="Theme">
+        <span class="icon">
+         <span aria-hidden="true" class="docon docon-sun">
+         </span>
+        </span>
+        <span>
+         Theme
+        </span>
+       </button>
+       <div class="dropdown-menu" id="theme-menu" role="menu">
+        <ul class="theme-selector has-padding-small">
+         <li class="theme is-block">
+          <button class="button button-clear button-sm theme-control button-block justify-content-flex-start" data-theme-to="light">
+           <span class="theme-light has-margin-right-small">
+            <span aria-hidden="true" class="theme-selector-icon css-variable-support border is-inline-block has-body-background">
+             <svg class="svg" viewBox="0 0 22 14" xmlns="http://www.w3.org/2000/svg">
+              <rect class="has-fill-body-background" height="14" width="22">
+              </rect>
+              <rect class="has-fill-secondary" height="4" width="12" x="5" y="5">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="2" x="5" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="2" x="8" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="3" x="11" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="2" width="2" x="1" y="1">
+              </rect>
+              <rect class="has-fill-primary" height="2" rx="0.3" width="7" x="5" y="10">
+              </rect>
+              <rect class="has-fill-secondary" height="2" rx="1" width="2" x="19" y="1">
+              </rect>
+             </svg>
+            </span>
+           </span>
+           <span role="menuitem">
+            Light
+           </span>
+          </button>
+         </li>
+         <li class="theme is-block">
+          <button class="button button-clear button-sm theme-control button-block justify-content-flex-start" data-theme-to="dark">
+           <span class="theme-dark has-margin-right-small">
+            <span aria-hidden="true" class="border theme-selector-icon css-variable-support is-inline-block has-body-background">
+             <svg class="svg" viewBox="0 0 22 14" xmlns="http://www.w3.org/2000/svg">
+              <rect class="has-fill-body-background" height="14" width="22">
+              </rect>
+              <rect class="has-fill-secondary" height="4" width="12" x="5" y="5">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="2" x="5" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="2" x="8" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="3" x="11" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="2" width="2" x="1" y="1">
+              </rect>
+              <rect class="has-fill-primary" height="2" rx="0.3" width="7" x="5" y="10">
+              </rect>
+              <rect class="has-fill-secondary" height="2" rx="1" width="2" x="19" y="1">
+              </rect>
+             </svg>
+            </span>
+           </span>
+           <span role="menuitem">
+            Dark
+           </span>
+          </button>
+         </li>
+         <li class="theme is-block">
+          <button class="button button-clear button-sm theme-control button-block justify-content-flex-start" data-theme-to="high-contrast">
+           <span class="theme-high-contrast has-margin-right-small">
+            <span aria-hidden="true" class="border theme-selector-icon css-variable-support is-inline-block has-body-background">
+             <svg class="svg" viewBox="0 0 22 14" xmlns="http://www.w3.org/2000/svg">
+              <rect class="has-fill-body-background" height="14" width="22">
+              </rect>
+              <rect class="has-fill-secondary" height="4" width="12" x="5" y="5">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="2" x="5" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="2" x="8" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="1" width="3" x="11" y="2">
+              </rect>
+              <rect class="has-fill-secondary" height="2" width="2" x="1" y="1">
+              </rect>
+              <rect class="has-fill-primary" height="2" rx="0.3" width="7" x="5" y="10">
+              </rect>
+              <rect class="has-fill-secondary" height="2" rx="1" width="2" x="19" y="1">
+              </rect>
+             </svg>
+            </span>
+           </span>
+           <span role="menuitem">
+            High contrast
+           </span>
+          </button>
+         </li>
+        </ul>
+       </div>
+      </div>
+     </div>
+    </div>
+    <ul class="links" data-bi-name="footerlinks">
+     <li class="manage-cookies-holder" hidden="">
+     </li>
+     <li>
+      <a data-bi-name="archivelink" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/previous-versions/">
+       Previous Version Docs
+      </a>
+     </li>
+     <li>
+      <a data-bi-name="bloglink" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/teamblog">
+       Blog
+      </a>
+     </li>
+     <li>
+      <a data-bi-name="contributorGuide" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/contribute">
+       Contribute
+      </a>
+     </li>
+     <li>
+      <a data-bi-name="privacy" data-mscc-ic="false" href="https://go.microsoft.com/fwlink/?LinkId=521839">
+       Privacy &amp; Cookies
+      </a>
+     </li>
+     <li>
+      <a data-bi-name="termsofuse" data-mscc-ic="false" href="https://docs.microsoft.com/en-US/legal/termsofuse">
+       Terms of Use
+      </a>
+     </li>
+     <li>
+      <a data-bi-name="trademarks" data-mscc-ic="false" href="https://www.microsoft.com/en-us/legal/intellectualproperty/Trademarks/EN-US.aspx">
+       Trademarks
+      </a>
+     </li>
+     <li>
+      &copy; Microsoft 2021
+     </li>
+    </ul>
+   </footer>
+  </section>
+  <div aria-label="Action Panel" class="action-panel has-default-focus" id="action-panel" role="region" tabindex="-1">
+  </div>
+ </body>
+</html>

