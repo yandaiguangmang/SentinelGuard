@@ -143,9 +143,8 @@ header {
     <div class="nav">
       <a href="#result">总览</a>
       <a href="#ir">APK 摘要</a>
-      <a href="#chain">证据链</a>
+      <a href="#screenshot">页面截图</a>
       <a href="#evidence">风险证据</a>
-      <a href="#screenshots">截图</a>
       <a href="#discussion">协同研判</a>
       <a href="#appendix">扩展信息</a>
     </div>
@@ -173,10 +172,8 @@ header {
         ${parent_report_block}
         ${apk_dynamic_block}
         ${apk_graph_block}
-        ${apk_heatmap_block}
         ${apk_consistency_block}
         ${apk_robustness_block}
-        ${arbitration_block}
         ${role_limitations_block}
       </div>
     </section>
@@ -192,13 +189,13 @@ header {
     </section>
   </div>
 
-  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
+  <section class="panel section-anchor" id="screenshot" style="margin-top: 18px;">
     <div class="panel-inner">
       <div class="section-title">
-        <h3>证据链与截图轨迹</h3>
-        <small>支持滑动查看完整内容</small>
+        <h3>页面截图</h3>
+        <small>仅展示一张应用页面截图</small>
       </div>
-      ${chain_panel}
+      ${screenshot_block}
     </div>
   </section>
 
@@ -212,21 +209,11 @@ header {
     </div>
   </section>
 
-  <section class="panel section-anchor" id="screenshots" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>APK / 页面截图证据</h3>
-        <small>静态与动态截图均可展示</small>
-      </div>
-      ${screenshot_block}
-    </div>
-  </section>
-
   <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
     <div class="panel-inner">
       <div class="section-title">
         <h3>${discussion_title}</h3>
-        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+        <small>主持人 / 静态 / 行为 / 情报 / 处置 · 单表展示</small>
       </div>
       ${discussion_panel}
       ${model_panel}

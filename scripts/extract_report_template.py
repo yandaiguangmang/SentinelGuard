@@ -37,7 +37,6 @@ def main() -> None:
         ("{apk_graph_block}", "${apk_graph_block}"),
         ("{apk_consistency_block}", "${apk_consistency_block}"),
         ("{apk_robustness_block}", "${apk_robustness_block}"),
-        ("{arbitration_block}", "${arbitration_block}"),
         ("{role_limitations_block}", "${role_limitations_block}"),
         ("{'模型深度研判' if report.analysis_mode == 'deep' else 'APK 动态协同研判' if report.analysis_mode == 'dynamic' else '协同研判'}", "${discussion_title}"),
         ("{_render_screenshot_block(report)}", "${screenshot_block}"),

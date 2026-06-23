@@ -445,6 +445,7 @@ class APKGraphExtractor:
         total_nodes = len(cfg_nodes) + len(fcg_nodes) + len(api_nodes)
         total_edges = len(cfg_edges) + len(fcg_edges) + len(api_edges)
         density = self._density(total_nodes, total_edges)
+        fcg_density = self._density(len(fcg_nodes), len(fcg_edges))
         avg_degree = (2 * total_edges / total_nodes) if total_nodes else 0.0
 
         api_call_counts = graph_data.get("api_graph", {}).get("api_call_counts", {}) or {}
@@ -462,6 +463,7 @@ class APKGraphExtractor:
             "total_node_count": total_nodes,
             "total_edge_count": total_edges,
             "density": density,
+            "fcg_density": fcg_density,
             "average_degree": avg_degree,
             "api_call_type_count": len(api_call_counts),
             "top_api_call": most_frequent_api,

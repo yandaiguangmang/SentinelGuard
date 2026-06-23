@@ -952,6 +952,6 @@ class APKDynamicAnalyzer:
         return risk_level_from_score(score) if findings else (fallback if fallback in {"low", "medium", "high", "critical"} else "low")
 
 
-def dynamic_analyze_apk(static_report: DetectionReport, runtime_config: AnalysisRuntimeConfig | None = None, runtime_window_seconds: int = 12, progress_callback=None) -> Dict[str, Any]:
+def dynamic_analyze_apk(static_report: DetectionReport, runtime_config: AnalysisRuntimeConfig | None = None, runtime_window_seconds: int = 20, progress_callback=None) -> Dict[str, Any]:
     analyzer = APKDynamicAnalyzer(runtime_window_seconds=runtime_window_seconds, runtime_config=runtime_config)
     return analyzer.analyze(static_report, progress_callback=progress_callback)
