@@ -164,11 +164,12 @@ header {
     <div class="nav">
       <a href="#result">总览</a>
       <a href="#ir">APK 摘要</a>
-      <a href="#chain">证据链</a>
       <a href="#evidence">风险证据</a>
       <a href="#screenshots">截图</a>
       <a href="#discussion">协同研判</a>
-      <a href="#appendix">扩展信息</a>
+      <a href="#robustness">鲁棒性分析</a>
+      <a href="#graph">图结构分析</a>
+      <a href="#consistency">一致性验证</a>
     </div>
     <div class="hero-mini">
       <span class="chip warning">${analysis_mode_chip}</span>
@@ -192,56 +193,27 @@ header {
       ${result_panel}
       ${parent_report_block}
       ${apk_dynamic_block}
-      ${apk_graph_block}
-      ${apk_heatmap_block}
-      ${apk_consistency_block}
-      ${apk_robustness_block}
-      ${arbitration_block}
-      ${role_limitations_block}
     </div>
   </section>
 
   <div class="report-tabs" role="tablist" aria-label="报告子页面">
     <button class="report-tab-btn active" type="button" data-report-tab="ir">APK 摘要</button>
-    <button class="report-tab-btn" type="button" data-report-tab="chain">证据链</button>
     <button class="report-tab-btn" type="button" data-report-tab="evidence">风险证据</button>
     <button class="report-tab-btn" type="button" data-report-tab="screenshots">截图</button>
     <button class="report-tab-btn" type="button" data-report-tab="discussion">协同研判</button>
-    <button class="report-tab-btn" type="button" data-report-tab="appendix">扩展信息</button>
+    <button class="report-tab-btn" type="button" data-report-tab="robustness">鲁棒性分析</button>
+    <button class="report-tab-btn" type="button" data-report-tab="graph">图结构分析</button>
+    <button class="report-tab-btn" type="button" data-report-tab="consistency">一致性验证</button>
   </div>
 
   <section class="report-pane active" data-report-pane="ir">
-    <div class="grid two-col" style="margin-top: 18px;">
-      <section class="panel section-anchor" id="ir">
-        <div class="panel-inner">
-          <div class="section-title">
-            <h3>APK 摘要</h3>
-            <small>${analysis_mode_label_escaped}</small>
-          </div>
-          ${artifact_panel}
-        </div>
-      </section>
-
-      <section class="panel section-anchor">
-        <div class="panel-inner">
-          <div class="section-title">
-            <h3>证据链与截图轨迹</h3>
-            <small>完整展开证据链与轨迹内容</small>
-          </div>
-          ${chain_panel}
-        </div>
-      </section>
-    </div>
-  </section>
-
-  <section class="report-pane" data-report-pane="chain">
-    <section class="panel section-anchor" id="chain">
+    <section class="panel section-anchor" id="ir" style="margin-top: 18px;">
       <div class="panel-inner">
         <div class="section-title">
-          <h3>证据链与截图轨迹</h3>
-          <small>完整展开证据链与轨迹内容</small>
+          <h3>APK 摘要</h3>
+          <small>${analysis_mode_label_escaped}</small>
         </div>
-        ${chain_panel}
+        ${artifact_panel}
       </div>
     </section>
   </section>
@@ -283,16 +255,42 @@ header {
     </section>
   </section>
 
-  <section class="report-pane" data-report-pane="appendix">
-    <section class="panel section-anchor" id="appendix">
+  <section class="report-pane" data-report-pane="robustness">
+    <section class="panel section-anchor" id="robustness">
       <div class="panel-inner">
         <div class="section-title">
-          <h3>扩展信息</h3>
-          <small>一致性 / 鲁棒性 / 统计信息</small>
+          <h3>鲁棒性分析</h3>
+          <small>抗检测技术与鲁棒性评分</small>
         </div>
-        ${placeholders_panel}
+        ${apk_robustness_block}
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="graph">
+    <section class="panel section-anchor" id="graph">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>CFG / FCG / API 调用图分析</h3>
+          <small>控制流、函数调用与敏感 API 统计</small>
+        </div>
+        ${apk_graph_block}
+        ${apk_heatmap_block}
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="consistency">
+    <section class="panel section-anchor" id="consistency">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>一致性验证结果</h3>
+          <small>仲裁结果与多角色结论一致性</small>
+        </div>
+        ${apk_consistency_block}
+        ${arbitration_block}
+        ${role_limitations_block}
         ${stats_block}
-        <p class="footer-note">APK 报告与 URL 报告采用分离模板，避免不同对象类型的分析模块混排。</p>
       </div>
     </section>
   </section>

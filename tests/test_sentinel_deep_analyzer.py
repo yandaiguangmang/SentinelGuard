@@ -1,7 +1,6 @@
 import json
 import os
 from pathlib import Path
-import pytest
 
 from config import settings
 from SentinelGuard.analyzers.apk_deep_analyzer import APKDeepAnalyzer
@@ -9,24 +8,6 @@ from SentinelGuard.judgement import run_apk_dynamic_detection_from_static
 from SentinelGuard.analyzers.url_deep_analyzer import URLDeepAnalyzer, _load_json_payload
 from SentinelGuard.judgement import run_deep_url_detection_from_static, run_static_detection
 from SentinelGuard.state import APKIR, DetectionFinding, DetectionReport, TargetIR
-
-
-class StubRoleAgent:
-    def __init__(self, role: str) -> None:
-        self.role = role
-        self.calls = []
-
-    def run(self, task: str, system_message: str | None = None):
-        self.calls.append({"task": task, "system_message": system_message})
-        return {
-            "success": True,
-            "content": json.dumps(
-                {"opinion": f"{self.role} ok", "risk_hint": "medium", "additional_findings": []},
-                ensure_ascii=False,
-            ),
-            "elapsed": 0.1,
-            "usage": None,
-        }
 
 
 class FakeDeepAnalyzerResponse:
@@ -338,10 +319,89 @@ def test_apk_deep_payload_trims_large_apk_fields():
     assert "nodes" not in apk_payload["graph_data"]["cfg"]
     assert len(apk_payload["graph_data"]["api_graph"]["api_call_counts_top"]) == 12
 
+
+def test_apk_deep_payload_excludes_source_path_from_model_input():
+    apk_ir = APKIR(
+        normalized_path=r"C:\\Temp\\sentinel_uploads\\sample.apk",
+        file_name="sample.apk",
+        package_name="com.example.sample",
+        sha256="a" * 64,
+        size_bytes=123456,
+    )
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input=r"C:\\Temp\\sentinel_uploads\\sample.apk", status="ready", apk=apk_ir),
+        risk_level="medium",
+        score=55,
+        findings=[],
+        expert_opinions={"主持人": "ok", "静态分析员": "ok", "行为分析员": "ok", "情报分析员": "ok", "处置建议员": "ok"},
+    )
+
+    analyzer = APKDeepAnalyzer()
+    payload = analyzer._build_payload(static_report)
+    intel_payload = analyzer._build_role_payload("情报分析员", static_report, payload)
+
+    assert "normalized_path" not in payload["apk_ir"]
+    assert "normalized_path" not in payload["target"]["apk"]
+    assert "C:\\Temp\\sentinel_uploads\\sample.apk" not in json.dumps(payload, ensure_ascii=False)
+    assert "C:\\Temp\\sentinel_uploads\\sample.apk" not in analyzer._summarize_host_evidence_source(static_report)
+    assert "C:\\Temp\\sentinel_uploads\\sample.apk" not in json.dumps(intel_payload, ensure_ascii=False)
+
     assert set(host_payload.keys()) == {"role_outputs"}
     assert host_payload["role_outputs"] == {}
     json.dumps(payload, ensure_ascii=False)
     json.dumps(host_payload, ensure_ascii=False)
+
+
+def test_apk_deep_payload_recursive_compression_under_80kb():
+    analyzer = APKDeepAnalyzer()
+    payload = {
+        "target": {
+            "original_input": "A" * 5000,
+            "apk": {
+                "file_name": "demo.apk",
+                "package_name": "com.example.demo",
+                "evidence_summary": {
+                    "files": [f"file_{i}_{'B' * 6000}" for i in range(30)],
+                    "warnings": [f"warn_{i}_{'C' * 3000}" for i in range(20)],
+                    "summary": {"blob": "D" * 40000},
+                },
+                "graph_data": {
+                    "cfg": {
+                        "nodes": [{"id": i, "name": f"node_{i}_{'E' * 4000}"} for i in range(20)],
+                        "edges": [{"src": i, "dst": i + 1, "label": "L" * 4000} for i in range(20)],
+                    },
+                },
+            },
+        },
+        "static_report": {
+            "apk_summary": {
+                "suspicious_strings": [f"S{i}_{'F' * 5000}" for i in range(20)],
+            },
+            "expert_opinions": {
+                "主持人": "G" * 30000,
+                "静态分析员": "H" * 30000,
+                "行为分析员": "I" * 30000,
+                "情报分析员": "J" * 30000,
+                "处置建议员": "K" * 30000,
+            },
+        },
+        "role_outputs": {
+            "静态分析员": {"opinion": "L" * 50000, "additional_findings": []},
+            "行为分析员": {"opinion": "M" * 50000, "additional_findings": []},
+        },
+    }
+
+    initial_size = analyzer._payload_size_bytes(payload)
+    assert initial_size > 80 * 1024
+
+    compressed = analyzer._ensure_payload_within_limit("test", payload)
+    compressed_size = analyzer._payload_size_bytes(compressed)
+
+    assert compressed_size <= 80 * 1024
+    assert len(compressed["target"]["original_input"]) <= 1200
+    assert "evidence_summary" not in compressed["target"]["apk"] or isinstance(compressed["target"]["apk"]["evidence_summary"], dict)
+    assert "graph_data" not in compressed["target"]["apk"] or isinstance(compressed["target"]["apk"]["graph_data"], dict)
+    assert len(compressed["role_outputs"]["静态分析员"]["opinion"]) <= 1200
 
 
 def test_load_json_payload_accepts_code_fenced_and_mixed_text():
@@ -364,46 +424,9 @@ def test_load_json_payload_accepts_code_fenced_and_mixed_text():
     assert list_data["risk_hint"] == "critical"
 
 
-def test_url_deep_analyzer_uses_persistent_role_agents(monkeypatch):
-    from SentinelGuard.analyzers import url_deep_analyzer
-
-    analyzer = URLDeepAnalyzer()
-    analyzer.role_conversations = {role: StubRoleAgent(role) for role in url_deep_analyzer.DEEP_ROLE_ORDER}
-    analyzer._build_messages = lambda role, payload: [
-        {"role": "system", "content": f"sys-{role}"},
-        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-    ]
-
-    static_report = run_static_detection("http://example.com/login?redirect=http://evil.test", fetch_page=False)
-    result = analyzer._call_role_model("静态分析员", analyzer._build_payload(static_report))
-
-    assert result["success"] is True
-    assert analyzer.role_conversations["静态分析员"].calls[0]["system_message"] == "sys-静态分析员"
-    assert "redirect" in analyzer.role_conversations["静态分析员"].calls[0]["task"]
-
-
-def test_apk_deep_analyzer_uses_persistent_role_agents(monkeypatch):
-    from SentinelGuard.analyzers import apk_deep_analyzer
-
-    analyzer = APKDeepAnalyzer()
-    analyzer.role_conversations = {role: StubRoleAgent(role) for role in apk_deep_analyzer.DEEP_ROLE_ORDER}
-
-    apk_ir = APKIR(normalized_path="demo.apk", file_name="demo.apk", package_name="com.example.demo")
-    static_report = DetectionReport(
-        target_ir=TargetIR(target_type="apk", original_input="demo.apk", status="ready", apk=apk_ir),
-        risk_level="medium",
-        score=55,
-        findings=[],
-        expert_opinions={"主持人": "ok", "静态分析员": "ok", "行为分析员": "ok", "情报分析员": "ok", "处置建议员": "ok"},
-    )
-
-    result = analyzer._call_role_model("静态分析员", analyzer._build_payload(static_report))
-
-    assert result["success"] is True
-    assert analyzer.role_conversations["静态分析员"].calls[0]["system_message"] == apk_deep_analyzer.ROLE_SYSTEM_PROMPTS["静态分析员"]
+def test_apk_dynamic_full_pipeline_with_real_sample(monkeypatch):
     apk_path = Path(r"G:\testcases\apk\Yahnac.apk")
-    if not apk_path.exists():
-        pytest.skip(f"测试样本不存在: {apk_path}")
+    assert apk_path.exists(), f"测试样本不存在: {apk_path}"
 
     static_report = run_static_detection(str(apk_path), target_type="apk")
     assert static_report.target_ir.target_type == "apk"

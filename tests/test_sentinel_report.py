@@ -2,6 +2,7 @@ from pathlib import Path
 
 from SentinelGuard.judgement import run_detection, run_deep_url_detection_from_static
 from SentinelGuard.report import save_detection_report
+from SentinelGuard.state import APKIR, DetectionReport, TargetIR
 
 
 def test_report_files_are_generated(tmp_path):
@@ -33,6 +34,42 @@ def test_apk_report_mentions_apk_summary(tmp_path):
     assert "sentinel_report_apk_static_" in report.html_report_path
     assert "sentinel_report_apk_static_" in report.markdown_report_path
     assert report.target_ir.apk.file_name == "sample.apk"
+
+
+def test_apk_report_includes_static_content_summary(tmp_path):
+    report = DetectionReport(
+        target_ir=TargetIR(
+            target_type="apk",
+            original_input="demo.apk",
+            status="ready",
+            apk=APKIR(normalized_path="demo.apk", file_name="demo.apk"),
+        ),
+        risk_level="medium",
+        score=42,
+        evidence_score=42,
+        deep_score=None,
+        findings=[],
+        expert_opinions={"主持人": "demo", "静态分析员": "demo", "行为分析员": "demo", "情报分析员": "demo", "处置建议员": "demo"},
+        apk_summary={
+            "static_content_summary": {
+                "parsed_content_count": 3,
+                "match_preview": "敏感 API：Ljava/lang/Runtime;->exec (system)",
+                "matched_rules": [
+                    {"rule_id": "APK_STATIC_RULE_MATCH", "title": "静态内容规则命中", "evidence": "Ljava/lang/Runtime;->exec"},
+                ],
+            }
+        },
+        analysis_mode="static",
+    )
+
+    save_detection_report(report, output_dir=tmp_path)
+
+    html_text = Path(report.html_report_path).read_text(encoding="utf-8")
+    md_text = Path(report.markdown_report_path).read_text(encoding="utf-8")
+
+    assert "静态内容解析" in html_text
+    assert "静态内容解析与规则匹配" in md_text
+    assert "已解析文本条数" in md_text
 
 
 def test_deep_report_mentions_parent_report(monkeypatch, tmp_path):

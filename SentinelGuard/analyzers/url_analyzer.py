@@ -194,12 +194,12 @@ def analyze_url(target_ir: TargetIR, fetch_page: bool = True,
     
     if fetch_page:
         network_result = _fetch_page(target_ir.url.normalized_url, runtime_config=runtime_config)
-        LOGGER.debug("fetch finished")
+        print("fetch finished")
         redirect_chain = network_result["redirect_chain"] or redirect_chain
         page_summary = network_result["page_summary"]
         findings.extend(network_result["findings"])
         findings.extend(_analyze_redirect_chain(redirect_chain))
-        LOGGER.debug("analyze_redirect_chain_finished")
+        print("analyze_redirect_chain_finished")
 
         final_hostname = ""
         if redirect_chain:
@@ -208,20 +208,20 @@ def analyze_url(target_ir: TargetIR, fetch_page: bool = True,
        
         # 截图
         if _should_capture_screenshot(findings, page_summary, runtime_config):
-            LOGGER.debug("screenshoot start")
+            print("screenshoot start")
             screenshot = _capture_page_screenshot(target_ir.url.normalized_url, runtime_config=runtime_config)
-            LOGGER.debug("screenshot finished")
+            print("screenshot finished")
             if screenshot:
                 screenshots.append(screenshot)
                 
-    LOGGER.debug("extend start")
+    print("extend start")
     # ----- 新增：外部情报注入（免费，对可访问域名） -----
     if fetch_page and page_summary:
         hostname = urlparse(target_ir.url.normalized_url).hostname or ""
         proxies = _build_request_proxies(runtime_config)
         external_intel = _gather_external_intel(hostname, proxies=proxies)
         page_summary["external_intel"] = external_intel
-    LOGGER.debug("extend_finished")
+    print("extend_finished")
     return {
         "findings": findings,
         "redirect_chain": redirect_chain,
@@ -397,7 +397,7 @@ def _capture_page_screenshot(url: str, runtime_config: AnalysisRuntimeConfig | N
         proxy_payload = {"server": proxies.get("https") or proxies.get("http") or proxies.get("all") or ""}
         if not proxy_payload["server"]:
             proxy_payload = None
-    LOGGER.debug("start screenshoot1")
+    print("start screenshoot1")
     return capture_page_screenshot(url, proxy=proxy_payload,
                                    timeout_seconds=20)
 

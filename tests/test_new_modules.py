@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
+
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -10,11 +12,14 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from SentinelGuard.analyzers.apk_graph_extractor import APKGraphExtractor
+import SentinelGuard.analyzers.apk_analyzer as apk_analyzer_module
 import SentinelGuard.analyzers.apk_graph_extractor as apk_graph_extractor_module
 from SentinelGuard.arbitrator import Arbitrator
 from SentinelGuard.robustness_validator import RobustnessValidator
 from SentinelGuard.scoring import combine_apk_scores, combine_scores
-from SentinelGuard.state import APKIR, DetectionFinding, DetectionReport, TargetIR
+from SentinelGuard.report import _markdown_apk_robustness_block, _top_level_adversarial_techniques
+from SentinelGuard.report import _apk_graph_data_map
+from SentinelGuard.state import APKIR, DetectionFinding, DetectionReport, GraphStructure, TargetIR
 
 
 def test_graph_extractor() -> None:
@@ -141,6 +146,33 @@ def test_graph_extractor_multi_dex_merge() -> None:
         apk_graph_extractor_module.DalvikVMFormat = original_dalvik_vm_format
 
 
+def test_apk_graph_data_map_preserves_graph_structure_metadata() -> None:
+    """验证 GraphStructure 传入报告层后，新增元数据不会丢失。"""
+
+    graph = GraphStructure(
+        cfg={"nodes": [{"id": "b0"}], "edges": []},
+        fcg={"nodes": [{"id": "m0"}], "edges": [{"source": "m0", "target": "m1"}]},
+        api_graph={
+            "nodes": [{"id": "api0"}],
+            "edges": [],
+            "api_call_counts": {"Landroid/telephony/SmsManager;->sendTextMessage": 3},
+        },
+        stats={"cfg_node_count": 1, "fcg_node_count": 1},
+        fallback=True,
+        fallback_reason="androguard_unavailable_or_parse_failed",
+        source={"file_name": "demo.apk", "package_name": "com.example.demo"},
+        warnings=["图结构提取失败：BadZipFile: File is not a zip file"],
+    )
+
+    mapped = _apk_graph_data_map(graph)
+
+    assert mapped["fallback"] is True
+    assert mapped["fallback_reason"] == "androguard_unavailable_or_parse_failed"
+    assert mapped["source"]["file_name"] == "demo.apk"
+    assert mapped["warnings"] == ["图结构提取失败：BadZipFile: File is not a zip file"]
+    assert mapped["api_graph"]["api_call_counts"]["Landroid/telephony/SmsManager;->sendTextMessage"] == 3
+
+
 def test_arbitrator() -> None:
     """模拟三组评分，验证仲裁一致性和污染源识别。"""
 
@@ -212,6 +244,168 @@ def test_robustness_validator() -> None:
     assert result.anti_emulator_detected is True
 
 
+def test_robustness_validator_detects_anti_static_analysis() -> None:
+    """模拟 APK 解析失败/回退，验证抗静态检测会被命中。"""
+
+    validator = RobustnessValidator()
+    apk_ir = APKIR(
+        normalized_path="broken.apk",
+        file_name="broken.apk",
+        package_name="com.example.broken",
+        evidence_summary={
+            "warnings": [
+                "图结构提取失败：BadZipFile: File is not a zip file",
+                "样本疑似加壳或头部格式异常",
+            ]
+        },
+    )
+
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input="broken.apk", status="ok", apk=apk_ir),
+        risk_level="low",
+        score=10,
+        findings=[DetectionFinding("R2", "static parse fallback", "medium", "fallback", "androguard_unavailable_or_parse_failed", "check")],
+        expert_opinions={"主持人": "demo"},
+        apk_summary={
+            "graph_warnings": ["图结构提取失败：BadZipFile: File is not a zip file"],
+            "graph_summary": {"has_fallback": True},
+        },
+    )
+
+    graph_data = {
+        "fallback": True,
+        "fallback_reason": "androguard_unavailable_or_parse_failed",
+        "warnings": ["BadZipFile: File is not a zip file"],
+    }
+
+    result = validator.validate(static_report, apk_ir, graph_data)
+
+    print("[robustness_validator_anti_static]")
+    print(f"adversarial_techniques: {result.adversarial_techniques}")
+    print(f"anti_static_categories: {result.anti_static_categories}")
+    print(f"anti_static_detected: {result.anti_static_detected}")
+    print(f"robustness_score: {result.robustness_score}")
+
+    assert result.anti_static_detected is True
+    assert "抗静态检测" in result.adversarial_techniques
+    assert "伪装头部" in result.anti_static_categories
+    assert "加壳" in result.anti_static_categories
+    assert result.robustness_score >= 10
+
+    top_level_techniques = _top_level_adversarial_techniques(result)
+    assert "抗静态检测" in top_level_techniques
+    assert "伪装头部" not in top_level_techniques
+    assert "加壳" not in top_level_techniques
+
+
+def test_apk_analyzer_marks_fallback_graph_on_bad_zip() -> None:
+    """验证 APK 解析失败时，图结构会显式标记 fallback，从而触发鲁棒性加分。"""
+
+    with TemporaryDirectory() as tmpdir:
+        apk_path = Path(tmpdir) / "broken.apk"
+        apk_path.write_bytes(b"this is not a zip archive")
+
+        apk_ir = APKIR(normalized_path=str(apk_path), file_name="broken.apk")
+
+        result = apk_analyzer_module._enrich_apk_ir(apk_ir)
+
+    assert result.graph_data is not None
+    assert getattr(result.graph_data, "fallback", False) is True or result.graph_data.get("fallback") is True
+    fallback_reason = getattr(result.graph_data, "fallback_reason", "") if not isinstance(result.graph_data, dict) else result.graph_data.get("fallback_reason", "")
+    assert "BadZipFile" in str(fallback_reason)
+
+
+def test_robustness_validator_gains_bonus_on_parse_fallback() -> None:
+    """验证解析失败的 fallback 图结构会提升鲁棒性分数。"""
+
+    validator = RobustnessValidator()
+    apk_ir = APKIR(
+        normalized_path="broken.apk",
+        file_name="broken.apk",
+        package_name="com.example.broken",
+    )
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input="broken.apk", status="ok", apk=apk_ir),
+        risk_level="low",
+        score=10,
+        findings=[],
+        expert_opinions={"主持人": "demo"},
+        apk_summary={"graph_summary": {"has_fallback": True}, "graph_warnings": ["图结构提取失败：BadZipFile: File is not a zip file"]},
+    )
+    graph_data = {
+        "fallback": True,
+        "fallback_reason": "BadZipFile: File is not a zip file",
+        "warnings": ["图结构提取失败：BadZipFile: File is not a zip file"],
+        "cfg": {"nodes": [], "edges": []},
+        "fcg": {"nodes": [], "edges": []},
+        "api_graph": {"nodes": [], "edges": [], "api_call_counts": {}},
+    }
+
+    result = validator.validate(static_report, apk_ir, graph_data)
+
+    assert result.anti_static_detected is True
+    assert "抗静态检测" in result.adversarial_techniques
+    assert result.robustness_score >= 10
+
+
+def test_robustness_validator_treats_axml_warnings_as_parse_failure() -> None:
+    """验证 AXML / namespace prefix 类报错也会被视为解析失败信号。"""
+
+    validator = RobustnessValidator()
+    apk_ir = APKIR(
+        normalized_path="namespace-error.apk",
+        file_name="namespace-error.apk",
+        package_name="com.example.namespace",
+    )
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input="namespace-error.apk", status="ok", apk=apk_ir),
+        risk_level="low",
+        score=10,
+        findings=[],
+        expert_opinions={"主持人": "demo"},
+        apk_summary={
+            "graph_warnings": [
+                "2026-06-24 22:18:20,570 [WARNING] androguard.axml: Name seems to contain a namespace prefix: 'http://schemas.android.com/apk/res/android'",
+                "2026-06-24 22:18:20,570 [WARNING] androguard.axml: Name 'http://schemas.android.com/apk/res/android' contains invalid characters!",
+            ]
+        },
+    )
+
+    result = validator.validate(static_report, apk_ir, graph_data={})
+
+    assert result.robustness_score >= 10
+    assert result.anti_static_detected is True
+    assert "抗静态检测" in result.adversarial_techniques
+
+
+def test_robustness_validator_gains_bonus_when_graph_structure_missing() -> None:
+    """验证只要图结构缺失，即使没有显式 fallback 标记也会加分。"""
+
+    validator = RobustnessValidator()
+    apk_ir = APKIR(
+        normalized_path="missing-graph.apk",
+        file_name="missing-graph.apk",
+        package_name="com.example.missing",
+    )
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input="missing-graph.apk", status="ok", apk=apk_ir),
+        risk_level="low",
+        score=10,
+        findings=[],
+        expert_opinions={"主持人": "demo"},
+        apk_summary={
+            "graph_status": "图结构缺失",
+            "graph_warnings": [],
+        },
+    )
+
+    result = validator.validate(static_report, apk_ir, graph_data={})
+
+    assert result.robustness_score >= 10
+    assert result.anti_static_detected is True
+    assert "抗静态检测" in result.adversarial_techniques
+
+
 def test_scoring_integration() -> None:
     """测试综合评分是否包含仲裁与鲁棒性两个新维度。"""
 
@@ -246,6 +440,9 @@ def _run_selected(test_name: str | None) -> None:
         "test_graph_extractor_multi_dex_merge": test_graph_extractor_multi_dex_merge,
         "test_arbitrator": test_arbitrator,
         "test_robustness_validator": test_robustness_validator,
+        "test_robustness_validator_detects_anti_static_analysis": test_robustness_validator_detects_anti_static_analysis,
+        "test_apk_analyzer_marks_fallback_graph_on_bad_zip": test_apk_analyzer_marks_fallback_graph_on_bad_zip,
+        "test_robustness_validator_gains_bonus_on_parse_fallback": test_robustness_validator_gains_bonus_on_parse_fallback,
         "test_scoring_integration": test_scoring_integration,
     }
 

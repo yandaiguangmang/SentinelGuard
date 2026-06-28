@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import logging
 from collections import Counter, defaultdict
+from dataclasses import asdict
 from math import log2
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from SentinelGuard.state import GraphNodeFeature, GraphStructure
 from .apk_rules import SENSITIVE_API_RULES, match_sensitive_api, sensitive_api_category
-
-LOGGER = logging.getLogger(__name__)
 
 try:  # pragma: no cover - optional dependency fallback
     from androguard.core.bytecodes.dvm import DalvikVMFormat
@@ -37,46 +35,69 @@ class APKGraphExtractor:
 
         vm = self._build_vm(dex_data)
         if vm is None:
+            print("[DEBUG] extract_all: vm is None, using fallback")
             graph_data = self._extract_fallback(dex_data, apk_summary)
             graph_data["stats"] = self._compute_graph_stats(graph_data)
+            # 标记为 fallback
+            graph_data["fallback"] = True
+            graph_data["fallback_reason"] = "vm_creation_failed"
             return graph_data
 
+        print("[DEBUG] extract_all: vm created successfully, extracting graphs")
         cfg = self._extract_cfg(vm)
         fcg = self._extract_fcg(vm)
         api_graph = self._extract_api_graph(vm)
+        
+        print(f"[DEBUG] extract_all: cfg nodes={len(cfg.get('nodes', []))}, edges={len(cfg.get('edges', []))}")
+        print(f"[DEBUG] extract_all: fcg nodes={len(fcg.get('nodes', []))}, edges={len(fcg.get('edges', []))}")
+        
         graph_data = {
             "cfg": cfg,
             "fcg": fcg,
             "api_graph": api_graph,
+            "fallback": False,
+            "fallback_reason": "",
         }
         graph_data["stats"] = self._compute_graph_stats(graph_data)
         return graph_data
 
     def _build_vm(self, dex_data: Any) -> Any:
         if DalvikVMFormat is None:
+            print("[DEBUG] DalvikVMFormat is None")
             return None
         
         dex_blobs = self._normalize_dex_blobs(dex_data)
         
+        print(f"[DEBUG] _build_vm: dex_blobs count = {len(dex_blobs)}")
+        
         if not dex_blobs:
+            print("[DEBUG] _build_vm: no dex blobs found")
             return None
 
         vms: List[Any] = []
         for idx, dex_bytes in enumerate(dex_blobs):
             try:
+                print(f"[DEBUG] _build_vm: processing dex blob {idx}, size={len(dex_bytes)}")
                 vm = DalvikVMFormat(dex_bytes)
                 if vm is not None:
                     vms.append(vm)
+                    print(f"[DEBUG] _build_vm: vm {idx} created successfully")
             except Exception as e:
+                print(f"[DEBUG] _build_vm: failed to create vm {idx}: {e}")
                 continue
 
         if not vms:
+            print("[DEBUG] _build_vm: no vms created")
             return None
+        
+        print(f"[DEBUG] _build_vm: {len(vms)} vms created, returning first")
         return vms[0] if len(vms) == 1 else vms
 
     def _normalize_dex_blobs(self, dex_data: Any) -> List[bytes]:
         if dex_data is None:
             return []
+        
+        print(f"[DEBUG] _normalize_dex_blobs: dex_data type = {type(dex_data)}")
         
         # 处理 bytes/bytearray
         if isinstance(dex_data, (bytes, bytearray)):
@@ -87,14 +108,17 @@ class APKGraphExtractor:
             payload = dex_data.encode("utf-8", errors="ignore")
             return [payload] if payload else []
         
-        # 处理 APK 对象（关键修复）
+        # 处理 APK 对象
         if hasattr(dex_data, 'get_dex'):
             try:
+                print("[DEBUG] _normalize_dex_blobs: calling get_dex()")
                 dex_result = dex_data.get_dex()
+                print(f"[DEBUG] _normalize_dex_blobs: get_dex() returned type = {type(dex_result)}")
+                
                 if dex_result is None:
                     return []
                 
-                # 如果返回的是 bytes（你的情况）
+                # 如果返回的是 bytes
                 if isinstance(dex_result, (bytes, bytearray)):
                     return [bytes(dex_result)] if dex_result else []
                 
@@ -113,6 +137,11 @@ class APKGraphExtractor:
                                     chunks.append(bytes(data))
                             except Exception:
                                 pass
+                        # 安全检查
+                        if len(chunks) > 50:
+                            print("[WARN] DEX 数量异常（>50），截断处理")
+                            break
+                    print(f"[DEBUG] _normalize_dex_blobs: extracted {len(chunks)} chunks from list")
                     return chunks
                 
                 # 如果返回的是迭代器
@@ -128,14 +157,16 @@ class APKGraphExtractor:
                                     chunks.append(bytes(data))
                             except Exception:
                                 pass
-                        # 安全检查：正常 APK 不会超过 10 个 DEX
                         if len(chunks) > 50:
-                            LOGGER.warning("DEX 数量异常（>50），截断处理")
+                            print("[WARN] DEX 数量异常（>50），截断处理")
                             break
+                    print(f"[DEBUG] _normalize_dex_blobs: extracted {len(chunks)} chunks from iterator")
                     return chunks
                     
             except Exception as e:
-                LOGGER.warning("APK.get_dex() 调用失败: %s", e)
+                print(f"[WARN] APK.get_dex() 调用失败: {e}")
+                import traceback
+                traceback.print_exc()
                 return []
         
         # 处理 Sequence（列表、元组等）
@@ -155,94 +186,153 @@ class APKGraphExtractor:
         return []
 
     def _extract_cfg(self, vm: Any) -> Dict[str, Any]:
-        """提取控制流图，从指令流中构建基本块"""
+        """提取控制流图 (CFG) - 每个基本块作为一个节点"""
         nodes: List[Dict[str, Any]] = []
         edges: List[Dict[str, Any]] = []
-
-        methods = self._iter_methods(vm)
-        method_index = 0
+        node_id_counter = 0
+        seen_edges: set[tuple[str, str]] = set()  # 用于去重边
         
+        methods = self._iter_methods(vm)
         for method in methods:
             instructions = self._method_instructions(method)
             if not instructions:
                 continue
-
+            
             method_name = self._method_signature(method)
-            node_id = f"m{method_index}"
             
-            # 统计方法的指令特征
-            feature = GraphNodeFeature()
-            for inst in instructions:
-                self._update_features(self._instruction_name(inst), feature)
-
-            # 添加方法节点
-            nodes.append({
-                "id": node_id,
-                "name": method_name,
-                "feature": feature.to_dict(),
-                "instruction_count": len(instructions),
-            })
-
-            # 从指令流构建基本块
+            # 构建基本块
             blocks = self._build_basic_blocks(instructions)
+            if not blocks:
+                continue
             
-            if blocks:
-                # 添加基本块节点（作为方法节点的子节点）
-                previous_block_id: Optional[str] = None
-                for block_index, block_instructions in enumerate(blocks):
-                    if not block_instructions:
-                        continue
-                        
-                    block_id = f"{node_id}_b{block_index}"
-                    block_feature = GraphNodeFeature()
-                    for inst in block_instructions:
-                        self._update_features(self._instruction_name(inst), block_feature)
-                    
-                    nodes.append({
-                        "id": block_id,
-                        "name": f"{method_name}#block{block_index}",
-                        "feature": block_feature.to_dict(),
-                        "instruction_count": len(block_instructions),
-                        "parent": node_id,
-                    })
-                    
-                    # 添加顺序边
-                    if previous_block_id is not None:
-                        edges.append({
-                            "source": previous_block_id, 
-                            "target": block_id, 
-                            "kind": "cfg"
-                        })
-                    previous_block_id = block_id
+            # 为每个基本块创建节点
+            block_ids: List[str] = []
+            for block_idx, block_instructions in enumerate(blocks):
+                block_id = f"b{node_id_counter}"
+                node_id_counter += 1
+                block_ids.append(block_id)
                 
-                # 添加控制流边（分支跳转）
-                for block_index, block_instructions in enumerate(blocks):
-                    if not block_instructions:
-                        continue
-                        
-                    # 检查最后一条指令是否是分支指令
-                    last_inst = block_instructions[-1] if block_instructions else None
-                    if last_inst:
-                        inst_name = self._instruction_name(last_inst).lower()
-                        # 如果是无条件跳转或条件跳转，尝试找到目标
-                        if inst_name.startswith(('goto', 'if-', 'packed-switch', 'sparse-switch')):
-                            # 获取跳转目标
-                            target_label = self._get_jump_target(last_inst)
-                            if target_label:
-                                # 在 blocks 中查找目标块
-                                target_block_index = self._find_block_by_label(blocks, target_label)
-                                if target_block_index is not None and target_block_index != block_index:
-                                    source_id = f"{node_id}_b{block_index}"
-                                    target_id = f"{node_id}_b{target_block_index}"
-                                    edges.append({
-                                        "source": source_id,
-                                        "target": target_id,
-                                        "kind": "cfg_branch"
-                                    })
+                feature = GraphNodeFeature()
+                for inst in block_instructions:
+                    self._update_features(self._instruction_name(inst), feature)
+                
+                nodes.append({
+                    "id": block_id,
+                    "name": f"{method_name}#B{block_idx}",
+                    "feature": feature.to_dict(),
+                    "instruction_count": len(block_instructions),
+                    "method": method_name,
+                })
             
-            method_index += 1
-
+            # 连接基本块之间的边
+            for block_idx, block in enumerate(blocks):
+                if not block:
+                    continue
+                current_id = block_ids[block_idx]
+                
+                # 检查最后一条指令是否是跳转指令
+                last_inst = block[-1] if block else None
+                if last_inst:
+                    inst_name = self._instruction_name(last_inst).lower()
+                    
+                    # 处理跳转指令
+                    if self._is_branch_instruction(inst_name):
+                        target_idx = self._find_jump_target(blocks, last_inst, block_idx)
+                        if target_idx is not None and target_idx != block_idx:
+                            edge_key = (current_id, block_ids[target_idx])
+                            if edge_key not in seen_edges:
+                                seen_edges.add(edge_key)
+                                edges.append({
+                                    "source": current_id,
+                                    "target": block_ids[target_idx],
+                                    "kind": "branch"
+                                })
+                        # 条件跳转有 fall-through
+                        if self._is_conditional_branch(inst_name):
+                            fallthrough_idx = block_idx + 1
+                            if fallthrough_idx < len(block_ids):
+                                edge_key = (current_id, block_ids[fallthrough_idx])
+                                if edge_key not in seen_edges:
+                                    seen_edges.add(edge_key)
+                                    edges.append({
+                                        "source": current_id,
+                                        "target": block_ids[fallthrough_idx],
+                                        "kind": "fallthrough"
+                                    })
+                        continue
+                    
+                    # 返回指令 - 不添加额外边
+                    if self._is_return_instruction(inst_name):
+                        continue
+                
+                # 顺序边（非跳转/返回指令的块）
+                if block_idx + 1 < len(block_ids):
+                    edge_key = (current_id, block_ids[block_idx + 1])
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        edges.append({
+                            "source": current_id,
+                            "target": block_ids[block_idx + 1],
+                            "kind": "sequential"
+                        })
+        
         return {"nodes": nodes, "edges": edges}
+    
+    def _is_branch_instruction(self, inst_name: str) -> bool:
+        """判断是否是跳转指令"""
+        branch_instructions = {
+            'goto', 'if-eq', 'if-ne', 'if-lt', 'if-ge', 'if-gt', 'if-le',
+            'if-eqz', 'if-nez', 'if-ltz', 'if-gez', 'if-gtz', 'if-lez',
+            'packed-switch', 'sparse-switch', 'throw'
+        }
+        return any(inst_name.startswith(b) for b in branch_instructions)
+
+
+    def _is_conditional_branch(self, inst_name: str) -> bool:
+        """判断是否是条件跳转"""
+        conditional = {'if-eq', 'if-ne', 'if-lt', 'if-ge', 'if-gt', 'if-le',
+                    'if-eqz', 'if-nez', 'if-ltz', 'if-gez', 'if-gtz', 'if-lez'}
+        return any(inst_name.startswith(c) for c in conditional)
+
+
+    def _is_return_instruction(self, inst_name: str) -> bool:
+        """判断是否是返回指令"""
+        return_instructions = {'return-void', 'return', 'return-wide', 'return-object'}
+        return any(inst_name.startswith(r) for r in return_instructions)
+    
+    def _find_jump_target(self, blocks: List[List[Any]], inst: Any, current_idx: int) -> Optional[int]:
+        """
+        查找跳转指令的目标基本块索引
+        简化版本：尝试解析目标标签或偏移量
+        """
+        output = self._instruction_output(inst) or ""
+        
+        # 尝试匹配标签格式 :label_xxx
+        import re
+        match = re.search(r':([a-zA-Z_][a-zA-Z0-9_]*)', output)
+        if match:
+            label = match.group(1)
+            # 在后续块中查找包含该标签的指令
+            for idx in range(current_idx + 1, len(blocks)):
+                for block_inst in blocks[idx]:
+                    block_output = self._instruction_output(block_inst) or ""
+                    if label in block_output:
+                        return idx
+        
+        # 尝试匹配偏移量 +xx 或 -xx
+        match = re.search(r'([+-]\d+)', output)
+        if match:
+            try:
+                offset = int(match.group(1))
+                # 简单启发：正偏移跳转到后续块，负偏移跳转到前序块
+                # 但由于我们无法精确计算，保守处理：如果是正偏移且不大，尝试下一个块
+                if offset > 0 and offset < 100:
+                    return current_idx + 1
+            except ValueError:
+                pass
+        
+        # 无法确定目标，返回 None
+        return None
     
     def _build_basic_blocks(self, instructions: List[Any]) -> List[List[Any]]:
         """从指令流构建基本块"""
@@ -282,6 +372,51 @@ class APKGraphExtractor:
             blocks.append(current_block)
         
         return blocks
+    
+    def _parse_jump_target(self, inst: Any, blocks: List[List[Any]]) -> Optional[int]:
+        """
+        解析跳转指令的目标块索引
+        
+        Args:
+            inst: 跳转指令对象
+            blocks: 基本块列表
+        
+        Returns:
+            目标块索引，如果无法解析则返回 None
+        """
+        output = self._instruction_output(inst) or ""
+        
+        # 尝试匹配 :label_xxx 格式
+        import re
+        match = re.search(r':([a-zA-Z_][a-zA-Z0-9_]*)', output)
+        if match:
+            label = match.group(1)
+            for idx, block in enumerate(blocks):
+                for block_inst in block:
+                    block_output = self._instruction_output(block_inst) or ""
+                    if label in block_output:
+                        return idx
+        
+        # 尝试匹配偏移量格式 (+xx 或 -xx)
+        match = re.search(r'([+-]\d+)', output)
+        if match:
+            try:
+                offset = int(match.group(1))
+                # 注意：这里需要知道当前指令在块中的位置
+                # 简化处理：根据偏移量估计目标块
+                # 在真实的 Dalvik 字节码中，偏移量是相对于当前指令的
+                # 但由于我们无法精确获取指令地址，这里做个近似处理
+                # 如果有多个块，偏移量正数表示向后跳转，负数表示向前跳转
+                if offset > 0:
+                    # 向后跳转，目标在当前块之后
+                    return None  # 暂时无法精确确定，交给 fallback
+                else:
+                    # 向前跳转，目标在当前块之前
+                    return None  # 暂时无法精确确定，交给 fallback
+            except ValueError:
+                pass
+        
+        return None
 
     def _get_jump_target(self, inst: Any) -> Optional[str]:
         """获取跳转指令的目标标签"""
@@ -348,53 +483,76 @@ class APKGraphExtractor:
             features.number_const_count += 1
 
     def _extract_fcg(self, vm: Any) -> Dict[str, Any]:
+        """提取函数调用图 (FCG) - 方法之间的调用关系"""
         nodes: List[Dict[str, Any]] = []
         edges: List[Dict[str, Any]] = []
-        seen_nodes: Dict[str, int] = {}
-
+        seen_nodes: set[str] = set()
+        seen_edges: set[tuple[str, str]] = set()  # 使用 set 记录已存在的边
+        
         for method in self._iter_methods(vm):
-            instructions = self._method_instructions(method)
-            if not instructions:
-                continue
-                
             caller = self._method_signature(method)
             if caller not in seen_nodes:
-                seen_nodes[caller] = len(nodes)
+                seen_nodes.add(caller)
                 nodes.append({"id": caller, "name": caller})
-
+            
+            # 获取被调用的方法
             for callee in self._method_called_methods(method):
-                if callee not in seen_nodes:
-                    seen_nodes[callee] = len(nodes)
-                    nodes.append({"id": callee, "name": callee})
-                edges.append({"source": caller, "target": callee, "kind": "fcg"})
-
+                if callee:
+                    if callee not in seen_nodes:
+                        seen_nodes.add(callee)
+                        nodes.append({"id": callee, "name": callee})
+                    
+                    # 使用 set 去重，O(1) 复杂度
+                    edge_key = (caller, callee)
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        edges.append({"source": caller, "target": callee, "kind": "call"})
+        
         return {"nodes": nodes, "edges": edges}
 
     def _extract_api_graph(self, vm: Any) -> Dict[str, Any]:
+        """提取 API 调用图"""
         nodes: List[Dict[str, Any]] = []
         edges: List[Dict[str, Any]] = []
         api_call_counts: Counter[str] = Counter()
-        api_nodes: Dict[str, str] = {}
-
+        seen_apis: set[str] = set()
+        seen_methods: set[str] = set()
+        seen_edges: set[tuple[str, str]] = set()  # 使用 set 记录已存在的边
+        
         for method in self._iter_methods(vm):
-            instructions = self._method_instructions(method)
-            if not instructions:
-                continue
-                
             caller = self._method_signature(method)
-            for inst in instructions:
-                inst_name = self._instruction_name(inst)
+            if caller not in seen_methods:
+                seen_methods.add(caller)
+                nodes.append({"id": caller, "name": caller, "type": "method"})
+            
+            for inst in self._method_instructions(method):
                 called_api = self._match_sensitive_api(inst)
                 if not called_api:
                     continue
+                
+                # 统计 API 调用
                 api_call_counts[called_api] += 1
-                if called_api not in api_nodes:
-                    api_id = f"api_{len(api_nodes)}"
-                    api_nodes[called_api] = api_id
+                
+                if called_api not in seen_apis:
+                    seen_apis.add(called_api)
                     category = self._sensitive_api_category(called_api)
-                    nodes.append({"id": api_id, "name": called_api, "category": category})
-                edges.append({"source": caller, "target": api_nodes[called_api], "kind": "api_call", "instruction": inst_name})
-
+                    nodes.append({
+                        "id": called_api, 
+                        "name": called_api, 
+                        "category": category, 
+                        "type": "api"
+                    })
+                
+                # 使用 set 去重，O(1) 复杂度
+                edge_key = (caller, called_api)
+                if edge_key not in seen_edges:
+                    seen_edges.add(edge_key)
+                    edges.append({
+                        "source": caller, 
+                        "target": called_api, 
+                        "kind": "api_call"
+                    })
+        
         return {
             "nodes": nodes,
             "edges": edges,
@@ -437,39 +595,49 @@ class APKGraphExtractor:
         }
 
     def _compute_graph_stats(self, graph_data: Dict[str, Any]) -> Dict[str, Any]:
-        cfg_nodes = self._graph_nodes(graph_data.get("cfg"))
-        cfg_edges = self._graph_edges(graph_data.get("cfg"))
-        fcg_nodes = self._graph_nodes(graph_data.get("fcg"))
-        fcg_edges = self._graph_edges(graph_data.get("fcg"))
-        api_nodes = self._graph_nodes(graph_data.get("api_graph"))
-        api_edges = self._graph_edges(graph_data.get("api_graph"))
-
-        total_nodes = len(cfg_nodes) + len(fcg_nodes) + len(api_nodes)
-        total_edges = len(cfg_edges) + len(fcg_edges) + len(api_edges)
-        density = self._density(total_nodes, total_edges)
-        avg_degree = (2 * total_edges / total_nodes) if total_nodes else 0.0
-
-        api_call_counts = graph_data.get("api_graph", {}).get("api_call_counts", {}) or {}
-        most_frequent_api = None
-        if api_call_counts:
-            most_frequent_api = max(api_call_counts.items(), key=lambda item: item[1])[0]
-
+        cfg = graph_data.get("cfg", {})
+        fcg = graph_data.get("fcg", {})
+        api_graph = graph_data.get("api_graph", {})
+        
+        cfg_nodes = cfg.get("nodes", [])
+        cfg_edges = cfg.get("edges", [])
+        fcg_nodes = fcg.get("nodes", [])
+        fcg_edges = fcg.get("edges", [])
+        api_nodes = api_graph.get("nodes", [])
+        api_edges = api_graph.get("edges", [])
+        
+        cfg_node_count = len(cfg_nodes)
+        cfg_edge_count = len(cfg_edges)
+        fcg_node_count = len(fcg_nodes)
+        fcg_edge_count = len(fcg_edges)
+        
+        # 计算密度（仅当节点数 > 1）
+        fcg_density = self._density(fcg_node_count, fcg_edge_count)
+        cfg_density = self._density(cfg_node_count, cfg_edge_count)
+        api_density = self._density(len(api_nodes), len(api_edges))
+        
         return {
-            "cfg_node_count": len(cfg_nodes),
-            "cfg_edge_count": len(cfg_edges),
-            "fcg_node_count": len(fcg_nodes),
-            "fcg_edge_count": len(fcg_edges),
+            "cfg_node_count": cfg_node_count,
+            "cfg_edge_count": cfg_edge_count,
+            "cfg_density": cfg_density,
+            "fcg_node_count": fcg_node_count,
+            "fcg_edge_count": fcg_edge_count,
+            "fcg_density": fcg_density,
             "api_graph_node_count": len(api_nodes),
             "api_graph_edge_count": len(api_edges),
-            "total_node_count": total_nodes,
-            "total_edge_count": total_edges,
-            "density": density,
-            "average_degree": avg_degree,
-            "api_call_type_count": len(api_call_counts),
-            "top_api_call": most_frequent_api,
+            "api_graph_density": api_density,
+            "api_call_type_count": len(api_graph.get("api_call_counts", {})),
+            "total_api_calls": sum(api_graph.get("api_call_counts", {}).values()),
             "has_fallback": bool(graph_data.get("fallback")),
         }
 
+
+    def _density(self, nodes: int, edges: int) -> float:
+        """计算图密度"""
+        if nodes <= 1:
+            return 0.0
+        return min(1.0, edges / (nodes * (nodes - 1)))
+    
     def _iter_methods(self, vm: Any) -> List[Any]:
         methods: List[Any] = []
         for unit in self._iter_vm_units(vm):

@@ -27,7 +27,7 @@ except Exception:  # pragma: no cover - optional dependency
     OpenAIChatCompletionClient = None
 
 
-@dataclass(slots=True)
+@dataclass
 class RoleConversation:
     role: str
     system_message: str
@@ -57,30 +57,44 @@ class RoleConversation:
             self._merge_history(context)
         self._latest_input = task
         start = time.perf_counter()
-        try:
-            if not self.api_key and self.client is None:
-                return {"success": False, "error": f"未配置 {self.role} API Key，无法执行模型深度检查。", "elapsed": 0.0, "usage": None}
-            if self._can_use_autogen():
-                try:
-                    content, usage = asyncio.run(self._run_autogen(task))
-                except Exception:
+        
+        # 重试配置
+        max_retries = 3
+        retry_delay = 2.0
+        
+        for attempt in range(max_retries + 1):
+            try:
+                if not self.api_key and self.client is None:
+                    return {"success": False, "error": f"未配置 {self.role} API Key，无法执行模型深度检查。", "elapsed": 0.0, "usage": None}
+                
+                # 尝试使用 autogen，失败则降级到 OpenAI
+                if self._can_use_autogen():
+                    try:
+                        content, usage = asyncio.run(self._run_autogen(task))
+                    except Exception:
+                        content, usage = self._run_openai(task)
+                else:
                     content, usage = self._run_openai(task)
-            else:
-                content, usage = self._run_openai(task)
 
-            elapsed = time.perf_counter() - start
-            if not content:
-                return {"success": False, "error": "模型未返回内容", "elapsed": elapsed, "usage": usage}
+                elapsed = time.perf_counter() - start
+                if not content:
+                    return {"success": False, "error": "模型未返回内容", "elapsed": elapsed, "usage": usage}
 
-            self._latest_output = content
-            self._history.extend([
-                {"role": "user", "content": task},
-                {"role": "assistant", "content": content},
-            ])
-            return {"success": True, "content": content, "elapsed": elapsed, "usage": usage}
-        except Exception as exc:
-            elapsed = time.perf_counter() - start
-            return {"success": False, "error": f"模型调用异常: {exc}", "elapsed": elapsed, "usage": None}
+                self._latest_output = content
+                self._history.extend([
+                    {"role": "user", "content": task},
+                    {"role": "assistant", "content": content},
+                ])
+                return {"success": True, "content": content, "elapsed": elapsed, "usage": usage}
+                
+            except Exception as exc:
+                elapsed = time.perf_counter() - start
+                if attempt < max_retries:
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                return {"success": False, "error": f"模型调用异常(尝试{attempt+1}次): {exc}", "elapsed": elapsed, "usage": None}
+        
+        return {"success": False, "error": "模型调用失败", "elapsed": time.perf_counter() - start, "usage": None}
 
     def append_context(self, messages: Sequence[Dict[str, str]]) -> None:
         self._merge_history(messages)
@@ -199,24 +213,45 @@ class RoleConversation:
 
     def _run_openai(self, task: str) -> tuple[str, Optional[Dict[str, Any]]]:
         client = self._ensure_openai_client()
-        response = client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "system", "content": self.system_message},
-                *self._history,
-                {"role": "user", "content": task},
-            ],
-            temperature=self.temperature,
-            top_p=self.top_p,
-            response_format={"type": "json_object"},
-        )
+        messages = [
+            {"role": "system", "content": self.system_message},
+            *self._history,
+            {"role": "user", "content": task},
+        ]
+
+        response = None
+        last_error: Exception | None = None
+
+        # 先尝试带 response_format 的请求，如果失败则降级
+        for request_kwargs in (
+            {"response_format": {"type": "json_object"}},
+            {},  # 降级：移除 response_format
+        ):
+            try:
+                response = client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=self.temperature,
+                    top_p=self.top_p,
+                    timeout=180.0,  # 添加超时
+                    **request_kwargs,
+                )
+                break
+            except Exception as exc:
+                last_error = exc
+                # 如果已经是降级请求，则继续抛出
+                if not request_kwargs:
+                    raise
+
+        if response is None:
+            raise last_error or RuntimeError("模型请求失败")
 
         content = response.choices[0].message.content if response.choices else ""
         usage = _extract_usage_from_openai_response(response)
         return content or "", usage
 
 
-@dataclass(slots=True)
+@dataclass
 class MultiAgentOrchestrator:
     agents: Dict[str, RoleConversation]
     role_order: List[str]

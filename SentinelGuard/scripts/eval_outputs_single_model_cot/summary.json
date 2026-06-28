@@ -1,0 +1,34 @@
+{
+  "model": "gpt-5.4-mini",
+  "total_samples": 40,
+  "valid_predictions": 40,
+  "errors": 0,
+  "metrics": {
+    "total_samples": 40,
+    "accuracy": 0.825,
+    "precision": 0.7407407407407407,
+    "recall": 1.0,
+    "f1": 0.851063829787234,
+    "confusion_matrix": [
+      [
+        13,
+        7
+      ],
+      [
+        0,
+        20
+      ]
+    ],
+    "roc_auc": 0.825
+  },
+  "split_stats": {
+    "split_apk_count": 5,
+    "single_apk_count": 35,
+    "split_apk_accuracy": 1.0,
+    "single_apk_accuracy": 0.8
+  },
+  "sample_summary": {
+    "benign": 20,
+    "malicious": 20
+  }
+}
