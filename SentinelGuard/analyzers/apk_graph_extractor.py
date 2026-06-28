@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter, defaultdict
-from dataclasses import asdict
 from math import log2
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from SentinelGuard.state import GraphNodeFeature, GraphStructure
 from .apk_rules import SENSITIVE_API_RULES, match_sensitive_api, sensitive_api_category
+
+LOGGER = logging.getLogger(__name__)
 
 try:  # pragma: no cover - optional dependency fallback
     from androguard.core.bytecodes.dvm import DalvikVMFormat
@@ -128,12 +130,12 @@ class APKGraphExtractor:
                                 pass
                         # 安全检查：正常 APK 不会超过 10 个 DEX
                         if len(chunks) > 50:
-                            print(f"[WARN] DEX 数量异常（>50），截断处理")
+                            LOGGER.warning("DEX 数量异常（>50），截断处理")
                             break
                     return chunks
                     
             except Exception as e:
-                print(f"[WARN] APK.get_dex() 调用失败: {e}")
+                LOGGER.warning("APK.get_dex() 调用失败: %s", e)
                 return []
         
         # 处理 Sequence（列表、元组等）

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import difflib
 import html as html_lib
 import html.parser
@@ -26,6 +27,8 @@ except ImportError:
 from config import settings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, TargetIR
 from SentinelGuard.analyzers.screenshot import capture_page_screenshot
+
+LOGGER = logging.getLogger(__name__)
 
 
 SENSITIVE_KEYWORDS = (
@@ -179,46 +182,53 @@ def analyze_url(target_ir: TargetIR, fetch_page: bool = True,
                 runtime_config: AnalysisRuntimeConfig | None = None) -> Dict[str, Any]:
     if target_ir.target_type != "url" or not target_ir.url:
         return {"findings": [], "redirect_chain": [], "page_summary": {}, "screenshots": []}
-
+   
     findings: List[DetectionFinding] = []
     findings.extend(_analyze_url_structure(target_ir.url))
+
+    LOGGER.debug("struct_analyze_finished")
 
     redirect_chain: List[str] = [target_ir.url.normalized_url]
     page_summary: Dict[str, Any] = {}
     screenshots: List[Dict[str, Any]] = []
-
+    
     if fetch_page:
         network_result = _fetch_page(target_ir.url.normalized_url, runtime_config=runtime_config)
+        LOGGER.debug("fetch finished")
         redirect_chain = network_result["redirect_chain"] or redirect_chain
         page_summary = network_result["page_summary"]
         findings.extend(network_result["findings"])
         findings.extend(_analyze_redirect_chain(redirect_chain))
+        LOGGER.debug("analyze_redirect_chain_finished")
 
         final_hostname = ""
         if redirect_chain:
             final_hostname = urlparse(redirect_chain[-1]).hostname or ""
         findings.extend(_analyze_page_summary(page_summary, final_hostname))
-
+       
         # 截图
         if _should_capture_screenshot(findings, page_summary, runtime_config):
+            LOGGER.debug("screenshoot start")
             screenshot = _capture_page_screenshot(target_ir.url.normalized_url, runtime_config=runtime_config)
+            LOGGER.debug("screenshot finished")
             if screenshot:
                 screenshots.append(screenshot)
-
+                
+    LOGGER.debug("extend start")
     # ----- 新增：外部情报注入（免费，对可访问域名） -----
     if fetch_page and page_summary:
         hostname = urlparse(target_ir.url.normalized_url).hostname or ""
         proxies = _build_request_proxies(runtime_config)
         external_intel = _gather_external_intel(hostname, proxies=proxies)
         page_summary["external_intel"] = external_intel
-
+    LOGGER.debug("extend_finished")
     return {
         "findings": findings,
         "redirect_chain": redirect_chain,
         "page_summary": page_summary,
         "screenshots": screenshots,
     }
-
+    
 
 def _gather_external_intel(hostname: str, proxies: Dict[str, str] | None = None) -> Dict[str, Any]:
     intel: Dict[str, Any] = {}
@@ -241,58 +251,96 @@ def _gather_external_intel(hostname: str, proxies: Dict[str, str] | None = None)
     return intel
 
 def _query_whois_safe(domain: str, proxies: Dict[str, str] | None = None) -> Dict[str, Any]:
-    # 优先使用传统 WHOIS（如果网络允许）
-    if whois is not None:
-        try:
-            w = whois.whois(domain, timeout=5)
-            creation_date = w.creation_date
-            if isinstance(creation_date, list):
-                creation_date = creation_date[0]
-            age_days = None
-            if creation_date and isinstance(creation_date, datetime):
-                created_dt = creation_date
-                if created_dt.tzinfo is None:
-                    created_dt = created_dt.replace(tzinfo=timezone.utc)
-                age_days = (datetime.now(timezone.utc) - created_dt.astimezone(timezone.utc)).days
-            return {
-                "whois_registrar": w.registrar,
-                "whois_country": w.country,
-                "whois_creation_date": str(creation_date) if creation_date else None,
-                "whois_age_days": age_days,
-            }
-        except Exception:
-            pass
-
-    # 回退：使用 RDAP（HTTP，可走代理）
-    try:
-        # 通用 RDAP 服务，可按需更换
+     try:
         rdap_url = f"https://rdap.org/domain/{domain}"
         resp = requests.get(rdap_url, timeout=5, proxies=proxies)
-        if resp.status_code == 200:
-            data = resp.json()
-            events = data.get("events", [])
-            creation_date = None
-            for event in events:
-                if event.get("eventAction") == "registration":
-                    creation_date = event.get("eventDate")
-                    break
-            age_days = None
-            if creation_date:
-                dt = datetime.fromisoformat(creation_date.replace("Z", "+00:00"))
-                age_days = (datetime.now(timezone.utc) - dt).days
-            registrant = data.get("entities", [{}])[0].get("vcardArray", [[], []])[1] if data.get("entities") else []
-            registrar = next((item[3] for item in registrant if item[0] == "fn"), None) if registrant else None
-            country = next((item[3] for item in registrant if item[0] == "country-name"), None) if registrant else None
-            return {
-                "whois_registrar": registrar,
-                "whois_country": country,
-                "whois_creation_date": creation_date,
-                "whois_age_days": age_days,
-            }
-    except Exception:
-        pass
+        if resp.status_code != 200:
+            return {}
+        data = resp.json()
 
-    return {}
+        # 1. 提取创建时间
+        events = data.get("events", [])
+        creation_date = None
+        for event in events:
+            if event.get("eventAction") == "registration":
+                creation_date = event.get("eventDate")
+                break
+        age_days = None
+        if creation_date:
+            dt = datetime.fromisoformat(creation_date.replace("Z", "+00:00"))
+            age_days = (datetime.now(timezone.utc) - dt).days
+
+        # 2. 提取注册商（优先从 registrar 实体获取）
+        entities = data.get("entities", [])
+        registrar = None
+        for ent in entities:
+            if "registrar" in ent.get("roles", []):
+                vcard = ent.get("vcardArray", [None, []])
+                if len(vcard) > 1 and isinstance(vcard[1], list):
+                    for prop in vcard[1]:
+                        if prop[0] == "fn" and len(prop) > 3:
+                            registrar = prop[3]
+                            break
+                if registrar:
+                    break
+
+        # 3. 提取国家（从注册者实体，或任何有国家的实体）
+        country = None
+        # 先找注册者实体
+        registrant_entity = None
+        for ent in entities:
+            if "registrant" in ent.get("roles", []):
+                registrant_entity = ent
+                break
+        if not registrant_entity:
+            # 回退：找第一个包含国家信息的实体
+            for ent in entities:
+                vcard = ent.get("vcardArray", [None, []])
+                if len(vcard) > 1 and isinstance(vcard[1], list):
+                    for prop in vcard[1]:
+                        if prop[0] == "country-name" and len(prop) > 3:
+                            country = prop[3]
+                            break
+                        if prop[0] == "adr" and len(prop) > 3:
+                            adr_value = prop[3]
+                            if isinstance(adr_value, list) and len(adr_value) > 6:
+                                country = adr_value[6]
+                                break
+                            elif isinstance(adr_value, str):
+                                # 极少情况是字符串，用逗号分割
+                                parts = adr_value.split(",")
+                                if len(parts) > 6:
+                                    country = parts[6].strip()
+                                    break
+                if country:
+                    break
+        else:
+            # 从注册者实体提取
+            vcard = registrant_entity.get("vcardArray", [None, []])
+            if len(vcard) > 1 and isinstance(vcard[1], list):
+                for prop in vcard[1]:
+                    if prop[0] == "country-name" and len(prop) > 3:
+                        country = prop[3]
+                        break
+                    if prop[0] == "adr" and len(prop) > 3 and not country:
+                        adr_value = prop[3]
+                        if isinstance(adr_value, list) and len(adr_value) > 6:
+                            country = adr_value[6]
+                            break
+                        elif isinstance(adr_value, str):
+                            parts = adr_value.split(",")
+                            if len(parts) > 6:
+                                country = parts[6].strip()
+                                break
+
+        return {
+            "whois_registrar": registrar,
+            "whois_country": country,
+            "whois_creation_date": creation_date,
+            "whois_age_days": age_days,
+        }
+     except Exception:
+        return {}
 
 
 def _query_crtsh_safe(domain: str, proxies: Dict[str, str] | None = None) -> Dict[str, Any]:
@@ -349,8 +397,9 @@ def _capture_page_screenshot(url: str, runtime_config: AnalysisRuntimeConfig | N
         proxy_payload = {"server": proxies.get("https") or proxies.get("http") or proxies.get("all") or ""}
         if not proxy_payload["server"]:
             proxy_payload = None
+    LOGGER.debug("start screenshoot1")
     return capture_page_screenshot(url, proxy=proxy_payload,
-                                   timeout_seconds=max(settings.DETECTION_TIMEOUT_SECONDS, 10))
+                                   timeout_seconds=20)
 
 
 # ---------- 结构分析（含关系型检测） ----------

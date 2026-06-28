@@ -267,8 +267,15 @@ def render_markdown_report(report: DetectionReport) -> str:
         "# SentinelGuard 哨塔检测报告",
         "",
         f"> {analysis_mode_label} · 风险等级：**{report.risk_level.upper()}** · 风险分数：**{report.score}/100**",
-        f"> 证据分数：**{report.evidence_score}/100** · 深度研判分数：**{report.deep_score if report.deep_score is not None else '-'} /100**",
-        f"> 评分口径：URL 采用 `0.5 × 证据分数 + 0.5 × 深度研判分数`；APK 采用 `0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励`。",
+    ]
+    if ir.target_type == "apk":
+        lines.extend([
+            f"> 证据分数：**{report.evidence_score}/100** · 深度研判分数：**{report.deep_score if report.deep_score is not None else '-'} /100**",
+            f"> 评分口径：APK 采用 `0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励`。",
+        ])
+    elif report.analysis_mode == "deep":
+        lines.append("> 评分口径：URL 深度研判分数已综合证据分数，最终风险分数直接采用深度研判分数。")
+    lines.extend([
         "模型深度研判" if report.analysis_mode == "deep" and ir.target_type == "url" else "",
         "",
         "## 一、检测结论",
@@ -277,7 +284,7 @@ def render_markdown_report(report: DetectionReport) -> str:
         f"- 状态：`{ir.status}`",
         f"- 证据条数：{stats['finding_count']} 条",
         f"- 高危证据：{stats['high_count']} 条",
-    ]
+    ])
 
     if report.parent_html_report_path or report.parent_markdown_report_path:
         lines.extend(["- 关联静态报告："])
@@ -550,8 +557,16 @@ def _build_evidence_tags(findings: Sequence[DetectionFinding]) -> list[str]:
         tags.append(f"{finding.severity.upper()} · {finding.title}")
     return tags
 
-
 def _render_summary_cards(report: DetectionReport, stats: dict[str, int]) -> str:
+    if report.target_ir.target_type == "url":
+        cards = [
+            _summary_card("风险等级", report.risk_level.upper(), f"{stats['high_count']} 条高危 / {stats['medium_count']} 条中危证据", "risk"),
+            _summary_card("风险分数", f"{report.score}/100", "深度研判已综合证据分数", "target"),
+            _summary_card("分析模式", _analysis_mode_label(report), "静态检测结果可继续叠加深度研判", "mode"),
+            _summary_card("输入对象", report.target_ir.target_type, report.target_ir.original_input, "target"),
+        ]
+        return "".join(cards)
+
     formula_hint = _risk_formula_hint(report)
     cards = [
         _summary_card("风险等级", report.risk_level.upper(), f"{stats['high_count']} 条高危 / {stats['medium_count']} 条中危证据", "risk"),
@@ -580,6 +595,16 @@ def _render_result_panel(report: DetectionReport) -> str:
         f"<span class='pill {'high' if tag.startswith(('CRITICAL', 'HIGH')) else 'medium' if tag.startswith('MEDIUM') else 'low'}'>{html.escape(tag)}</span>"
         for tag in tags
     )
+    if report.target_ir.target_type == "url":
+        return f"""
+          <p><span class="badge">{html.escape(report.risk_level.upper())}</span></p>
+          <p>风险分数：<strong>{report.score}/100</strong></p>
+          <p class="subtle">深度研判分数已综合证据分数，URL 报告直接以该分数作为最终风险分数。</p>
+          <p>原始输入：<code>{html.escape(report.target_ir.original_input)}</code></p>
+          <p>报告类型：<strong>{html.escape(_analysis_mode_label(report))}</strong></p>
+          <div class="pill-row">{tag_html}</div>
+        """
+
     deep_score_text = str(report.deep_score) if report.deep_score is not None else "-"
     formula_hint = _risk_formula_hint(report)
     return f"""
@@ -606,7 +631,7 @@ def _risk_formula_expression(report: DetectionReport) -> str:
     if report.target_ir.target_type == "apk":
         return "0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励"
     if report.target_ir.target_type == "url":
-        return "0.5 × 证据分数 + 0.5 × 深度研判分数"
+        return "深度研判分数"
     return "根据对象类型使用对应评分口径"
 
 
@@ -698,21 +723,8 @@ def _render_findings_panel(report: DetectionReport) -> str:
 
 
 def _render_discussion_panel(report: DetectionReport) -> str:
-    expert_cards = ""
-    for role in ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]:
-        opinion = report.expert_opinions.get(role, "")
-        model_name = report.expert_models.get(role, "unknown")
-        expert_cards += f"""
-        <article class="expert-card">
-          <h4>{html.escape(role)} <span class="pill muted">{html.escape(model_name)}</span></h4>
-          <p>{html.escape(opinion or '无')}</p>
-        </article>
-        """
-
     timeline = _build_discussion_timeline(report)
     return f"""
-      <div class="expert-grid">{expert_cards}</div>
-      <div style="height: 14px"></div>
       <div class="grid two-col">
         <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
           <div class="panel-inner">
@@ -1779,25 +1791,45 @@ def _group_findings_by_severity(findings: Sequence[DetectionFinding]) -> dict[st
 
 
 def _build_discussion_timeline(report: DetectionReport) -> str:
-    items = []
     role_map = {
-        "主持人": "汇总各方证据，先定风险基调。",
         "静态分析员": "聚焦域名结构、参数、敏感关键词等静态特征。",
         "行为分析员": "聚焦跳转链、自动跳转、下载与表单行为。",
         "情报分析员": "说明离线/外部情报可用性及局限。",
         "处置建议员": "给出拦截、隔离、复核与留痕建议。",
+        "主持人": "汇总各方证据，形成最终风险结论。",
     }
-    for index, role in enumerate(["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"], start=1):
-        opinion = report.expert_opinions.get(role, "")
-        if not opinion:
+    stages = [
+        ("1. 静态 / 行为 / 情报并行研判", ["静态分析员", "行为分析员", "情报分析员"]),
+        ("2. 行为处置员", ["处置建议员"]),
+        ("3. 主持人", ["主持人"]),
+    ]
+    role_labels = {
+        "处置建议员": "行为处置员",
+    }
+    items = []
+    for title, roles in stages:
+        role_blocks = []
+        for role in roles:
+            opinion = report.expert_opinions.get(role, "")
+            if not opinion:
+                continue
+            role_blocks.append(
+                f"""
+                <div style="margin-top:8px;">
+                  <strong>{html.escape(role_labels.get(role, role))}</strong>
+                  <p>{html.escape(role_map.get(role, ''))}</p>
+                  <p class="subtle" style="margin-top:6px;">{html.escape(opinion)}</p>
+                </div>
+                """
+            )
+        if not role_blocks:
             continue
         items.append(
             f"""
             <div class="timeline-item">
               <span class="timeline-dot"></span>
-              <h4>{index}. {html.escape(role)}</h4>
-              <p>{html.escape(role_map.get(role, ''))}</p>
-              <p class="subtle" style="margin-top:6px;">{html.escape(opinion)}</p>
+              <h4>{html.escape(title)}</h4>
+              {''.join(role_blocks)}
             </div>
             """
         )

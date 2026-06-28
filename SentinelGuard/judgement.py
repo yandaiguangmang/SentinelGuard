@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import logging
+from collections import Counter
 from typing import Any, Callable, Dict, List, Optional
-
 from openai import OpenAI
 
 from config import settings
@@ -17,6 +18,8 @@ from SentinelGuard.parsers.input_parser import parse_target
 from SentinelGuard.report import _deduplicate_semantic_findings, save_detection_report
 from SentinelGuard.scoring import combine_apk_scores, combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport, TargetIR
+
+LOGGER = logging.getLogger(__name__)
 
 
 SEVERITY_WEIGHTS = {
@@ -85,6 +88,7 @@ def run_detection(raw_target: str, target_type: str = "auto", fetch_page: bool =
 def run_static_detection(raw_target: str, target_type: str = "auto", fetch_page: bool = True, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None) -> DetectionReport:
     target_ir = parse_target(raw_target, target_type)
     report = build_static_report(target_ir, fetch_page=fetch_page, runtime_config=runtime_config)
+    LOGGER.debug("build_finished")
     if persist_report:
         save_detection_report(report)
     return report
@@ -147,18 +151,17 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
                 "graph_data_available": bool(target_ir.apk.graph_data),
             }
         return report
-
+    LOGGER.debug("start analysis")
     analysis = analyze_url(target_ir, fetch_page=fetch_page, runtime_config=runtime_config)
-    findings: List[DetectionFinding] = _deduplicate_semantic_findings(analysis["findings"])
-    evidence_score = score_from_findings(findings)
-    risk_level = risk_level_from_score(evidence_score)
+    LOGGER.debug("analysis finished")
+    findings: List[DetectionFinding] = _deduplicate_findings(analysis["findings"])
+    score = _calculate_score(findings)
+    risk_level = _risk_level(score, findings)
 
     return DetectionReport(
         target_ir=target_ir,
         risk_level=risk_level,
-        score=evidence_score,
-        evidence_score=evidence_score,
-        deep_score=None,
+        score=score,
         findings=findings,
         expert_opinions=_build_expert_opinions(risk_level, findings),
         redirect_chain=analysis["redirect_chain"],
@@ -167,8 +170,35 @@ def build_static_report(target_ir: TargetIR, fetch_page: bool = True, runtime_co
         placeholders=PLACEHOLDERS,
         analysis_mode="static",
     )
+def _calculate_score(findings: List[DetectionFinding]) -> int:
+    if not findings:
+        return 0
 
+    severity_counts = Counter(finding.severity for finding in findings)
+    base_score = max(SEVERITY_BASE_SCORES.get(finding.severity, 0) for finding in findings)
+    bonus_score = sum(severity_counts.get(severity, 0) * weight for severity, weight in SEVERITY_WEIGHTS.items())
+    return min(100, base_score + min(20, bonus_score))
 
+def _deduplicate_findings(findings: List[DetectionFinding]) -> List[DetectionFinding]:
+    seen = set()
+    unique: List[DetectionFinding] = []
+    for finding in findings:
+        key = (finding.rule_id, finding.evidence)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(finding)
+    return unique
+
+def _risk_level(score: int, findings: List[DetectionFinding]) -> str:
+    severities = {finding.severity for finding in findings}
+    if "critical" in severities or score >= 80:
+        return "critical"
+    if "high" in severities or score >= 50:
+        return "high"
+    if "medium" in severities or score >= 25:
+        return "medium"
+    return "low"
 def run_deep_url_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
     try:
         deep_result = deep_analyze_url(static_report, runtime_config=runtime_config, progress_callback=progress_callback)

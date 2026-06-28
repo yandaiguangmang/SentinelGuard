@@ -32,9 +32,9 @@ def score_from_findings(findings: Sequence[DetectionFinding]) -> int:
     severity_counts = Counter(finding.severity for finding in findings)
     severity_base_scores = {
         "low": 5,
-        "medium": 15,
-        "high": 30,
-        "critical": 50,
+        "medium": 25,
+        "high": 60,
+        "critical": 75,
     }
     severity_weights = {
         "low": 1,
@@ -95,7 +95,7 @@ def combine_scores(evidence_score: int, deep_score: Optional[int]) -> int:
     evidence_score = clamp_score(evidence_score)
     if deep_score is None:
         return evidence_score
-    return clamp_score(round(evidence_score * 0.5 + clamp_score(deep_score) * 0.5))
+    return clamp_score(deep_score)
 
 
 def combine_apk_scores(

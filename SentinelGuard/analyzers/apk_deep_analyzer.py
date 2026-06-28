@@ -10,13 +10,13 @@ import httpx
 from openai import OpenAI
 
 from config import settings
+from SentinelGuard.agents.autogen_runner import build_multi_agent_orchestrator, build_role_conversation
 from SentinelGuard.arbitrator import Arbitrator
 from SentinelGuard.robustness_validator import RobustnessValidator
 from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.scoring import combine_apk_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
-from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
-
+import logging
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
 LOGGER = logging.getLogger(__name__)
@@ -110,6 +110,21 @@ class APKDeepAnalyzer:
         self.role_models = self._resolve_role_models()
         self.proxy_map = _build_proxy_map(self.runtime_config)
         self.role_clients = {role: self._build_client(role) for role in DEEP_ROLE_ORDER}
+        self.role_conversations = {
+            role: build_role_conversation(
+                role=role,
+                system_message=ROLE_SYSTEM_PROMPTS[role],
+                model_name=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
+                api_key=self._resolve_role_credentials(role)[0],
+                base_url=self._resolve_role_credentials(role)[1],
+                client=self.role_clients.get(role),
+                http_client=getattr(self.role_clients.get(role), "http_client", None),
+                temperature=0.2,
+                top_p=0.9,
+            )
+            for role in DEEP_ROLE_ORDER
+        }
+        self.orchestrator = build_multi_agent_orchestrator(self.role_conversations, DEEP_ROLE_ORDER)
         self.arbitrator = Arbitrator()
         self.robustness_validator = RobustnessValidator()
 
@@ -179,6 +194,22 @@ class APKDeepAnalyzer:
                 error=exc,
             )
 
+    def _get_role_conversation(self, role: str):
+        if getattr(self.orchestrator, "agents", None) is not self.role_conversations:
+            self.orchestrator.agents = self.role_conversations
+        return self.role_conversations[role]
+
+    def _build_client(self, role: str) -> OpenAI:
+        api_key, base_url = self._resolve_role_credentials(role)
+        if not api_key:
+            return None
+
+        client_kwargs: Dict[str, Any] = {"api_key": api_key, "http_client": _build_httpx_client(self.proxy_map)}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+
+        return OpenAI(**client_kwargs)
+
     def _resolve_role_models(self) -> Dict[str, str]:
         role_models: Dict[str, str] = {}
         for role, keys in ROLE_CONFIG_KEYS.items():
@@ -192,23 +223,6 @@ class APKDeepAnalyzer:
             if base_url:
                 setattr(self, f"_{role}_base_url", base_url)
         return role_models
-
-    def _build_client(self, role: str) -> OpenAI:
-        api_key, base_url = self._resolve_role_credentials(role)
-        if not api_key:
-            return None
-
-        client_kwargs: Dict[str, Any] = {"api_key": api_key, "http_client": _build_httpx_client(self.proxy_map)}
-        if base_url:
-            client_kwargs["base_url"] = base_url
-
-        return OpenAI(**client_kwargs)
-
-    def _get_client(self, role: str) -> OpenAI:
-        client = self.role_clients.get(role)
-        if client is None:
-            raise ValueError(f"未配置 {role} API Key，无法执行模型深度检查。")
-        return client
 
     def _resolve_role_credentials(self, role: str) -> tuple[str, str]:
         if self.runtime_config.llm_api_key.strip() or self.runtime_config.llm_base_url.strip():
@@ -569,7 +583,7 @@ class APKDeepAnalyzer:
             return
 
         size_kb = size_bytes / 1024
-        print(f"[APK_DEEP_PAYLOAD] {label} payload size: {size_bytes} bytes ({size_kb:.2f} KB)", flush=True)
+        LOGGER.debug("[APK_DEEP_PAYLOAD] %s payload size: %s bytes (%.2f KB)", label, size_bytes, size_kb)
         LOGGER.info("APK 深度研判 %s payload size: %s bytes (%.2f KB)", label, size_bytes, size_kb)
 
     def _build_role_payload(self, role: str, static_report: DetectionReport, base_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -593,23 +607,12 @@ class APKDeepAnalyzer:
         self._log_payload_size(role, payload)
         return payload
 
-    @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            response = self._get_client(role).chat.completions.create(
-                model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
-                messages=[
-                    {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
-                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
-                ],
-                temperature=0.3,
-                top_p=0.9,
-                response_format={"type": "json_object"},
-            )
-            content = response.choices[0].message.content if response.choices else ""
-            if not content:
-                return {"success": False, "error": "模型未返回内容"}
-            return {"success": True, "content": content}
+            conversation = self._get_role_conversation(role)
+            task = json.dumps(payload, ensure_ascii=False, indent=2)
+            system_message = ROLE_SYSTEM_PROMPTS[role]
+            return conversation.run(task, system_message=system_message)
         except Exception as exc:
             return {"success": False, "error": f"模型调用异常: {exc}"}
 
@@ -617,8 +620,6 @@ class APKDeepAnalyzer:
         return {
             "role_outputs": self._serialize_role_outputs(role_outputs),
         }
-
-    def _build_fallback_role_output(self, role: str, static_report: DetectionReport, error: Any) -> Dict[str, Any]:
         base_opinion = static_report.expert_opinions.get(role) or static_report.expert_opinions.get("主持人") or ""
         if not base_opinion:
             base_opinion = f"{role} 模型暂不可用，已使用静态检测结果进行降级研判。"

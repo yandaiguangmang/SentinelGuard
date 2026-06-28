@@ -3,6 +3,7 @@ from SentinelGuard.analyzers.url_deep_analyzer import _load_json_payload
 from SentinelGuard.judgement import run_detection
 from SentinelGuard.parsers.input_parser import parse_target
 from SentinelGuard.state import DetectionFinding
+import threading
 
 
 class FakeRaw:
@@ -77,9 +78,66 @@ def test_page_rules_with_monkeypatched_fetch(monkeypatch):
     rule_ids = {finding.rule_id for finding in result["findings"]}
 
     assert "PAGE_PASSWORD_FORM" in rule_ids
-    assert "PAGE_DOWNLOAD_LINK" in rule_ids
+    assert "PAGE_DOWNLOAD_EXECUTABLE" in rule_ids
     assert "REDIRECT_CROSS_DOMAIN" not in rule_ids
     assert result["page_summary"]["title"] == "Login"
+
+
+def test_post_fetch_steps_can_overlap(monkeypatch):
+    fetch_done = threading.Event()
+    redirect_started = threading.Event()
+    page_started = threading.Event()
+    intel_started = threading.Event()
+    screenshot_started = threading.Event()
+    allow_finish = threading.Event()
+
+    def fake_fetch(_url, runtime_config=None):
+        fetch_done.set()
+        return {
+            "findings": [],
+            "redirect_chain": ["http://example.com/start", "https://safe.example/login"],
+            "page_summary": {"status_code": 200, "final_url": "https://safe.example/login", "external_script_count": 0},
+        }
+
+    def fake_redirect(chain):
+        assert fetch_done.is_set()
+        redirect_started.set()
+        allow_finish.wait(timeout=1)
+        return [DetectionFinding(rule_id="REDIRECT_CROSS_DOMAIN", title="跨域跳转", severity="low", description="", evidence="", recommendation="")]
+
+    def fake_page(summary, hostname):
+        assert fetch_done.is_set()
+        page_started.set()
+        allow_finish.wait(timeout=1)
+        return [DetectionFinding(rule_id="PAGE_PASSWORD_FORM", title="密码框", severity="medium", description="", evidence="", recommendation="")]
+
+    def fake_intel(hostname, proxies=None):
+        assert fetch_done.is_set()
+        intel_started.set()
+        allow_finish.wait(timeout=1)
+        return {"whois_age_days": 10}
+
+    def fake_capture(*_args, **_kwargs):
+        screenshot_started.set()
+        allow_finish.set()
+        return {"base64": "x"}
+
+    monkeypatch.setattr(url_analyzer, "_fetch_page", fake_fetch)
+    monkeypatch.setattr(url_analyzer, "_analyze_redirect_chain", fake_redirect)
+    monkeypatch.setattr(url_analyzer, "_analyze_page_summary", fake_page)
+    monkeypatch.setattr(url_analyzer, "_gather_external_intel", fake_intel)
+    monkeypatch.setattr(url_analyzer, "_should_capture_screenshot", lambda *args, **kwargs: True)
+    monkeypatch.setattr(url_analyzer, "_capture_page_screenshot", fake_capture)
+
+    target = parse_target("http://example.com/start")
+    result = url_analyzer.analyze_url(target, fetch_page=True)
+
+    assert redirect_started.is_set()
+    assert page_started.is_set()
+    assert intel_started.is_set()
+    assert screenshot_started.is_set()
+    assert result["page_summary"]["external_intel"] == {"whois_age_days": 10}
+    assert {finding.rule_id for finding in result["findings"]} >= {"REDIRECT_CROSS_DOMAIN", "PAGE_PASSWORD_FORM"}
 
 
 def test_redirect_response_is_not_followed_but_is_recorded(monkeypatch):

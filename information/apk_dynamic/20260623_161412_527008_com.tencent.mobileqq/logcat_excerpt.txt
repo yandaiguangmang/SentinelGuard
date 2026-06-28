@@ -1,0 +1,111 @@
+--------- beginning of main
+06-23 08:13:51.074 I/abb     ( 5374): StartCommandInProcess(73657474696e67730067657400676c6f settings.get.glo [truncated])
+06-23 08:13:51.079 W/binder:568_7(  568): type=1400 audit(0.0:205): avc:  denied  { getopt } for  scontext=u:r:system_server:s0 tcontext=u:r:shell:s0 tclass=unix_stream_socket permissive=0
+06-23 08:13:51.079 W/binder:568_7(  568): type=1400 audit(0.0:206): avc:  denied  { getopt } for  scontext=u:r:system_server:s0 tcontext=u:r:shell:s0 tclass=unix_stream_socket permissive=0
+06-23 08:13:51.079 W/binder:568_7(  568): type=1400 audit(0.0:207): avc:  denied  { getopt } for  scontext=u:r:system_server:s0 tcontext=u:r:shell:s0 tclass=unix_stream_socket permissive=0
+06-23 08:13:51.086 I/abb     ( 5374): StartCommandInProcess(7061636b61676500696e7374616c6c00 package.install. [truncated])
+06-23 08:13:51.106 D/TrafficStats( 1372): tagSocket(110) with statsTag=0x20008100, statsUid=-1
+06-23 08:13:51.619 I/resolv  (  354): GetAddrInfoHandler::run: {101 786533 101 983141 10128 0}
+06-23 08:13:51.619 D/TrafficStats( 1372): tagSocket(116) with statsTag=0x20008100, statsUid=-1
+06-23 08:13:51.619 I/resolv  (  354): res_nmkquery: (QUERY, IN, A)
+06-23 08:13:51.619 I/resolv  (  354): resolv_cache_lookup: FOUND IN CACHE entry=0x7b554f10cc90
+06-23 08:13:51.619 I/resolv  (  354): doQuery: rcode=0, ancount=4, return value=113
+06-23 08:13:51.622 I/resolv  (  354): res_nmkquery: (QUERY, IN, AAAA)
+06-23 08:13:51.622 I/resolv  (  354): resolv_cache_lookup: FOUND IN CACHE entry=0x7b55df10d4b0
+06-23 08:13:51.622 I/resolv  (  354): doQuery: rcode=0, ancount=4, return value=161
+06-23 08:13:53.050 D/StatusBarIconController(  801): ignoring old pipeline callbacks, because the new mobile icons are enabled
+06-23 08:13:53.267 W/binder:568_7(  568): type=1400 audit(0.0:208): avc:  denied  { getopt } for  scontext=u:r:system_server:s0 tcontext=u:r:shell:s0 tclass=unix_stream_socket permissive=0
+06-23 08:13:54.517 D/TrafficStats( 2533): tagSocket(105) with statsTag=0x20001803, statsUid=-1
+06-23 08:13:55.730 D/StatusBarIconController(  801): ignoring old pipeline callback because the new wifi icon is enabled
+--------- beginning of system
+06-23 08:13:55.777 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.android.launcher2.permission.READ_SETTINGS in package: com.tencent.mobileqq at: Binary XML file line #60
+06-23 08:13:55.777 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.WRITE_CONTACTS in package: com.tencent.mobileqq at: Binary XML file line #84
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.tencent.msf.permission.account.sync in package: com.tencent.mobileqq at: Binary XML file line #127
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.CHANGE_WIFI_STATE in package: com.tencent.mobileqq at: Binary XML file line #130
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.INTERNET in package: com.tencent.mobileqq at: Binary XML file line #131
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.ACCESS_WIFI_STATE in package: com.tencent.mobileqq at: Binary XML file line #132
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.ACCESS_NETWORK_STATE in package: com.tencent.mobileqq at: Binary XML file line #133
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.CAMERA in package: com.tencent.mobileqq at: Binary XML file line #138
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.WAKE_LOCK in package: com.tencent.mobileqq at: Binary XML file line #139
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION in package: com.tencent.mobileqq at: Binary XML file line #140
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.android.launcher.permission.INSTALL_SHORTCUT in package: com.tencent.mobileqq at: Binary XML file line #142
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.RECEIVE_BOOT_COMPLETED in package: com.tencent.mobileqq at: Binary XML file line #143
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.tencent.msf.permission.account.sync in package: com.tencent.mobileqq at: Binary XML file line #145
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.RESTART_PACKAGES in package: com.tencent.mobileqq at: Binary XML file line #183
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.qihoo360.launcher.permission.READ_SETTINGS in package: com.tencent.mobileqq at: Binary XML file line #184
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.RESTART_PACKAGES in package: com.tencent.mobileqq at: Binary XML file line #188
+06-23 08:13:55.778 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.REORDER_TASKS in package: com.tencent.mobileqq at: Binary XML file line #192
+06-23 08:13:55.780 W/PackageParsing(  568): No actions in intent-filter at /data/app/vmdl640825705.tmp/base.apk Binary XML file line #797
+06-23 08:13:55.795 I/PackageManager(  568): Integrity check passed for file:///data/app/vmdl640825705.tmp
+06-23 08:13:55.805 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.android.launcher2.permission.READ_SETTINGS in package: com.tencent.mobileqq at: Binary XML file line #60
+06-23 08:13:55.805 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.WRITE_CONTACTS in package: com.tencent.mobileqq at: Binary XML file line #84
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.tencent.msf.permission.account.sync in package: com.tencent.mobileqq at: Binary XML file line #127
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.CHANGE_WIFI_STATE in package: com.tencent.mobileqq at: Binary XML file line #130
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.INTERNET in package: com.tencent.mobileqq at: Binary XML file line #131
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.ACCESS_WIFI_STATE in package: com.tencent.mobileqq at: Binary XML file line #132
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.ACCESS_NETWORK_STATE in package: com.tencent.mobileqq at: Binary XML file line #133
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.CAMERA in package: com.tencent.mobileqq at: Binary XML file line #138
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.WAKE_LOCK in package: com.tencent.mobileqq at: Binary XML file line #139
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION in package: com.tencent.mobileqq at: Binary XML file line #140
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.android.launcher.permission.INSTALL_SHORTCUT in package: com.tencent.mobileqq at: Binary XML file line #142
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.RECEIVE_BOOT_COMPLETED in package: com.tencent.mobileqq at: Binary XML file line #143
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.tencent.msf.permission.account.sync in package: com.tencent.mobileqq at: Binary XML file line #145
+06-23 08:13:55.806 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.RESTART_PACKAGES in package: com.tencent.mobileqq at: Binary XML file line #183
+06-23 08:13:55.807 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: com.qihoo360.launcher.permission.READ_SETTINGS in package: com.tencent.mobileqq at: Binary XML file line #184
+06-23 08:13:55.807 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.RESTART_PACKAGES in package: com.tencent.mobileqq at: Binary XML file line #188
+06-23 08:13:55.807 W/PackageParsing(  568): Ignoring duplicate uses-permissions/uses-permissions-sdk-m: android.permission.REORDER_TASKS in package: com.tencent.mobileqq at: Binary XML file line #192
+06-23 08:13:55.808 W/PackageParsing(  568): No actions in intent-filter at /data/app/vmdl640825705.tmp/base.apk Binary XML file line #797
+06-23 08:13:55.922 W/PackageManager(  568): Skipping provider name com.tencent.mobileqq.fileprovider (in package com.tencent.mobileqq): name already used by com.tencent.mobileqq
+06-23 08:13:55.922 W/PackageManager(  568): Skipping provider name com.tencent.mobileqq.external.fileprovider (in package com.tencent.mobileqq): name already used by com.tencent.mobileqq
+06-23 08:13:55.930 I/PermissionManager(  568): Permission ownership changed. Updating all permissions.
+06-23 08:13:55.966 D/PackageManager(  568): Instant App installer not found with android.intent.action.INSTALL_INSTANT_APP_PACKAGE
+06-23 08:13:55.967 D/PackageManager(  568): Clear ephemeral installer activity
+--------- beginning of kernel
+06-23 08:13:55.946 I/logd    (    0): start watching /data/system/packages.list ...
+06-23 08:13:55.947 I/logd    (    0): ReadPackageList, total packages: 200
+06-23 08:13:55.979 V/StorageManagerService(  568): Package null does not have legacy storage
+06-23 08:13:55.986 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:55.990 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:55.992 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:55.969 I/servicemanager(    0): Since 'artd' could not be found, trying to start it as a lazy AIDL service. (if it's not configured to be a lazy service, it may be stuck starting or still starting).
+06-23 08:13:55.993 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:55.995 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:55.996 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:56.001 D/MediaGrants( 1467): Removed 0 media_grants for 0 user for com.tencent.mobileqq. Reason: Mode changed: android:read_external_storage
+06-23 08:13:55.978 I/init    (    0): starting service 'artd'...
+06-23 08:13:56.003 D/TrafficStats( 2533): tagSocket(106) with statsTag=0x1803, statsUid=10128
+06-23 08:13:56.010 I/init    (    0): ... started service 'artd' has pid 13202
+06-23 08:13:56.012 I/init    (    0): Control message: Processed ctl.interface_start for 'aidl/artd' from pid: 157 (/system/bin/servicemanager)
+06-23 08:13:56.092 I/artd    (13202): Starting artd
+06-23 08:13:56.092 I/AidlLazyServiceRegistrar(13202): Registering service artd
+06-23 08:13:56.093 I/AidlLazyServiceRegistrar(13202): Process has 1 (of 1 available) client(s) in use after notification artd has clients: 1
+06-23 08:13:56.094 I/artd    (13202): Merge skipped because there are no existing profiles
+06-23 08:13:56.074 I/BpBinder(    0): onLastStrongRef automatically unlinking death recipients:
+06-23 08:13:56.075 I/servicemanager(    0): Notifying artd they do (previously: don't) have clients when service is guaranteed to be in use
+06-23 08:13:56.144 W/ziparchive(13202): Unable to open '/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.dm': No such file or directory
+06-23 08:13:56.144 W/ziparchive(13202): Unable to open '/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.dm': No such file or directory
+06-23 08:13:56.162 I/artd    (13202): Running dex2oat: /apex/com.android.art/bin/art_exec --drop-capabilities --set-task-profile=Dex2OatBootComplete --set-priority=background --keep-fds=7:8:9:10:11 -- /apex/com.android.art/bin/dex2oat64 --zip-fd=7 --zip-location=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.apk --oat-fd=8 --oat-location=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/oat/x86_64/base.odex --output-vdex-fd=9 --swap-fd=10 --class-loader-context-fds=11 --class-loader-context=PCL[]{PCL[/system/framework/org.apache.http.legacy.jar]} --classpath-dir=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA== --instruction-set=x86_64 --instruction-set-features=default --instruction-set-variant=x86_64 --compiler-filter=verify --compilation-reason=install --compact-dex-level=none --max-image-block-size=524288 --resolve-startup-const-strings=true --generate-mini-debug-info --runtime-arg -Xtarget-sdk-version:34 --runtime-arg -Xhidden-api-policy:enabled --runtime-arg -Xms64m --runtime-arg -Xmx512m --comments=app-version-name:9.3.1,app-version-code:14378,art-version:340818082
+06-23 08:13:56.162 I/artd    (13202): Opened FDs: 7:/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.apk 8:/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/oat/x86_64/base.odex.SXY3Nv.tmp 9:/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/oat/x86_64/base.vdex.5i4H4K.tmp 10:/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/oat/x86_64/base.odex.swap.28Ox5c.tmp 11:/system/framework/org.apache.http.legacy.jar 
+06-23 08:13:56.231 W/dex2oat64(13204): Unexpected CPU variant for x86: x86_64.
+06-23 08:13:56.231 W/dex2oat64(13204): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+06-23 08:13:56.232 W/dex2oat64(13204): Mismatch between dex2oat instruction set features to use (ISA: X86_64 Feature string: -ssse3,-sse4.1,-sse4.2,-avx,-avx2,-popcnt) and those from CPP defines (ISA: X86_64 Feature string: ssse3,sse4.1,sse4.2,-avx,-avx2,popcnt) for the command line:
+06-23 08:13:56.232 W/dex2oat64(13204): /apex/com.android.art/bin/dex2oat64 --zip-fd=7 --zip-location=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.apk --oat-fd=8 --oat-location=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/oat/x86_64/base.odex --output-vdex-fd=9 --swap-fd=10 --class-loader-context-fds=11 --class-loader-context=PCL[]{PCL[/system/framework/org.apache.http.legacy.jar]} --classpath-dir=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA== --instruction-set=x86_64 --instruction-set-features=default --instruction-set-variant=x86_64 --compiler-filter=verify --compilation-reason=install --compact-dex-level=none --max-image-block-size=524288 --resolve-startup-const-strings=true --generate-mini-debug-info --runtime-arg -Xtarget-sdk-version:34 --runtime-arg -Xhidden-api-policy:enabled --runtime-arg -Xms64m --runtime-arg -Xmx512m --comments=app-version-name:9.3.1,app-version-code:14378,art-version:340818082
+06-23 08:13:56.232 I/dex2oat64(13204): /apex/com.android.art/bin/dex2oat64 --output-vdex-fd=9 --class-loader-context-fds=11 --class-loader-context=PCL[]{PCL[/system/framework/org.apache.http.legacy.jar]} --classpath-dir=/data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA== --compiler-filter=verify --compilation-reason=install --compact-dex-level=none --max-image-block-size=524288 --resolve-startup-const-strings=true --generate-mini-debug-info --comments=app-version-name:9.3.1,app-version-code:14378,art-version:340818082
+06-23 08:13:57.043 I/wpa_supplicant(  787): wlan0: CTRL-EVENT-BEACON-LOSS 
+06-23 08:13:57.182 W/ProcessStats(  568): Tracking association SourceState{587339f com.google.android.gms/10128 Service #8477} whose proc state 8 is better than process ProcessState{7e72a52 com.google.android.gms.unstable/10128 pkg=com.google.android.gms} proc state 9 (5 skipped)
+06-23 08:13:58.044 W/dex2oat64(13204): Method Lcom/qq/e/comm/plugin/tangramsplash/fusionsdkimpl/model/d;.a is abstract, but the declaring class is neither abstract nor an interface in dex file /data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.apk!classes33.dex
+06-23 08:13:58.044 W/dex2oat64(13204): Method Lcom/qq/e/comm/plugin/tangramsplash/fusionsdkimpl/service/b;.a is abstract, but the declaring class is neither abstract nor an interface in dex file /data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.apk!classes33.dex
+06-23 08:13:58.044 W/dex2oat64(13204): Method Lcom/qq/e/comm/plugin/tangramsplash/fusionsdkimpl/service/c;.a is abstract, but the declaring class is neither abstract nor an interface in dex file /data/app/~~8rVvzgr6qgJd_HcOPkSO9g==/com.tencent.mobileqq-wbi19VF7bX3BIKAv-_x4mA==/base.apk!classes33.dex
+06-23 08:13:58.734 D/StatusBarIconController(  801): ignoring old pipeline callback because the new wifi icon is enabled
+06-23 08:13:59.555 W/CpuMonitorService(  568): Current CPU frequency (5116944) is greater than maximum CPU frequency (2) for policy ID (1). Skipping CPU frequency policy
+06-23 08:13:59.555 W/CpuMonitorService(  568): Current CPU frequency (5250312) is greater than maximum CPU frequency (2) for policy ID (2). Skipping CPU frequency policy
+06-23 08:13:59.555 W/CpuMonitorService(  568): Current CPU frequency (5122733) is greater than maximum CPU frequency (2) for policy ID (3). Skipping CPU frequency policy
+06-23 08:13:59.622 I/dex2oat64(13204): Using CollectorTypeCC GC.
+06-23 08:13:59.694 I/dex2oat64(13204): Large app, accepted running with swap.
+06-23 08:13:59.719 W/dex2oat64(13204): Verification of void com.tencent.biz.pubaccount.accountdetail.api.impl.PublicAccountDetailImpl.initLbsItem(com.tencent.mobileqq.mp.mobileqq_mp$GetPublicAccountDetailInfoResponse) took 18446744073.709s (0.00 bytecodes/s) (4856B approximate peak alloc)
+06-23 08:13:59.870 W/dex2oat64(13204): Method void android.support.v4.util.ArraySet.allocArrays(int) failed lock verification and will run slower.
+06-23 08:13:59.870 W/dex2oat64(13204): Common causes for lock verification issues are non-optimized dex code
+06-23 08:13:59.870 W/dex2oat64(13204): and incorrect proguard optimizations.
+06-23 08:13:59.871 W/dex2oat64(13204): Method void android.support.v4.util.ArraySet.freeArrays(int[], java.lang.Object[], int) failed lock verification and will run slower.
+06-23 08:13:59.906 W/dex2oat64(13204): Method com.tencent.qimei.sdk.Qimei com.tencent.qimei.ai.a.a(java.lang.String) failed lock verification and will run slower.
+06-23 08:14:00.001 I/AiAiEcho( 1459): Predicting[

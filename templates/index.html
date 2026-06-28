@@ -34,6 +34,38 @@
     .tab-btn.active { background: linear-gradient(135deg,#2563eb,#22c55e); border-color: transparent; }
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
+    .detail-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 12px; }
+    .detail-tab-btn { border: 1px solid rgba(148,163,184,.2); background: #0f172a; color: #e5eefb; border-radius: 999px; padding: 10px 16px; cursor: pointer; }
+    .detail-tab-btn.active { background: linear-gradient(135deg,#2563eb,#22c55e); border-color: transparent; }
+    .detail-pane { display: none; }
+    .detail-pane.active { display: block; }
+    .detail-pane h3:first-child { margin-top: 0; }
+    .detail-pane .panel-block + .panel-block { margin-top: 18px; }
+    .result-shell .overview-grid { margin-top: 10px; }
+    .result-shell .result-table-wrap { margin-top: 10px; }
+    .result-shell .detail-pane { margin-top: 10px; }
+    .result-shell .summary-box { margin-top: 10px; }
+    .result-shell .detail-pane .hint { margin-top: 0; }
+    .result-shell .detail-pane .result-table-wrap { margin-top: 0; }
+    .result-shell .detail-pane .summary-box { margin-top: 0; }
+    .result-shell .detail-pane .panel-block { margin-top: 0; }
+    .result-shell .detail-pane pre { margin: 0; }
+    .detail-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 12px; }
+    .detail-tab-btn { border: 1px solid rgba(148,163,184,.2); background: #0f172a; color: #e5eefb; border-radius: 999px; padding: 10px 16px; cursor: pointer; }
+    .detail-tab-btn.active { background: linear-gradient(135deg,#2563eb,#22c55e); border-color: transparent; }
+    .detail-pane { display: none; }
+    .detail-pane.active { display: block; }
+    .detail-pane h3:first-child { margin-top: 0; }
+    .detail-pane .panel-block + .panel-block { margin-top: 18px; }
+    .result-shell .overview-grid { margin-top: 10px; }
+    .result-shell .result-table-wrap { margin-top: 10px; }
+    .result-shell .detail-pane { margin-top: 10px; }
+    .result-shell .summary-box { margin-top: 10px; }
+    .result-shell .detail-pane .hint { margin-top: 0; }
+    .result-shell .detail-pane .result-table-wrap { margin-top: 0; }
+    .result-shell .detail-pane .summary-box { margin-top: 0; }
+    .result-shell .detail-pane .panel-block { margin-top: 0; }
+    .result-shell .detail-pane pre { margin: 0; }
     .progress-panel { display: none; margin-top: 18px; }
     .progress-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
     .progress-bar { width: 100%; height: 14px; background: rgba(148,163,184,.14); border-radius: 999px; overflow: hidden; border: 1px solid rgba(148,163,184,.2); }
@@ -50,8 +82,8 @@
     .overview-card ul { margin: 0; padding-left: 18px; color: #cbd5e1; }
     .overview-card li { margin-bottom: 6px; word-break: break-word; }
     .overview-card .subtle { margin-top: 8px; }
-    .scroll-box { max-height: 220px; overflow: auto; padding-right: 6px; }
-    .scroll-box.slim { max-height: 170px; }
+    .scroll-box { overflow: visible; padding-right: 0; }
+    .scroll-box.slim { max-height: none; }
     .scroll-box pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
     .result-table-wrap { overflow-x: auto; }
     .result-table-wrap table { min-width: 720px; }
@@ -62,7 +94,7 @@
       word-break: break-word;
       white-space: normal;
     }
-    .summary-text { max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+    .summary-text { white-space: pre-wrap; word-break: break-word; }
     @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -161,13 +193,13 @@
       </form>
     </div>
 
-    <div id="client-result-panel" class="card panel result-panel">
+    <div id="client-result-panel" class="card panel result-panel result-shell">
       <h2>检测结果</h2>
       <div class="meta">
         <div class="pill" id="result-risk-level">风险等级：-</div>
-        <div class="pill" id="result-evidence-score">证据分数：-</div>
-        <div class="pill" id="result-deep-score">深度研判分数：-</div>
         <div class="pill" id="result-score">风险分数：-</div>
+        <div class="pill apk-score-pill" id="result-evidence-score">证据分数：-</div>
+        <div class="pill apk-score-pill" id="result-deep-score">深度研判分数：-</div>
         <div class="pill" id="result-mode">分析模式：-</div>
         <div class="pill" id="result-count">证据条数：-</div>
       </div>
@@ -175,11 +207,15 @@
       <h3>检测总览</h3>
       <div id="result-overview" class="overview-grid">
         <div class="overview-card">
-          <h4>网址结构静态分析</h4>
+          <h4>总览摘要</h4>
           <div class="subtle">等待分析结果。</div>
         </div>
         <div class="overview-card">
-          <h4>结论摘要</h4>
+          <h4>目标信息</h4>
+          <div class="subtle">等待分析结果。</div>
+        </div>
+        <div class="overview-card">
+          <h4>研判结论</h4>
           <div class="subtle">等待分析结果。</div>
         </div>
       </div>
@@ -198,133 +234,236 @@
         </table>
       </div>
 
-      <h3>证据摘要</h3>
-      <div id="result-findings-empty" class="hint">未发现明显风险项。</div>
-      <table id="result-findings-table" style="display:none;">
-        <thead>
-          <tr><th>严重度</th><th>标题</th><th>证据</th><th>建议</th></tr>
-        </thead>
-        <tbody id="result-findings-body"></tbody>
-      </table>
-
-      <h3>页面线索</h3>
-      <div class="result-table-wrap scroll-box slim">
-        <table id="result-page-summary-table">
-          <tbody id="result-page-summary-body"></tbody>
-        </table>
+      <div class="detail-tabs" role="tablist" aria-label="检测结果子页面">
+        <button class="detail-tab-btn active" type="button" data-detail-tab="evidence">证据</button>
+        <button class="detail-tab-btn" type="button" data-detail-tab="page">页面线索</button>
+        <button class="detail-tab-btn" type="button" data-detail-tab="opinions">研判结论</button>
+        <button class="detail-tab-btn" type="button" data-detail-tab="files">报告文件</button>
       </div>
 
-      <h3>研判结论</h3>
-      <div class="result-table-wrap scroll-box slim">
-        <table>
-          <tbody id="result-opinions-body"></tbody>
-        </table>
+      <div class="detail-pane active" data-detail-pane="evidence">
+        <div class="panel-block">
+          <h3>证据摘要</h3>
+          <div id="result-findings-empty" class="hint">未发现明显风险项。</div>
+          <table id="result-findings-table" style="display:none;">
+            <thead>
+              <tr><th>严重度</th><th>标题</th><th>证据</th><th>建议</th></tr>
+            </thead>
+            <tbody id="result-findings-body"></tbody>
+          </table>
+        </div>
       </div>
 
-      <h3>主持人最终总结</h3>
-      <div class="summary-box scroll-box" id="result-summary-box">
-        <pre id="result-summary">-</pre>
+      <div class="detail-pane" data-detail-pane="page">
+        <div class="panel-block">
+          <h3>页面线索</h3>
+          <div class="result-table-wrap scroll-box slim">
+            <table id="result-page-summary-table">
+              <tbody id="result-page-summary-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <h3>报告文件</h3>
-      <p id="result-report-links">检测完成后可在此查看 HTML / Markdown 报告入口。</p>
+      <div class="detail-pane" data-detail-pane="opinions">
+        <div class="panel-block">
+          <h3>研判结论</h3>
+          <div class="result-table-wrap scroll-box slim">
+            <table>
+              <tbody id="result-opinions-body"></tbody>
+            </table>
+          </div>
+          <h3>主持人最终总结</h3>
+          <div class="summary-box scroll-box" id="result-summary-box">
+            <pre id="result-summary">-</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-pane" data-detail-pane="files">
+        <div class="panel-block">
+          <h3>报告文件</h3>
+          <p id="result-report-links">检测完成后可在此查看 HTML / Markdown 报告入口。</p>
+        </div>
+      </div>
     </div>
 
     {% if report %}
-      <div class="card panel result-panel active" id="server-result-panel">
+      <div class="card panel result-panel result-shell" id="server-result-panel">
         <h2>检测结果</h2>
         <div class="meta">
           <div class="pill">风险等级：{{ report.risk_level|upper }}</div>
-          <div class="pill">证据分数：{{ report.evidence_score if report.evidence_score is not none else report.score }}/100</div>
-          <div class="pill">深度研判分数：{{ report.deep_score if report.deep_score is not none else '-' }}/100</div>
           <div class="pill">风险分数：{{ report.score }}/100</div>
+          {% if report.target_ir.target_type == 'apk' %}
+            <div class="pill">证据分数：{{ report.evidence_score if report.evidence_score is not none else report.score }}/100</div>
+            <div class="pill">深度研判分数：{{ report.deep_score if report.deep_score is not none else '-' }}/100</div>
+          {% endif %}
           <div class="pill">分析模式：{{ report.analysis_mode }}</div>
           <div class="pill">证据条数：{{ report.findings|length }}</div>
         </div>
 
+        <h3>检测总览</h3>
+        <div class="overview-grid">
+          <div class="overview-card">
+            <h4>总览摘要</h4>
+            <div class="scroll-box slim">
+              <ul>
+                <li>风险等级：{{ report.risk_level|upper }}</li>
+                <li>风险分数：{{ report.score }}/100</li>
+                <li>分析模式：{{ report.analysis_mode }}</li>
+                <li>证据条数：{{ report.findings|length }}</li>
+              </ul>
+            </div>
+          </div>
+          <div class="overview-card">
+            <h4>目标信息</h4>
+            <div class="scroll-box slim">
+              <ul>
+                <li>原始输入：{{ report.target_ir.original_input }}</li>
+                <li>对象类型：{{ report.target_ir.target_type }}</li>
+                <li>状态：{{ report.target_ir.status }}</li>
+                {% if report.target_ir.url %}
+                  <li>规范化 URL：{{ report.target_ir.url.normalized_url }}</li>
+                {% endif %}
+                {% if report.target_ir.apk %}
+                  <li>APK 文件：{{ report.target_ir.apk.file_name }}</li>
+                  <li>包名：{{ report.target_ir.apk.package_name or '-' }}</li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
+          <div class="overview-card">
+            <h4>证据与切页</h4>
+            <div class="scroll-box slim">
+              <ul>
+                {% if report.findings %}
+                  {% for item in report.findings[:3] %}
+                    <li><strong>{{ item.title }}</strong>：{{ item.evidence }}</li>
+                  {% endfor %}
+                {% else %}
+                  <li>未发现明显风险项。</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div class="subtle">下半区可切换查看证据、页面线索、研判结论和报告文件。</div>
+          </div>
+        </div>
+
         <h3>目标信息</h3>
-        <table>
-          <tr><th>原始输入</th><td>{{ report.target_ir.original_input }}</td></tr>
-          <tr><th>对象类型</th><td>{{ report.target_ir.target_type }}</td></tr>
-          <tr><th>状态</th><td>{{ report.target_ir.status }}</td></tr>
-          {% if report.target_ir.url %}
-            <tr><th>规范化 URL</th><td>{{ report.target_ir.url.normalized_url }}</td></tr>
-          {% endif %}
-          {% if report.target_ir.apk %}
-            <tr><th>APK 文件</th><td>{{ report.target_ir.apk.file_name }}</td></tr>
-            <tr><th>APK 路径</th><td>{{ report.target_ir.apk.normalized_path }}</td></tr>
-            <tr><th>包名</th><td>{{ report.target_ir.apk.package_name or '-' }}</td></tr>
-            <tr><th>SHA256</th><td>{{ report.target_ir.apk.sha256 or '-' }}</td></tr>
-          {% endif %}
-        </table>
-
-        <h3>证据摘要</h3>
-        {% if report.findings %}
+        <div class="result-table-wrap">
           <table>
-            <thead>
-              <tr><th>严重度</th><th>标题</th><th>证据</th><th>建议</th></tr>
-            </thead>
-            <tbody>
-              {% for item in report.findings %}
-              <tr>
-                <td>{{ item.severity }}</td>
-                <td>{{ item.title }}</td>
-                <td>{{ item.evidence }}</td>
-                <td>{{ item.recommendation }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
+            <tr><th>原始输入</th><td>{{ report.target_ir.original_input }}</td></tr>
+            <tr><th>对象类型</th><td>{{ report.target_ir.target_type }}</td></tr>
+            <tr><th>状态</th><td>{{ report.target_ir.status }}</td></tr>
+            {% if report.target_ir.url %}
+              <tr><th>规范化 URL</th><td>{{ report.target_ir.url.normalized_url }}</td></tr>
+            {% endif %}
+            {% if report.target_ir.apk %}
+              <tr><th>APK 文件</th><td>{{ report.target_ir.apk.file_name }}</td></tr>
+              <tr><th>APK 路径</th><td>{{ report.target_ir.apk.normalized_path }}</td></tr>
+              <tr><th>包名</th><td>{{ report.target_ir.apk.package_name or '-' }}</td></tr>
+              <tr><th>SHA256</th><td>{{ report.target_ir.apk.sha256 or '-' }}</td></tr>
+            {% endif %}
           </table>
-        {% else %}
-          <p>未发现明显风险项。</p>
-        {% endif %}
+        </div>
 
-        <h3>页面线索</h3>
-        {% if report.page_summary %}
-          <table>
-            <tbody>
-              {% for key, value in report.page_summary.items() %}
-                <tr>
-                  <th>{{ key }}</th>
-                  <td>
-                    {% if value is mapping %}
-                      <pre>{{ value | tojson(indent=2) }}</pre>
-                    {% elif value is sequence and value is not string %}
-                      <pre>{{ value | tojson(indent=2) }}</pre>
-                    {% else %}
-                      {{ value }}
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <p>未获取到页面线索。</p>
-        {% endif %}
+        <div class="detail-tabs" role="tablist" aria-label="检测结果子页面">
+          <button class="detail-tab-btn active" type="button" data-detail-tab="evidence">证据</button>
+          <button class="detail-tab-btn" type="button" data-detail-tab="page">页面线索</button>
+          <button class="detail-tab-btn" type="button" data-detail-tab="opinions">研判结论</button>
+          <button class="detail-tab-btn" type="button" data-detail-tab="files">报告文件</button>
+        </div>
 
-        <h3>研判结论</h3>
-        <table>
-          {% for role, opinion in report.expert_opinions.items() %}
-            <tr><th>{{ role }}</th><td>{{ opinion }}</td></tr>
-          {% endfor %}
-        </table>
+        <div class="detail-pane active" data-detail-pane="evidence">
+          <div class="panel-block">
+            <h3>证据摘要</h3>
+            {% if report.findings %}
+              <table>
+                <thead>
+                  <tr><th>严重度</th><th>标题</th><th>证据</th><th>建议</th></tr>
+                </thead>
+                <tbody>
+                  {% for item in report.findings %}
+                  <tr>
+                    <td>{{ item.severity }}</td>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.evidence }}</td>
+                    <td>{{ item.recommendation }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p class="hint">未发现明显风险项。</p>
+            {% endif %}
+          </div>
+        </div>
 
-        {% if report.deep_summary %}
-          <h3>主持人最终总结</h3>
-          <pre>{{ report.deep_summary }}</pre>
-        {% endif %}
+        <div class="detail-pane" data-detail-pane="page">
+          <div class="panel-block">
+            <h3>页面线索</h3>
+            <div class="result-table-wrap scroll-box slim">
+              <table>
+                <tbody>
+                  {% if report.page_summary %}
+                    {% for key, value in report.page_summary.items() %}
+                      <tr>
+                        <th>{{ key }}</th>
+                        <td>
+                          {% if value is mapping %}
+                            <pre>{{ value | tojson(indent=2) }}</pre>
+                          {% elif value is sequence and value is not string %}
+                            <pre>{{ value | tojson(indent=2) }}</pre>
+                          {% else %}
+                            {{ value }}
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td class="hint">未获取到页面线索。</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-        <h3>报告文件</h3>
-        <p>
-          <a href="{{ url_for('report_file', filename=report.html_report_path.split('/')[-1]) }}" target="_blank">打开 HTML 报告</a>
-          · <a href="{{ url_for('download_report_file', filename=report.html_report_path.split('/')[-1]) }}">下载 HTML 报告</a>
-          {% if report.markdown_report_path %}
-            <br>
-            <a href="{{ url_for('report_file', filename=report.markdown_report_path.split('/')[-1]) }}" target="_blank">打开 Markdown 报告</a>
-            · <a href="{{ url_for('download_report_file', filename=report.markdown_report_path.split('/')[-1]) }}">下载 Markdown 报告</a>
-          {% endif %}
-        </p>
+        <div class="detail-pane" data-detail-pane="opinions">
+          <div class="panel-block">
+            <h3>研判结论</h3>
+            <div class="result-table-wrap scroll-box slim">
+              <table>
+                <tbody>
+                  {% for role, opinion in report.expert_opinions.items() %}
+                    <tr><th>{{ role }}</th><td>{{ opinion }}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% if report.deep_summary %}
+              <h3>主持人最终总结</h3>
+              <div class="summary-box scroll-box">
+                <pre>{{ report.deep_summary }}</pre>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="detail-pane" data-detail-pane="files">
+          <div class="panel-block">
+            <h3>报告文件</h3>
+            <p>
+              <a href="{{ url_for('report_file', filename=report.html_report_path.split('/')[-1]) }}" target="_blank">打开 HTML 报告</a>
+              · <a href="{{ url_for('download_report_file', filename=report.html_report_path.split('/')[-1]) }}">下载 HTML 报告</a>
+              {% if report.markdown_report_path %}
+                <br>
+                <a href="{{ url_for('report_file', filename=report.markdown_report_path.split('/')[-1]) }}" target="_blank">打开 Markdown 报告</a>
+                · <a href="{{ url_for('download_report_file', filename=report.markdown_report_path.split('/')[-1]) }}">下载 Markdown 报告</a>
+              {% endif %}
+            </p>
+          </div>
+        </div>
       </div>
     {% endif %}
   </div>
@@ -472,64 +611,74 @@
         .replaceAll("'", '&#39;');
     }
 
-    function buildUrlStaticOverview(url, findings, pageSummary) {
-      if (!url || !url.normalized_url) {
-        return `
-          <div class="overview-card">
-            <h4>网址结构静态分析</h4>
-            <div class="subtle">当前对象不是网址，或未能解析出 URL 结构。</div>
-          </div>
-          <div class="overview-card">
-            <h4>结论摘要</h4>
-            <div class="subtle">请切换到 APK 视图查看对应摘要。</div>
-          </div>
-        `;
-      }
+    function activateDetailTab(shell, name) {
+      if (!shell) return;
+      shell.querySelectorAll('.detail-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.detailTab === name);
+      });
+      shell.querySelectorAll('.detail-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.dataset.detailPane === name);
+      });
+    }
 
-      const staticSignals = [];
-      if (url.scheme && url.scheme !== 'https') staticSignals.push(`未使用 HTTPS（${escapeHtml(url.scheme)}）`);
-      if (url.hostname) staticSignals.push(`主机：${escapeHtml(url.hostname)}`);
-      if (url.is_ip_address) staticSignals.push('使用 IP 直连');
-      if (url.query_params && Object.keys(url.query_params).length) staticSignals.push(`参数数：${Object.keys(url.query_params).length}`);
-      if (url.path && url.path !== '/') staticSignals.push(`路径：${escapeHtml(url.path)}`);
+    function buildResultOverview(report) {
+      const targetIr = report.target_ir || {};
+      const apk = targetIr.apk || {};
+      const url = targetIr.url || {};
+      const findings = report.findings || [];
+      const pageSummary = report.page_summary || {};
+      const targetType = targetIr.target_type || '-';
+      const topSignals = [
+        `风险等级：${escapeHtml(String(report.risk_level || '-').toUpperCase())}`,
+        `风险分数：${escapeHtml(report.score ?? '-')}/100`,
+        `分析模式：${escapeHtml(report.analysis_mode || '-')}`,
+        `证据条数：${escapeHtml(findings.length)}`,
+      ];
 
-      const findingTexts = (findings || [])
-        .filter(item => item && item.rule_id && String(item.rule_id).startsWith('URL_'))
-        .slice(0, 5)
-        .map(item => `<li><strong>${escapeHtml(item.title)}</strong>：${escapeHtml(item.evidence)}</li>`)
-        .join('');
+      const targetSignals = targetType === 'apk'
+        ? [
+            apk.file_name ? `APK 文件：${escapeHtml(apk.file_name)}` : null,
+            apk.package_name ? `包名：${escapeHtml(apk.package_name)}` : null,
+            apk.version_name ? `版本名：${escapeHtml(apk.version_name)}` : null,
+            apk.sha256 ? `SHA256：${escapeHtml(apk.sha256)}` : null,
+          ].filter(Boolean)
+        : [
+            url.normalized_url ? `规范化 URL：${escapeHtml(url.normalized_url)}` : null,
+            url.scheme ? `协议：${escapeHtml(url.scheme)}` : null,
+            url.hostname ? `主机：${escapeHtml(url.hostname)}` : null,
+            url.path ? `路径：${escapeHtml(url.path)}` : null,
+          ].filter(Boolean);
 
-      const pageTexts = [];
-      if (pageSummary && pageSummary.status_code) pageTexts.push(`页面状态码：${escapeHtml(pageSummary.status_code)}`);
-      if (pageSummary && pageSummary.final_url) pageTexts.push(`记录到的终点：<code>${escapeHtml(pageSummary.final_url)}</code>`);
-      if (pageSummary && pageSummary.redirect_location) pageTexts.push(`跳转指向：<code>${escapeHtml(pageSummary.redirect_location)}</code>`);
-
-      const conclusion = [];
-      conclusion.push(`风险等级：<strong>${escapeHtml((window.__lastRiskLevel || '-').toUpperCase())}</strong>`);
-      conclusion.push(`风险分数：<strong>${escapeHtml(window.__lastRiskScore ?? '-')}</strong>`);
-      conclusion.push(`证据条数：<strong>${escapeHtml(window.__lastFindingCount ?? '-')}</strong>`);
+      const evidenceSignals = findings.slice(0, 3).map(item => (
+        `<li><strong>${escapeHtml(item.title || '')}</strong>：${escapeHtml(item.evidence || '')}</li>`
+      ));
+      const pageSignals = Object.entries(pageSummary).slice(0, 3).map(([key, value]) => {
+        const text = typeof value === 'object' ? JSON.stringify(value) : String(value ?? '-');
+        return `<li><strong>${escapeHtml(key)}</strong>：${escapeHtml(text)}</li>`;
+      });
 
       return `
         <div class="overview-card">
-          <h4>网址结构静态分析</h4>
+          <h4>总览摘要</h4>
           <div class="scroll-box slim">
-            <ul>${staticSignals.map(item => `<li>${item}</li>`).join('') || '<li>未发现明显结构异常。</li>'}</ul>
+            <ul>${topSignals.map(item => `<li>${item}</li>`).join('')}</ul>
           </div>
-          <div class="subtle">本部分基于 URL 协议、主机、路径、参数与结构特征进行静态判断。</div>
+          <div class="subtle">上半区只保留全局结论，方便快速看风险和分数。</div>
         </div>
         <div class="overview-card">
-          <h4>可疑静态证据</h4>
+          <h4>目标信息</h4>
           <div class="scroll-box slim">
-            <ul>${findingTexts || '<li>未命中明显 URL 规则。</li>'}</ul>
+            <ul>${targetSignals.length ? targetSignals.map(item => `<li>${item}</li>`).join('') : '<li>未解析到可展示的目标结构。</li>'}</ul>
           </div>
-          <div class="subtle">页面抓取与深度研判仅使用已采集证据，不会主动跟随跳转访问后续落点。</div>
+          <div class="subtle">对象类型：${escapeHtml(targetType)}</div>
         </div>
         <div class="overview-card">
-          <h4>结论摘要</h4>
+          <h4>证据与切页</h4>
           <div class="scroll-box slim">
-            <ul>${conclusion.map(item => `<li>${item}</li>`).join('')}</ul>
+            <ul>${evidenceSignals.length ? evidenceSignals.join('') : '<li>未发现明显风险项。</li>'}</ul>
           </div>
-          <div class="subtle scroll-box slim">${pageTexts.join('<br>') || '静态分析已完成，等待进一步研判。'}</div>
+          <div class="subtle">下半区可切换查看证据、页面线索、研判结论和报告文件。</div>
+          ${pageSignals.length ? `<div class="subtle scroll-box slim" style="margin-top: 8px;">${pageSignals.join('<br>')}</div>` : ''}
         </div>
       `;
     }
@@ -551,10 +700,14 @@
       window.__lastFindingCount = findings.length;
 
       clientResultPanel.classList.add('active');
+      activateDetailTab(clientResultPanel, 'evidence');
       resultRiskLevel.textContent = `风险等级：${String(report.risk_level || '-').toUpperCase()}`;
+      resultScore.textContent = `风险分数：${report.score ?? '-'}/100`;
+      const isApkResult = targetIr.target_type === 'apk';
+      resultEvidenceScore.style.display = isApkResult ? 'inline-flex' : 'none';
+      resultDeepScore.style.display = isApkResult ? 'inline-flex' : 'none';
       resultEvidenceScore.textContent = `证据分数：${report.evidence_score ?? '-'}/100`;
       resultDeepScore.textContent = `深度研判分数：${report.deep_score ?? '-'}/100`;
-      resultScore.textContent = `风险分数：${report.score ?? '-'}/100`;
       resultMode.textContent = `分析模式：${report.analysis_mode || '-'}`;
       resultCount.textContent = `证据条数：${findings.length}`;
       resultOriginalInput.textContent = targetIr.original_input || '-';
@@ -567,7 +720,7 @@
       resultSha256.textContent = apk.sha256 || '-';
       resultSummary.textContent = report.deep_summary || '-';
       if (resultOverview) {
-        resultOverview.innerHTML = buildUrlStaticOverview(url, findings, pageSummary);
+        resultOverview.innerHTML = buildResultOverview(report);
       }
 
       resultPageSummaryBody.innerHTML = '';
@@ -677,6 +830,11 @@
     }
 
     tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+    document.querySelectorAll('.result-shell .detail-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activateDetailTab(btn.closest('.result-shell'), btn.dataset.detailTab);
+      });
+    });
 
     if (deepCheckbox) deepCheckbox.addEventListener('change', syncDeepDependents);
     if (deepApkCheckbox) deepApkCheckbox.addEventListener('change', syncDeepDependents);

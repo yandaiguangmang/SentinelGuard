@@ -11,6 +11,7 @@ import httpx
 from openai import OpenAI
 import time
 from config import settings
+from SentinelGuard.agents.autogen_runner import build_multi_agent_orchestrator, build_role_conversation
 from SentinelGuard.scoring import combine_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
 from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
@@ -166,6 +167,21 @@ class URLDeepAnalyzer:
         self.role_models = self._resolve_role_models()
         self.proxy_map = _build_proxy_map(self.runtime_config)
         self.role_clients = {role: self._build_client(role) for role in DEEP_ROLE_ORDER}
+        self.role_conversations = {
+            role: build_role_conversation(
+                role=role,
+                system_message=ROLE_SYSTEM_PROMPTS[role],
+                model_name=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
+                api_key=self._resolve_role_credentials(role)[0],
+                base_url=self._resolve_role_credentials(role)[1],
+                client=self.role_clients.get(role),
+                http_client=getattr(self.role_clients.get(role), "http_client", None),
+                temperature=0.2,
+                top_p=0.9,
+            )
+            for role in DEEP_ROLE_ORDER
+        }
+        self.orchestrator = build_multi_agent_orchestrator(self.role_conversations, DEEP_ROLE_ORDER)
 
     def analyze(self, static_report: DetectionReport, progress_callback=None) -> Dict[str, Any]:
         payload = self._build_payload(static_report)
@@ -287,12 +303,6 @@ class URLDeepAnalyzer:
 
         return OpenAI(**client_kwargs)
 
-    def _get_client(self, role: str) -> OpenAI:
-        client = self.role_clients.get(role)
-        if client is None:
-            raise ValueError(f"未配置 {role} API Key，无法执行模型深度检查。")
-        return client
-
     def _resolve_role_credentials(self, role: str) -> tuple[str, str]:
         if self.runtime_config.llm_api_key.strip() or self.runtime_config.llm_base_url.strip():
             return self.runtime_config.llm_credentials()
@@ -340,49 +350,18 @@ class URLDeepAnalyzer:
             "proxy_enabled": False,
         }
 
-    @with_graceful_retry(
-        SEARCH_API_RETRY_CONFIG,
-        default_return={"success": False, "error": "模型服务暂时不可用", "elapsed": 0.0, "usage": None}
-    )
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        start = time.perf_counter()
-
         try:
             messages = self._build_messages(role, payload)
-            response = self._get_client(role).chat.completions.create(
-                model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
-                messages=messages,
-                temperature=0.2,
-                top_p=0.9,
-                response_format={"type": "json_object"},
-            )
-             # ★ 调试输出：打印原始响应类型和内容
-            #print(f"[DEBUG] {role} response type: {type(response)}")
-            #print(f"[DEBUG] {role} response: {response}")
-
-            elapsed = time.perf_counter() - start
-            content = response.choices[0].message.content if response.choices else ""
-
-            # 提取 token 用量
-            usage = None
-            if hasattr(response, 'usage') and response.usage:
-                usage = {
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens,
-                }
-
-            if not content:
-                return {"success": False, "error": "模型未返回内容", "elapsed": elapsed, "usage": usage}
-            return {"success": True, "content": content, "elapsed": elapsed, "usage": usage}
+            system_message = messages[0]["content"] if messages else ROLE_SYSTEM_PROMPTS[role]
+            task = messages[1]["content"] if len(messages) > 1 else json.dumps(payload, ensure_ascii=False, indent=2)
+            conversation = self._get_role_conversation(role)
+            return conversation.run(task, system_message=system_message)
         except Exception as exc:
-            elapsed = time.perf_counter() - start
-            return {"success": False, "error": f"模型调用异常: {exc}", "elapsed": elapsed, "usage": None}
-        
+            return {"success": False, "error": f"模型调用异常: {exc}", "elapsed": 0.0, "usage": None}
 
     def _build_messages(self, role: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         text_content = json.dumps(payload, ensure_ascii=False, indent=2)
-        # 默认使用线上 prompt
         system_prompt = ROLE_SYSTEM_PROMPTS[role]
 
         if role == "情报分析员":
@@ -401,16 +380,20 @@ class URLDeepAnalyzer:
                     val = ext.get(key)
                     if val is not None and val != "":
                         lines.append(f"- {label}：{val}")
-                if len(lines) > 1:   # 确实有情报才追加到 user content
+                if len(lines) > 1:
                     text_content = "\n".join(lines) + "\n\n" + text_content
             else:
-                # 离线模式：切换到离线专用提示词
                 system_prompt = OFFLINE_INTEL_ANALYST_SYSTEM_PROMPT
 
         return [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text_content},
         ]
+
+    def _get_role_conversation(self, role: str):
+        if getattr(self.orchestrator, "agents", None) is not self.role_conversations:
+            self.orchestrator.agents = self.role_conversations
+        return self.role_conversations[role]
 
     def _detect_claim_conflict(self, role_outputs: Dict[str, Dict[str, Any]]) -> bool:
         claims = {
@@ -437,7 +420,7 @@ class URLDeepAnalyzer:
             "expert_models": self.role_models,
             "role_outputs": self._serialize_role_outputs(role_outputs),
             "proxy_enabled": False,
-             "precomputed_claim_conflict": self._detect_claim_conflict(role_outputs),
+            "precomputed_claim_conflict": self._detect_claim_conflict(role_outputs),
         }
 
     def _build_fallback_role_output(self, role: str, static_report: DetectionReport, error: Any) -> Dict[str, Any]:
@@ -660,7 +643,9 @@ class URLDeepAnalyzer:
         host_score = normalize_score(data.get("score"), static_report.score)
         evidence_score = score_from_findings(static_report.findings + additional_findings)
         score = combine_scores(evidence_score, host_score)
-        risk_level = risk_level_from_score(score)
+        risk_level = str(data.get("risk_level") or risk_level_from_score(score)).strip().lower()
+        if risk_level not in {"low", "medium", "high", "critical"}:
+            risk_level = risk_level_from_score(score)
         summary = str(data.get("summary") or f"模型基于静态检测结果进行了五角色深度研判，综合风险等级为 {risk_level}。")
         normalized_opinions["主持人"] = f"{summary} {normalized_opinions['主持人']}".strip()
         

@@ -19,7 +19,6 @@
   --line: rgba(148, 163, 184, .18);
   --shadow: 0 18px 50px rgba(2, 6, 23, .3);
 }
-
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
@@ -44,11 +43,7 @@ header {
   border-bottom: 1px solid rgba(255,255,255,.08);
   box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
 }
-.hero {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 22px 22px 18px;
-}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
 .hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
 .hero p { margin: 4px 0; color: #dbeafe; }
 .nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
@@ -122,17 +117,14 @@ header {
 .panel h3, .panel h4 { margin-top: 0; }
 .panel p { line-height: 1.75; color: #dbe4f3; }
 .subtle { color: var(--text-muted); }
-.scroll-box { max-height: 320px; overflow: auto; padding-right: 6px; scroll-behavior: smooth; }
-.scroll-box.slim { max-height: 240px; }
-.scroll-box.wide { max-height: 420px; }
-.scroll-box.tall { max-height: 680px; }
-.scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
-.scroll-box::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .42); border-radius: 999px; }
-.scroll-box::-webkit-scrollbar-track { background: rgba(15, 23, 42, .16); }
+.scroll-box { overflow: visible; padding-right: 0; scroll-behavior: smooth; }
+.scroll-box.slim,
+.scroll-box.wide,
+.scroll-box.tall { max-height: none; }
 .screenshot-grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
 .screenshot-card { background: rgba(255,255,255,.04); border-radius: 16px; padding: 16px; border: 1px solid rgba(148,163,184,.16); }
 .screenshot-card h4 { margin: 0 0 10px; }
-.screenshot-preview { overflow: auto; border-radius: 14px; background: #0f172a; padding: 10px; }
+.screenshot-preview { overflow: visible; border-radius: 14px; background: #0f172a; padding: 10px; }
 .screenshot-card img { max-width: 100%; border-radius: 12px; border: 1px solid rgba(148,163,184,.18); display: block; }
 .screenshot-meta { margin-top: 8px; word-break: break-all; }
 .hscroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
@@ -164,8 +156,7 @@ header {
   border-radius: 16px;
   padding: 14px 14px 12px;
   min-height: 160px;
-  overflow: auto;
-  max-height: 250px;
+  overflow: visible;
 }
 .expert-card h4 { margin: 0 0 8px; }
 .expert-card p { margin: 0; }
@@ -198,6 +189,19 @@ header {
 .table th { color: #bfdbfe; width: 180px; }
 .footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
 .section-anchor { scroll-margin-top: 110px; }
+.report-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+.report-tab-btn {
+  border: 1px solid rgba(148,163,184,.2);
+  background: #0f172a;
+  color: #e5eefb;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.report-tab-btn.active { background: linear-gradient(135deg,#2563eb,#22c55e); border-color: transparent; }
+.report-pane { display: none; }
+.report-pane.active { display: block; }
+.report-pane .panel { margin-top: 0; }
 @media (max-width: 980px) {
   .two-col { grid-template-columns: 1fr; }
   header { position: static; }
@@ -208,7 +212,7 @@ header {
 <header>
   <div class="hero">
     <h1>SentinelGuard 哨塔检测报告</h1>
-    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 滑动查看证据链</p>
+    <p>网页恶意分析 · 静态检测 + 论坛式协同研判 · 上方总览、下方切页查看</p>
     <div class="nav">
       <a href="#result">总览</a>
       <a href="#ir">统一 IR</a>
@@ -216,7 +220,6 @@ header {
       <a href="#evidence">风险证据</a>
       <a href="#screenshots">页面截图</a>
       <a href="#discussion">协同研判</a>
-      <a href="#appendix">扩展信息</a>
     </div>
     <div class="hero-mini">
       <span class="chip warning">${analysis_mode_chip}</span>
@@ -231,88 +234,103 @@ header {
     ${summary_cards}
   </div>
 
-  <div class="grid two-col" style="margin-top: 18px;">
-    <section class="panel section-anchor" id="result">
-      <div class="panel-inner">
-        <div class="section-title">
-          <h3>检测总览</h3>
-          <small>${analysis_mode_label_escaped}</small>
-        </div>
-        ${result_panel}
-        ${parent_report_block}
-        ${browser_evidence_block}
-        ${apk_dynamic_block}
-        ${apk_graph_block}
-        ${apk_consistency_block}
-        ${apk_robustness_block}
-        ${arbitration_block}
-        ${role_limitations_block}
+  <section class="panel section-anchor" id="result" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>检测总览</h3>
+        <small>${analysis_mode_label_escaped}</small>
       </div>
-    </section>
+      ${result_panel}
+      ${parent_report_block}
+      ${browser_evidence_block}
+      ${apk_dynamic_block}
+      ${apk_graph_block}
+      ${apk_consistency_block}
+      ${apk_robustness_block}
+      ${arbitration_block}
+      ${role_limitations_block}
+    </div>
+  </section>
 
-    <section class="panel section-anchor" id="ir">
+  <div class="report-tabs" role="tablist" aria-label="报告子页面">
+    <button class="report-tab-btn active" type="button" data-report-tab="ir">统一 IR</button>
+    <button class="report-tab-btn" type="button" data-report-tab="chain">跳转链</button>
+    <button class="report-tab-btn" type="button" data-report-tab="evidence">风险证据</button>
+    <button class="report-tab-btn" type="button" data-report-tab="screenshots">页面截图</button>
+    <button class="report-tab-btn" type="button" data-report-tab="discussion">协同研判</button>
+  </div>
+
+  <section class="report-pane active" data-report-pane="ir">
+    <section class="panel section-anchor" id="ir" style="margin-top: 18px;">
       <div class="panel-inner">
         <div class="section-title">
           <h3>统一 IR 摘要</h3>
-          <small>${analysis_mode_label_escaped} · URL 采用 0.5×证据分数 + 0.5×深度研判分数，APK 采用 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</small>
+          <small>${analysis_mode_label_escaped} · URL 深度研判报告直接采用深度研判分数作为风险分数；APK 采用 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</small>
         </div>
         ${artifact_panel}
       </div>
     </section>
-  </div>
-
-  <section class="panel section-anchor" id="chain" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>跳转链与页面线索</h3>
-        <small>支持滑动查看完整页面摘要</small>
-      </div>
-      ${chain_panel}
-    </div>
   </section>
 
-  <section class="panel section-anchor" id="evidence" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>风险证据</h3>
-        <small>按严重度与规则优先级呈现</small>
+  <section class="report-pane" data-report-pane="chain">
+    <section class="panel section-anchor" id="chain">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>跳转链与页面线索</h3>
+          <small>完整展开页面摘要</small>
+        </div>
+        ${chain_panel}
       </div>
-      ${findings_panel}
-    </div>
+    </section>
   </section>
 
-  <section class="panel section-anchor" id="screenshots" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>页面截图证据</h3>
-        <small>仅在高风险 URL 上自动采集</small>
+  <section class="report-pane" data-report-pane="evidence">
+    <section class="panel section-anchor" id="evidence">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>风险证据</h3>
+          <small>按严重度与规则优先级呈现</small>
+        </div>
+        ${findings_panel}
       </div>
-      ${screenshot_block}
-    </div>
+    </section>
   </section>
 
-  <section class="panel section-anchor" id="discussion" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>${discussion_title}</h3>
-        <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+  <section class="report-pane" data-report-pane="screenshots">
+    <section class="panel section-anchor" id="screenshots">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>页面截图证据</h3>
+          <small>仅在高风险 URL 上自动采集</small>
+        </div>
+        ${screenshot_block}
       </div>
-      ${discussion_panel}
-      ${model_panel}
-    </div>
+    </section>
   </section>
 
-  <section class="panel section-anchor" id="appendix" style="margin-top: 18px;">
-    <div class="panel-inner">
-      <div class="section-title">
-        <h3>扩展信息</h3>
-        <small>便于后续扩展更多对象类型</small>
+  <section class="report-pane" data-report-pane="discussion">
+    <section class="panel section-anchor" id="discussion">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>${discussion_title}</h3>
+          <small>静态 / 行为 / 情报并行研判 · 行为处置员 · 主持人</small>
+        </div>
+        ${discussion_panel}
       </div>
-      ${placeholders_panel}
-      ${stats_block}
-      <p class="footer-note">后续可继续扩展证书信誉、域名黑名单与威胁情报联动。</p>
-    </div>
+    </section>
   </section>
 </main>
+
+<script>
+  const reportTabs = document.querySelectorAll('.report-tab-btn');
+  const reportPanes = document.querySelectorAll('.report-pane');
+  function activateReportTab(name) {
+    reportTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.reportTab === name));
+    reportPanes.forEach(pane => pane.classList.toggle('active', pane.dataset.reportPane === name));
+    const pane = document.querySelector('.report-pane[data-report-pane="' + name + '"]');
+    if (pane) pane.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  reportTabs.forEach(btn => btn.addEventListener('click', () => activateReportTab(btn.dataset.reportTab)));
+</script>
 </body>
 </html>
