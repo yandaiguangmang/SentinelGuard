@@ -206,7 +206,7 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
     return report
 
 
-def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None) -> DetectionReport:
+def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persist_report: bool = True, runtime_config: Optional[AnalysisRuntimeConfig] = None, progress_callback=None, enable_deep_model: bool = False) -> DetectionReport:
     return _build_apk_deep_report(
         static_report,
         dynamic_analyze_apk,
@@ -214,6 +214,7 @@ def run_apk_dynamic_detection_from_static(static_report: DetectionReport, persis
         runtime_config=runtime_config,
         progress_callback=progress_callback,
         analysis_mode="dynamic",
+        analyzer_kwargs={"enable_deep_model": enable_deep_model},
     )
 
 
@@ -235,12 +236,14 @@ def _build_apk_deep_report(
     runtime_config: Optional[AnalysisRuntimeConfig] = None,
     progress_callback=None,
     analysis_mode: str = "deep",
+    analyzer_kwargs: Optional[Dict[str, Any]] = None,
 ) -> DetectionReport:
     """内部辅助函数：执行 APK 深度分析并构建报告。"""
+    analyzer_kwargs = analyzer_kwargs or {}
     try:
-        result = analyzer_func(static_report, runtime_config=runtime_config, progress_callback=progress_callback)
+        result = analyzer_func(static_report, runtime_config=runtime_config, progress_callback=progress_callback, **analyzer_kwargs)
     except TypeError:
-        result = analyzer_func(static_report)
+        result = analyzer_func(static_report, **analyzer_kwargs)
     except Exception as exc:
         fallback_arbitration = Arbitrator().arbitrate(
             static_score=static_report.score,
@@ -256,7 +259,7 @@ def _build_apk_deep_report(
             score=fallback_arbitration.weighted_confidence,
             evidence_score=static_report.evidence_score or score_from_findings(static_report.findings),
             deep_score=static_report.score,
-        findings=_deduplicate_semantic_findings(static_report.findings),
+            findings=_deduplicate_semantic_findings(static_report.findings),
             expert_opinions=static_report.expert_opinions,
             expert_models=_build_expert_model_map(),
             deep_summary=f"APK 深度研判失败，已降级到仲裁置信度评分。原因：{exc}",
@@ -331,47 +334,61 @@ def _build_apk_deep_report(
 
 
 def _arb_result_findings(arbitration_result) -> List[DetectionFinding]:
+    """
+    从仲裁结果生成证据
+    修复：一致性高时不应产生"意见分歧"证据
+    """
     if not arbitration_result:
         return []
+    
     findings: List[DetectionFinding] = []
+    
     if isinstance(arbitration_result, dict):
         discrepancies = arbitration_result.get("discrepancies", []) or []
         suspected = arbitration_result.get("suspected_compromised", []) or []
         consistency_score = arbitration_result.get("consistency_score")
-        consistency_level = arbitration_result.get("consistency_level")
+        consistency_level = arbitration_result.get("consistency_level", "medium")
     else:
         discrepancies = getattr(arbitration_result, "discrepancies", None) or []
         suspected = getattr(arbitration_result, "suspected_compromised", None) or []
         consistency_score = getattr(arbitration_result, "consistency_score", None)
-        consistency_level = getattr(arbitration_result, "consistency_level", None)
-    if discrepancies:
+        consistency_level = getattr(arbitration_result, "consistency_level", "medium")
+    
+    # 1. 一致性评分（始终添加）
+    if consistency_score is not None:
+        findings.append(DetectionFinding(
+            rule_id="APK_ARBITRATION_CONSISTENCY",
+            title="仲裁一致性评分",
+            severity="low" if int(consistency_score) >= 75 else "medium",
+            description="仲裁器计算得到的分析一致性评分。评分越高，各方结论越一致。",
+            evidence=f"一致性分数：{consistency_score}/100，等级：{consistency_level}",
+            recommendation="将该评分作为后续人工复核的重要参考。",
+        ))
+    
+    # 2. 意见分歧（仅当一致性不是 high 时）
+    if discrepancies and consistency_level != "high":
         findings.append(DetectionFinding(
             rule_id="APK_ARBITRATION_DISCREPANCY",
             title="仲裁器发现意见分歧",
-            severity="medium" if str(consistency_level).lower() != "low" else "high",
+            severity="high" if consistency_level == "low" else "medium",
             description="多角色分析结果存在差异，需要结合冲突点继续复核。",
-            evidence="; ".join(map(str, discrepancies)),
+            evidence="; ".join(map(str, discrepancies[:5])),
             recommendation="优先复核分歧较大的证据链与可疑角色输出。",
         ))
+    
+    # 3. 疑似污染模块
     if suspected:
         findings.append(DetectionFinding(
             rule_id="APK_ARBITRATION_COMPROMISED",
             title="仲裁器标记疑似污染模块",
             severity="high",
             description="仲裁器识别到可能被污染或偏离的分析模块。",
-            evidence="; ".join(map(str, suspected)),
+            evidence="; ".join(map(str, suspected[:5])),
             recommendation="重点检查这些模块对应的证据来源和模型输出。",
         ))
-    if consistency_score is not None:
-        findings.append(DetectionFinding(
-            rule_id="APK_ARBITRATION_CONSISTENCY",
-            title="仲裁一致性评分",
-            severity="low" if int(consistency_score) >= 80 else "medium",
-            description="仲裁器计算得到的分析一致性评分。",
-            evidence=str(consistency_score),
-            recommendation="将该评分作为后续人工复核的重要参考。",
-        ))
+    
     return findings
+
 
 
 def _robustness_result_findings(robustness_result) -> List[DetectionFinding]:
@@ -381,7 +398,9 @@ def _robustness_result_findings(robustness_result) -> List[DetectionFinding]:
     if isinstance(robustness_result, dict):
         adversarial_techniques = robustness_result.get("adversarial_techniques", []) or []
         score = robustness_result.get("robustness_score", 0)
+        categories = list(robustness_result.get("anti_static_categories", []) or [])
         flags = {
+            "anti_static_detected": robustness_result.get("anti_static_detected", False),
             "anti_emulator_detected": robustness_result.get("anti_emulator_detected", False),
             "obfuscation_detected": robustness_result.get("obfuscation_detected", False),
             "reflection_detected": robustness_result.get("reflection_detected", False),
@@ -390,20 +409,25 @@ def _robustness_result_findings(robustness_result) -> List[DetectionFinding]:
     else:
         adversarial_techniques = getattr(robustness_result, "adversarial_techniques", [])
         score = getattr(robustness_result, "robustness_score", 0)
+        categories = list(getattr(robustness_result, "anti_static_categories", []) or [])
         flags = {
+            "anti_static_detected": getattr(robustness_result, "anti_static_detected", False),
             "anti_emulator_detected": getattr(robustness_result, "anti_emulator_detected", False),
             "obfuscation_detected": getattr(robustness_result, "obfuscation_detected", False),
             "reflection_detected": getattr(robustness_result, "reflection_detected", False),
             "dynamic_loading_detected": getattr(robustness_result, "dynamic_loading_detected", False),
         }
-
     if adversarial_techniques:
         findings.append(DetectionFinding(
-            rule_id="APK_ROBUSTNESS_TECHNIQUE",
-            title="鲁棒性验证发现对抗技术",
+            rule_id="ROBUSTNESS_ANTI_STATIC",
+            title="抗静态检测",
             severity="medium",
-            description="鲁棒性验证阶段检测到样本可能采用了对抗或规避技术。",
-            evidence="; ".join(map(str, adversarial_techniques)),
+            description=(
+                "鲁棒性验证阶段检测到样本可能采用了规避静态分析的技术。"
+                if not categories
+                else f"鲁棒性验证阶段检测到样本可能采用了规避静态分析的技术，细分类型：{', '.join(map(str, categories))}。"
+            ),
+            evidence="; ".join(map(str, [*adversarial_techniques, *categories])),
             recommendation="结合反编译与运行时行为继续确认是否存在规避分析。",
         ))
     for flag_name, detected in flags.items():
@@ -435,7 +459,9 @@ def _coerce_robustness_result(value):
         from SentinelGuard.state import RobustnessResult
         return RobustnessResult(
             adversarial_techniques=list(value.get("adversarial_techniques", []) or []),
+            anti_static_categories=list(value.get("anti_static_categories", []) or []),
             robustness_score=float(value.get("robustness_score", 0) or 0),
+            anti_static_detected=bool(value.get("anti_static_detected", False)),
             anti_emulator_detected=bool(value.get("anti_emulator_detected", False)),
             obfuscation_detected=bool(value.get("obfuscation_detected", False)),
             reflection_detected=bool(value.get("reflection_detected", False)),
@@ -506,6 +532,11 @@ def _sentence(prefix: str, items: List[str]) -> str:
     if not items:
         return f"{prefix}暂未发现明显异常。"
     return f"{prefix}：" + "、".join(items[:6]) + "。"
+
+
+
+
+
 
 
 

@@ -7,14 +7,43 @@ from urllib.parse import urlparse, urlunparse
 from typing import Any, Dict, List, Optional
 
 
-def _safe_to_dict(value: Any) -> Any:
+def _json_safe(value: Any) -> Any:
+    """递归转换为可 JSON 序列化的结构。
+
+    重点处理：
+    - dict 中的 tuple / 其他非基础类型 key
+    - dataclass / Counter / set / tuple 等嵌套结构
+    """
     if value is None:
         return None
+
     if hasattr(value, "to_dict"):
-        return value.to_dict()
+        return _json_safe(value.to_dict())
+
     if isinstance(value, dict):
-        return dict(value)
+        safe: Dict[str, Any] = {}
+        for key, item in value.items():
+            if isinstance(key, (str, int, float, bool)) or key is None:
+                safe_key = key
+            else:
+                safe_key = str(key)
+            safe[safe_key] = _json_safe(item)
+        return safe
+
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+
+    if isinstance(value, set):
+        return [_json_safe(item) for item in value]
+
     return asdict(value) if hasattr(value, "__dataclass_fields__") else value
+
+
+def _safe_to_dict(value: Any) -> Any:
+    return _json_safe(value)
 
 
 @dataclass
@@ -27,7 +56,7 @@ class AnalysisRuntimeConfig:
     enable_screenshot: Optional[bool] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
     def llm_credentials(self) -> tuple[str, str]:
         return self.llm_api_key.strip(), self.llm_base_url.strip()
@@ -122,13 +151,14 @@ class URLIR:
     query_params: Dict[str, List[str]] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
 
 @dataclass
 class APKIR:
     normalized_path: str
     file_name: str
+    bundle_apk_paths: List[str] = field(default_factory=list)
     package_name: str = ""
     version_name: str = ""
     version_code: str = ""
@@ -150,7 +180,7 @@ class APKIR:
     robustness: Optional[RobustnessResult] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
 
 @dataclass
@@ -181,7 +211,7 @@ class DetectionFinding:
     recommendation: str
 
     def to_dict(self) -> Dict[str, str]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
 
 @dataclass
@@ -213,29 +243,29 @@ class DetectionReport:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "target_ir": self.target_ir.to_dict(),
+            "target_ir": _json_safe(self.target_ir.to_dict()),
             "risk_level": self.risk_level,
             "score": self.score,
             "evidence_score": self.evidence_score,
             "deep_score": self.deep_score,
-            "findings": [finding.to_dict() for finding in self.findings],
-            "expert_opinions": self.expert_opinions,
-            "expert_models": self.expert_models,
+            "findings": [_json_safe(finding.to_dict()) for finding in self.findings],
+            "expert_opinions": _json_safe(self.expert_opinions),
+            "expert_models": _json_safe(self.expert_models),
             "deep_summary": self.deep_summary,
-            "redirect_chain": self.redirect_chain,
-            "page_summary": self.page_summary,
-            "apk_summary": self.apk_summary,
-            "apk_dynamic_summary": self.apk_dynamic_summary,
-            "apk_dynamic_artifacts": self.apk_dynamic_artifacts,
-            "placeholders": self.placeholders,
-            "screenshots": self.screenshots,
+            "redirect_chain": _json_safe(self.redirect_chain),
+            "page_summary": _json_safe(self.page_summary),
+            "apk_summary": _json_safe(self.apk_summary),
+            "apk_dynamic_summary": _json_safe(self.apk_dynamic_summary),
+            "apk_dynamic_artifacts": _json_safe(self.apk_dynamic_artifacts),
+            "placeholders": _json_safe(self.placeholders),
+            "screenshots": _json_safe(self.screenshots),
             "analysis_mode": self.analysis_mode,
             "deep_analysis_used": self.deep_analysis_used,
             "parent_html_report_path": self.parent_html_report_path,
             "parent_markdown_report_path": self.parent_markdown_report_path,
             "html_report_path": self.html_report_path,
             "markdown_report_path": self.markdown_report_path,
-            "stats": self.stats, 
+            "stats": _json_safe(self.stats), 
             "arbitration_result": _safe_to_dict(self.arbitration_result),
         }
 
@@ -258,7 +288,7 @@ class GraphNodeFeature:
     number_const_count: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
 
 @dataclass
@@ -305,7 +335,7 @@ class GraphStructure:
         return dict(self.stats)
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
 
 @dataclass
@@ -323,7 +353,7 @@ class ArbitrationResult:
     weighted_confidence: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return _json_safe(asdict(self))
 
 
 @dataclass
@@ -331,8 +361,11 @@ class RobustnessResult:
     """鲁棒性验证结果：检测 APK 是否使用了对抗/规避分析的技术。"""
     # 检测到的对抗技术列表
     adversarial_techniques: List[str] = field(default_factory=list)
+    # 抗静态检测的细分类型，例如：加壳、混淆、伪装头部、DEX 损坏、资源异常、反反编译
+    anti_static_categories: List[str] = field(default_factory=list)
     # 0-100，越高表示对抗特征越多
     robustness_score: float = 0.0
+    anti_static_detected: bool = False
     anti_emulator_detected: bool = False
     obfuscation_detected: bool = False
     reflection_detected: bool = False

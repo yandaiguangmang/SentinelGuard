@@ -319,10 +319,89 @@ def test_apk_deep_payload_trims_large_apk_fields():
     assert "nodes" not in apk_payload["graph_data"]["cfg"]
     assert len(apk_payload["graph_data"]["api_graph"]["api_call_counts_top"]) == 12
 
+
+def test_apk_deep_payload_excludes_source_path_from_model_input():
+    apk_ir = APKIR(
+        normalized_path=r"C:\\Temp\\sentinel_uploads\\sample.apk",
+        file_name="sample.apk",
+        package_name="com.example.sample",
+        sha256="a" * 64,
+        size_bytes=123456,
+    )
+    static_report = DetectionReport(
+        target_ir=TargetIR(target_type="apk", original_input=r"C:\\Temp\\sentinel_uploads\\sample.apk", status="ready", apk=apk_ir),
+        risk_level="medium",
+        score=55,
+        findings=[],
+        expert_opinions={"主持人": "ok", "静态分析员": "ok", "行为分析员": "ok", "情报分析员": "ok", "处置建议员": "ok"},
+    )
+
+    analyzer = APKDeepAnalyzer()
+    payload = analyzer._build_payload(static_report)
+    intel_payload = analyzer._build_role_payload("情报分析员", static_report, payload)
+
+    assert "normalized_path" not in payload["apk_ir"]
+    assert "normalized_path" not in payload["target"]["apk"]
+    assert "C:\\Temp\\sentinel_uploads\\sample.apk" not in json.dumps(payload, ensure_ascii=False)
+    assert "C:\\Temp\\sentinel_uploads\\sample.apk" not in analyzer._summarize_host_evidence_source(static_report)
+    assert "C:\\Temp\\sentinel_uploads\\sample.apk" not in json.dumps(intel_payload, ensure_ascii=False)
+
     assert set(host_payload.keys()) == {"role_outputs"}
     assert host_payload["role_outputs"] == {}
     json.dumps(payload, ensure_ascii=False)
     json.dumps(host_payload, ensure_ascii=False)
+
+
+def test_apk_deep_payload_recursive_compression_under_80kb():
+    analyzer = APKDeepAnalyzer()
+    payload = {
+        "target": {
+            "original_input": "A" * 5000,
+            "apk": {
+                "file_name": "demo.apk",
+                "package_name": "com.example.demo",
+                "evidence_summary": {
+                    "files": [f"file_{i}_{'B' * 6000}" for i in range(30)],
+                    "warnings": [f"warn_{i}_{'C' * 3000}" for i in range(20)],
+                    "summary": {"blob": "D" * 40000},
+                },
+                "graph_data": {
+                    "cfg": {
+                        "nodes": [{"id": i, "name": f"node_{i}_{'E' * 4000}"} for i in range(20)],
+                        "edges": [{"src": i, "dst": i + 1, "label": "L" * 4000} for i in range(20)],
+                    },
+                },
+            },
+        },
+        "static_report": {
+            "apk_summary": {
+                "suspicious_strings": [f"S{i}_{'F' * 5000}" for i in range(20)],
+            },
+            "expert_opinions": {
+                "主持人": "G" * 30000,
+                "静态分析员": "H" * 30000,
+                "行为分析员": "I" * 30000,
+                "情报分析员": "J" * 30000,
+                "处置建议员": "K" * 30000,
+            },
+        },
+        "role_outputs": {
+            "静态分析员": {"opinion": "L" * 50000, "additional_findings": []},
+            "行为分析员": {"opinion": "M" * 50000, "additional_findings": []},
+        },
+    }
+
+    initial_size = analyzer._payload_size_bytes(payload)
+    assert initial_size > 80 * 1024
+
+    compressed = analyzer._ensure_payload_within_limit("test", payload)
+    compressed_size = analyzer._payload_size_bytes(compressed)
+
+    assert compressed_size <= 80 * 1024
+    assert len(compressed["target"]["original_input"]) <= 1200
+    assert "evidence_summary" not in compressed["target"]["apk"] or isinstance(compressed["target"]["apk"]["evidence_summary"], dict)
+    assert "graph_data" not in compressed["target"]["apk"] or isinstance(compressed["target"]["apk"]["graph_data"], dict)
+    assert len(compressed["role_outputs"]["静态分析员"]["opinion"]) <= 1200
 
 
 def test_load_json_payload_accepts_code_fenced_and_mixed_text():

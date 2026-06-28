@@ -77,6 +77,20 @@ def _parse_url(value: str) -> Optional[URLIR]:
 
 def _parse_apk(value: str) -> Optional[APKIR]:
     path = Path(value)
+    if path.is_dir():
+        apk_files = sorted(
+            [item for item in path.iterdir() if item.is_file() and item.suffix.lower() == ".apk"],
+            key=lambda item: (0 if item.name.lower().startswith("base") else 1, item.name.lower()),
+        )
+        if not apk_files:
+            return None
+        primary = apk_files[0]
+        return APKIR(
+            normalized_path=str(primary.as_posix()),
+            file_name=primary.name,
+            bundle_apk_paths=[str(item.as_posix()) for item in apk_files],
+        )
+
     if path.suffix.lower() != ".apk":
         return None
 
@@ -84,6 +98,7 @@ def _parse_apk(value: str) -> Optional[APKIR]:
     return APKIR(
         normalized_path=normalized_path,
         file_name=path.name,
+        bundle_apk_paths=[normalized_path],
     )
 
 
@@ -97,5 +112,6 @@ def _is_ip_address(hostname: str) -> bool:
         return True
     except ValueError:
         return False
+
 
 

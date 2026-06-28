@@ -15,11 +15,20 @@ from SentinelGuard.robustness_validator import RobustnessValidator
 from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.scoring import combine_apk_scores, normalize_score, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
-from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
+from retry_helper import RetryConfig, SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
 
 DEEP_ROLE_ORDER = ["主持人", "静态分析员", "行为分析员", "情报分析员", "处置建议员"]
 LOGGER = logging.getLogger(__name__)
+MAX_MODEL_INPUT_BYTES = 80 * 1024
+AGGRESSIVE_MODEL_INPUT_BYTES = 160 * 1024
+
+INTEL_RETRY_CONFIG = RetryConfig(
+    max_retries=5,
+    initial_delay=15.0,
+    backoff_factor=2.5,
+    max_delay=300.0,
+)
 
 ROLE_CONFIG_KEYS = {
     "主持人": ("DETECTION_HOST_API_KEY", "DETECTION_HOST_BASE_URL", "DETECTION_HOST_MODEL_NAME"),
@@ -52,9 +61,11 @@ ROLE_SYSTEM_PROMPTS = {
     "静态分析员": """你是 APK 恶意软件深度研判中的静态分析员。
 关注 Manifest、权限、组件、签名、资源配置、DEX/Smali/脚本文件、可疑字符串和关键文件证据。
 
+注意：一个软件由多个 APK 分包组成（例如 base.apk、split_config.*.apk）属于正常安装形态，请将其视为安装包结构信息，而不是风险原因。
+
 如果输入中包含 dynamic_sandbox / dynamic_artifacts / dynamic_output_dir，请将其视为已接入的动态沙箱补充证据，仅用于交叉印证静态结论，不要输出“未执行动态沙箱”或“未接入”之类的旧状态描述。
 
-请输出严格 JSON：
+请一定要输出严格 JSON：
 {
   "opinion": "静态证据分析结论",
   "risk_hint": "low|medium|high|critical",
@@ -66,9 +77,11 @@ ROLE_SYSTEM_PROMPTS = {
     "行为分析员": """你是 APK 恶意软件深度研判中的行为分析员。
 关注自启动、后台驻留、敏感权限组合、服务/Receiver/Provider 设计、下载/安装/更新链路、持久化行为线索，以及动态沙箱中采集到的运行日志、落地文件、网络命中、权限与系统服务痕迹。
 
+注意：若输入中出现多个安装分包（base.apk + split_config.*.apk 等），不要把“多个 APK”本身当作恶意或风险证据；它只是同一应用的联合安装材料。
+
 如果输入中包含 dynamic_sandbox / dynamic_artifacts / dynamic_output_dir，请明确基于这些动态证据输出行为结论；不要再说“动态沙箱尚未执行”“未接入”或类似内容。
 
-请输出严格 JSON：
+请一定要输出严格 JSON：
 {
   "opinion": "行为链分析结论",
   "risk_hint": "low|medium|high|critical",
@@ -80,7 +93,10 @@ ROLE_SYSTEM_PROMPTS = {
     "情报分析员": """你是 APK 恶意软件深度研判中的情报分析员。
 你的职责是结合 APK 文件名、包名、签名和本地证据说明当前离线分析的边界，并提醒如何结合来源与分发渠道判断。
 
-请输出严格 JSON：
+注意：APK 的临时来源路径、上传缓存路径、解压目录路径、分析工作目录路径仅用于样本处理，不是恶意风险证据，不要把这类路径本身解读为风险点或异常行为。
+如果上下文中出现路径类信息，只能将其视为样本处理环境信息；真正的风险判断应基于权限、组件、签名、字符串、行为链和外联证据。
+
+请一定要输出严格 JSON：
 {
   "opinion": "情报分析与局限说明",
   "risk_hint": "low|medium|high|critical",
@@ -92,7 +108,7 @@ ROLE_SYSTEM_PROMPTS = {
     "处置建议员": """你是 APK 恶意软件深度研判中的处置建议员。
 你的任务是把前面所有证据落成可执行建议，包括是否隔离安装、是否沙箱复核、是否阻断分发、是否保留样本留痕。
 
-请输出严格 JSON：
+请一定要输出严格 JSON：
 {
   "opinion": "处置建议",
   "risk_hint": "low|medium|high|critical",
@@ -246,7 +262,7 @@ class APKDeepAnalyzer:
             "apk_ir": self._build_lightweight_apk_context(static_report.target_ir.apk),
         }
         self._log_payload_size("base", payload)
-        return payload
+        return self._ensure_payload_within_limit("base", payload)
 
     def _build_risk_static_report_context(self, static_report: DetectionReport) -> Dict[str, Any]:
         findings = self._summarize_findings(static_report.findings)
@@ -305,7 +321,6 @@ class APKDeepAnalyzer:
         key_files = self._summarize_key_files(apk.get("key_files", []))
 
         return {
-            "normalized_path": apk.get("normalized_path", ""),
             "file_name": apk.get("file_name", ""),
             "package_name": apk.get("package_name", ""),
             "version_name": apk.get("version_name", ""),
@@ -341,6 +356,100 @@ class APKDeepAnalyzer:
         if isinstance(apk_summary, list):
             return self._limit_list(apk_summary, 8)
         return str(apk_summary)[:1000]
+
+    def _build_intel_summary(self, static_report: DetectionReport) -> str:
+        """为情报分析员生成高密度结构化摘要，替代碎片化原始数据"""
+        apk = static_report.target_ir.apk
+        if not apk:
+            return "未检测到APK信息"
+
+        summary_parts = []
+        summary_parts.append(f"=== APK 基础信息 ===")
+        summary_parts.append(f"包名: {apk.package_name or '未知'}")
+        summary_parts.append(f"文件名: {apk.file_name or '未知'}")
+        summary_parts.append(f"文件大小: {apk.size_bytes or 0} 字节")
+        summary_parts.append(f"版本名: {apk.version_name or '未知'}")
+        summary_parts.append(f"版本号: {apk.version_code or '未知'}")
+        summary_parts.append(f"SHA256: {(apk.sha256 or '未知')[:16]}...")
+
+        if apk.permissions:
+            perms = apk.permissions
+            critical_keywords = ['SMS', 'INSTALL', 'ACCESSIBILITY', 'SYSTEM_ALERT', 'MANAGE_EXTERNAL']
+            high_keywords = ['CAMERA', 'RECORD_AUDIO', 'LOCATION', 'READ_CONTACTS', 'READ_CALL_LOG']
+
+            critical_perms = [p for p in perms if any(kw in p.upper() for kw in critical_keywords)]
+            high_perms = [p for p in perms if any(kw in p.upper() for kw in high_keywords) and p not in critical_perms]
+
+            summary_parts.append(f"=== 权限分析 ===")
+            summary_parts.append(f"总权限数: {len(perms)}")
+            if critical_perms:
+                summary_parts.append(f"关键权限({len(critical_perms)}个): {', '.join(critical_perms[:8])}")
+            if high_perms:
+                summary_parts.append(f"高危权限({len(high_perms)}个): {', '.join(high_perms[:8])}")
+        else:
+            summary_parts.append("未提取到权限信息")
+
+        components = (apk.activities or []) + (apk.services or []) + (apk.receivers or []) + (apk.providers or [])
+        if components:
+            suspicious_keywords = ['boot', 'admin', 'accessibility', 'service', 'receiver', 'provider']
+            suspicious_comp = [c for c in components if any(kw in c.lower() for kw in suspicious_keywords)]
+            summary_parts.append(f"=== 组件分析 ===")
+            summary_parts.append(f"总组件数: {len(components)}")
+            if suspicious_comp:
+                summary_parts.append(f"可疑组件({len(suspicious_comp)}个): {', '.join(suspicious_comp[:6])}")
+        else:
+            summary_parts.append("未提取到组件信息")
+
+        if static_report.findings:
+            critical_findings = [f for f in static_report.findings if f.severity == 'critical']
+            high_findings = [f for f in static_report.findings if f.severity == 'high']
+
+            summary_parts.append(f"=== 静态证据摘要 ===")
+            summary_parts.append(f"证据总数: {len(static_report.findings)}")
+            if critical_findings:
+                summary_parts.append(f"严重证据({len(critical_findings)}个): " + "; ".join([f"{f.title}" for f in critical_findings[:3]]))
+            if high_findings:
+                summary_parts.append(f"高危证据({len(high_findings)}个): " + "; ".join([f"{f.title}" for f in high_findings[:3]]))
+            if not critical_findings and not high_findings:
+                low_findings = [f for f in static_report.findings if f.severity in ('medium', 'low')]
+                if low_findings:
+                    summary_parts.append(f"中低危证据({len(low_findings)}个): " + "; ".join([f"{f.title}" for f in low_findings[:3]]))
+        else:
+            summary_parts.append("未发现静态证据")
+
+        if apk.certificate_subject or apk.certificate_issuer:
+            summary_parts.append(f"=== 证书信息 ===")
+            if apk.certificate_subject:
+                summary_parts.append(f"证书主体: {apk.certificate_subject[:100]}")
+            if apk.certificate_issuer:
+                summary_parts.append(f"证书签发者: {apk.certificate_issuer[:100]}")
+
+        if apk.graph_data:
+            graph_dict = apk.graph_data.to_dict() if hasattr(apk.graph_data, 'to_dict') else {}
+            stats = graph_dict.get('stats', {}) or {}
+            summary_parts.append(f"=== 图结构分析 ===")
+            summary_parts.append(f"CFG节点: {stats.get('cfg_node_count', 0)}, 边: {stats.get('cfg_edge_count', 0)}")
+            summary_parts.append(f"FCG节点: {stats.get('fcg_node_count', 0)}, 边: {stats.get('fcg_edge_count', 0)}")
+            summary_parts.append(f"API调用总数: {stats.get('total_api_calls', 0)}")
+            if stats.get('has_fallback'):
+                summary_parts.append("⚠️ 图结构提取回退到备用模式")
+
+        if static_report.apk_dynamic_summary:
+            dyn = static_report.apk_dynamic_summary
+            summary_parts.append(f"=== 动态沙箱摘要 ===")
+            summary_parts.append(f"安装: {'成功' if dyn.get('install_success') else '失败'}")
+            summary_parts.append(f"启动: {'成功' if dyn.get('launch_success') else '失败'}")
+            summary_parts.append(f"运行时事件数: {dyn.get('event_count', 0)}")
+            if dyn.get('network_hit_count', 0) > 0:
+                summary_parts.append(f"网络线索数: {dyn.get('network_hit_count', 0)}")
+            if dyn.get('granted_dangerous_permissions'):
+                summary_parts.append(f"授予的危险权限: {', '.join(dyn.get('granted_dangerous_permissions', [])[:5])}")
+
+        summary_parts.append(f"=== 综合评分 ===")
+        summary_parts.append(f"风险等级: {static_report.risk_level}")
+        summary_parts.append(f"风险分数: {static_report.score}/100")
+
+        return "\n".join(summary_parts)
 
     def _summarize_expert_opinions(self, expert_opinions: Any) -> Dict[str, str]:
         if not isinstance(expert_opinions, dict):
@@ -572,6 +681,123 @@ class APKDeepAnalyzer:
         print(f"[APK_DEEP_PAYLOAD] {label} payload size: {size_bytes} bytes ({size_kb:.2f} KB)", flush=True)
         LOGGER.info("APK 深度研判 %s payload size: %s bytes (%.2f KB)", label, size_bytes, size_kb)
 
+    def _payload_size_bytes(self, payload: Dict[str, Any]) -> int:
+        payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        return len(payload_json.encode("utf-8"))
+
+    def _ensure_payload_within_limit(self, label: str, payload: Dict[str, Any], max_bytes: int = None) -> Dict[str, Any]:
+        """确保payload在指定大小限制内，支持自定义阈值"""
+        limit_bytes = max_bytes if max_bytes is not None else MAX_MODEL_INPUT_BYTES
+
+        current_payload = payload
+        current_size = self._payload_size_bytes(current_payload)
+        if current_size <= limit_bytes:
+            return current_payload
+
+        if current_size <= limit_bytes * 2:
+            compression_level = 1
+        elif current_size <= limit_bytes * 3:
+            compression_level = 2
+        else:
+            compression_level = 3
+
+        compression_round = 0
+        while current_size > limit_bytes and compression_round < 5:
+            next_payload = self._compress_payload_once(current_payload, compression_level)
+            next_size = self._payload_size_bytes(next_payload)
+            LOGGER.info(
+                "APK 深度研判 %s payload 压缩: %s -> %s bytes (目标: %s, 级别: %s)",
+                label, current_size, next_size, limit_bytes, compression_level
+            )
+            if next_size >= current_size:
+                LOGGER.warning("APK 深度研判 %s payload 压缩后未缩小，停止", label)
+                current_payload = next_payload
+                break
+            current_payload = next_payload
+            current_size = next_size
+            compression_round += 1
+            if current_size > limit_bytes and compression_level < 4:
+                compression_level += 1
+
+        self._log_payload_size(f"{label}_compressed", current_payload)
+        return current_payload
+
+    def _compress_payload_once(self, payload: Dict[str, Any], level: int) -> Dict[str, Any]:
+        compressed = dict(payload)
+        self._compress_mapping_in_place(compressed, level)
+        return compressed
+
+    def _compress_mapping_in_place(self, mapping: Dict[str, Any], level: int) -> None:
+        for key, value in list(mapping.items()):
+            mapping[key] = self._compress_value(value, level, key)
+
+    def _compress_value(self, value: Any, level: int, path: str = "") -> Any:
+        if isinstance(value, dict):
+            return self._compress_dict(value, level, path)
+        if isinstance(value, list):
+            return self._compress_list(value, level, path)
+        if isinstance(value, str):
+            return self._compress_string(value, level, path)
+        return value
+
+    def _compress_dict(self, data: Dict[str, Any], level: int, path: str) -> Dict[str, Any]:
+        """压缩字典，保护高价值字段不被过度压缩"""
+        compressed: Dict[str, Any] = {}
+
+        high_value_keys = {
+            'package_name', 'file_name', 'sha256', 'permissions',
+            'activities', 'services', 'receivers', 'providers',
+            'risk_level', 'score', 'evidence_score', 'opinion',
+            'summary', 'risk_hint', 'consistency_score',
+            'intel_friendly_summary'
+        }
+
+        for key, value in data.items():
+            child_path = f"{path}.{key}" if path else key
+
+            if key in high_value_keys:
+                compressed[key] = self._compress_value(value, min(level, 2), child_path)
+                continue
+
+            if level >= 3 and key in {'evidence_summary', 'graph_data', 'dynamic_artifacts', 'apk_ir'}:
+                continue
+            if level >= 4 and key in {'static_report', 'dynamic_sandbox'}:
+                continue
+            if level >= 5 and key in {'target', 'role_outputs'}:
+                continue
+            compressed[key] = self._compress_value(value, level, child_path)
+        return compressed
+
+    def _compress_list(self, values: List[Any], level: int, path: str) -> List[Any]:
+        if not values:
+            return values
+
+        limit = len(values)
+        if level == 1:
+            limit = min(limit, 12)
+        elif level == 2:
+            limit = min(limit, 8)
+        elif level == 3:
+            limit = min(limit, 5)
+        else:
+            limit = min(limit, 3)
+
+        return [self._compress_value(item, level, f"{path}[{idx}]") for idx, item in enumerate(values[:limit])]
+
+    def _compress_string(self, value: str, level: int, path: str) -> str:
+        if not value:
+            return value
+
+        if level == 1:
+            limit = 1200
+        elif level == 2:
+            limit = 800
+        elif level == 3:
+            limit = 500
+        else:
+            limit = 300
+        return value[:limit]
+
     def _build_role_payload(self, role: str, static_report: DetectionReport, base_payload: Dict[str, Any]) -> Dict[str, Any]:
         payload = dict(base_payload)
         if role in {"静态分析员", "行为分析员"} and static_report.analysis_mode == "dynamic":
@@ -590,33 +816,75 @@ class APKDeepAnalyzer:
             payload["dynamic_summary"] = dynamic_summary
             payload["dynamic_artifacts"] = dynamic_artifacts
             payload["dynamic_output_dir"] = str(dynamic_artifacts.get("dynamic_output_dir") or "")
-        self._log_payload_size(role, payload)
-        return payload
 
-    @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型服务暂时不可用"})
+        if role == "情报分析员":
+            payload["intel_friendly_summary"] = self._build_intel_summary(static_report)
+
+            if "target" in payload and "apk" in payload["target"]:
+                apk_context = payload["target"]["apk"]
+                payload["target"]["apk"] = {
+                    "file_name": apk_context.get("file_name", ""),
+                    "package_name": apk_context.get("package_name", ""),
+                    "version_name": apk_context.get("version_name", ""),
+                    "version_code": apk_context.get("version_code", ""),
+                    "sha256": apk_context.get("sha256", ""),
+                    "size_bytes": apk_context.get("size_bytes", 0),
+                    "permissions": self._limit_list(apk_context.get("permissions", []), 8),
+                    "activities": self._limit_list(apk_context.get("activities", []), 4),
+                    "services": self._limit_list(apk_context.get("services", []), 4),
+                    "receivers": self._limit_list(apk_context.get("receivers", []), 4),
+                    "providers": self._limit_list(apk_context.get("providers", []), 4),
+                    "certificate_subject": apk_context.get("certificate_subject", "")[:200],
+                    "certificate_issuer": apk_context.get("certificate_issuer", "")[:200],
+                }
+
+            if "static_report" in payload and "findings" in payload["static_report"]:
+                findings = payload["static_report"]["findings"]
+                filtered_findings = [f for f in findings if f.get("severity") in ("critical", "high")][:8]
+                payload["static_report"]["findings"] = filtered_findings
+                payload["static_report"]["findings_count"] = len(filtered_findings)
+
+            self._log_payload_size(f"{role}_custom", payload)
+            return self._ensure_payload_within_limit(f"{role}_custom", payload, max_bytes=150 * 1024)
+
+        self._log_payload_size(role, payload)
+        return self._ensure_payload_within_limit(role, payload)
+
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            response = self._get_client(role).chat.completions.create(
-                model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
-                messages=[
-                    {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
-                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
-                ],
-                temperature=0.3,
-                top_p=0.9,
-                response_format={"type": "json_object"},
-            )
-            content = response.choices[0].message.content if response.choices else ""
-            if not content:
-                return {"success": False, "error": "模型未返回内容"}
-            return {"success": True, "content": content}
-        except Exception as exc:
-            return {"success": False, "error": f"模型调用异常: {exc}"}
+        retry_config = INTEL_RETRY_CONFIG if role == "情报分析员" else SEARCH_API_RETRY_CONFIG
+
+        @with_graceful_retry(retry_config, default_return={"success": False, "error": "模型服务暂时不可用"})
+        def _execute_call() -> Dict[str, Any]:
+            try:
+                timeout = 180.0
+                response = self._get_client(role).chat.completions.create(
+                    model=self.role_models.get(role) or ROLE_DEFAULT_MODELS.get(role, "gpt-4o-mini"),
+                    messages=[
+                        {"role": "system", "content": ROLE_SYSTEM_PROMPTS[role]},
+                        {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
+                    ],
+                    temperature=0.3,
+                    top_p=0.9,
+                    response_format={"type": "json_object"},
+                    timeout=timeout,
+                )
+                content = response.choices[0].message.content if response.choices else ""
+                if not content:
+                    return {"success": False, "error": "模型未返回内容"}
+                return {"success": True, "content": content}
+            except Exception as exc:
+                if role == "情报分析员":
+                    LOGGER.error(f"情报分析员模型调用失败: {type(exc).__name__}: {exc}")
+                return {"success": False, "error": f"模型调用异常: {exc}"}
+
+        return _execute_call()
 
     def _build_host_payload(self, static_report: DetectionReport, role_outputs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        return {
+        payload = {
             "role_outputs": self._serialize_role_outputs(role_outputs),
         }
+        self._log_payload_size("主持人", payload)
+        return self._ensure_payload_within_limit("主持人", payload)
 
     def _build_fallback_role_output(self, role: str, static_report: DetectionReport, error: Any) -> Dict[str, Any]:
         base_opinion = static_report.expert_opinions.get(role) or static_report.expert_opinions.get("主持人") or ""
@@ -696,6 +964,12 @@ class APKDeepAnalyzer:
         }
         expert_opinions["主持人"] = summary
 
+        intel_output = role_outputs.get("情报分析员", {})
+        if intel_output.get("fallback") or intel_output.get("error"):
+            intel_error = intel_output.get("error", "未知错误")
+            intel_note = f"\n\n⚠️ 情报分析员模型调用失败（{intel_error}），已使用静态分析结果降级替代。"
+            expert_opinions["主持人"] = expert_opinions.get("主持人", "") + intel_note
+
         return {
             "risk_level": risk_level,
             "score": host_score,
@@ -759,6 +1033,69 @@ class APKDeepAnalyzer:
             serialized[role] = serialized_output
         return serialized
 
+    def _extract_json_object(self, text: str) -> str:
+        """从模型原始输出中提取首个完整 JSON 对象，兼容 Markdown 代码块与前后解释文本。"""
+        if not text:
+            return ""
+
+        fenced_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL | re.IGNORECASE)
+        if fenced_match:
+            candidate = fenced_match.group(1).strip()
+            if candidate:
+                return candidate
+
+        start = text.find("{")
+        if start < 0:
+            return ""
+
+        depth = 0
+        in_string = False
+        escaped = False
+        for idx in range(start, len(text)):
+            char = text[idx]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start : idx + 1].strip()
+
+        return ""
+
+    def _loads_model_json(self, role: str, raw_content: str) -> Dict[str, Any]:
+        """优先解析完整 JSON；若模型夹带说明文本，则自动提取首个 JSON 对象。"""
+        if not raw_content or not raw_content.strip():
+            raise json.JSONDecodeError("Empty content", raw_content or "", 0)
+
+        candidate = raw_content.strip()
+        try:
+            data = json.loads(candidate)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        extracted = self._extract_json_object(candidate)
+        if extracted:
+            data = json.loads(extracted)
+            if isinstance(data, dict):
+                if extracted != candidate:
+                    LOGGER.warning("%s 模型返回内容包含非 JSON 前后缀，已自动截取首个 JSON 对象后解析。", role)
+                return data
+
+        raise json.JSONDecodeError("Unable to parse model JSON", raw_content, 0)
+
     def _normalize_role_output(self, role: str, result: Dict[str, Any]) -> Dict[str, Any]:
         if not result.get("success"):
             raise ValueError(f"{role} 模型调用失败: {result.get('error') or '未知错误'}")
@@ -766,7 +1103,7 @@ class APKDeepAnalyzer:
         raw_content = result.get("content", "")
 
         try:
-            data = json.loads(raw_content)
+            data = self._loads_model_json(role, raw_content)
         except json.JSONDecodeError as exc:
             LOGGER.warning(f"{role} 模型返回的 JSON 无法解析，将使用原始内容降级。错误: {exc}")
             fallback_findings = _coerce_additional_findings(
@@ -833,7 +1170,7 @@ class APKDeepAnalyzer:
 
         raw_content = result.get("content", "")
         try:
-            data = json.loads(raw_content)
+            data = self._loads_model_json("主持人", raw_content)
         except json.JSONDecodeError as exc:
             LOGGER.warning(f"主持人模型返回的JSON无法解析，将使用原始内容降级。错误: {exc}")
             return self._build_host_fallback_result(

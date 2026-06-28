@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Any, Dict, List
 import base64
 import difflib
 import mimetypes
@@ -11,9 +10,7 @@ from pathlib import Path
 from string import Template
 from typing import Iterable, Sequence
 from SentinelGuard.state import DetectionFinding, DetectionReport
-
-from typing import List
-import re
+from SentinelGuard.scoring import calculate_arbitration_adjustment
 REPORT_DIR = Path("sentinel_reports")
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
@@ -56,7 +53,7 @@ def _deduplicate_semantic_findings(findings: list[DetectionFinding], similarity_
 
 def save_detection_report(report: DetectionReport, output_dir: Path | str = REPORT_DIR) -> DetectionReport:
     # 去重证据，避免报告展示重复
-    report.findings = _dedupe_findings(report.findings)
+    report.findings = _deduplicate_semantic_findings(report.findings)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -75,81 +72,17 @@ def save_detection_report(report: DetectionReport, output_dir: Path | str = REPO
     return report
 
 
-
-import re
-from collections import defaultdict
-from typing import List, Dict
-
-def _dedupe_findings(findings: List[DetectionFinding]) -> List[DetectionFinding]:
-    # 第一步：基于 rule_id 去重（含 _REEVALUATED 映射）
-    best: Dict[str, DetectionFinding] = {}
-    for f in findings:
-        rid = f.rule_id
-        base_id = rid
-        if rid.endswith("_REEVALUATED"):
-            base_id = re.sub(r"^(STATIC_|BEHAVIOR_|INTEL_)?", "", rid)
-            base_id = re.sub(r"_REEVALUATED$", "", base_id) or rid
-        existing = best.get(base_id)
-        if existing is None or _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
-            best[base_id] = f
-    first_pass = list(best.values())
-
-    # 第二步：基于完全相同的 evidence 字符串去重（非空）
-    evidence_best: Dict[str, DetectionFinding] = {}
-    for f in first_pass:
-        ev = (f.evidence or "").strip()
-        if not ev:
-            evidence_best[f"__empty__{f.rule_id}__{id(f)}"] = f
-            continue
-        existing = evidence_best.get(ev)
-        if existing is None:
-            evidence_best[ev] = f
-        else:
-            if _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
-                evidence_best[ev] = f
-
-    second_pass = list(evidence_best.values())
-
-    # 第三步：规范化证据去重（处理中英文同义、格式差异）
-    # 定义关键词组：如果描述中包含这些关键词，且数字相同，则视为同类证据
-    KEYWORD_GROUPS = [
-        {"密码", "password", "密码框", "口令"},  # 密码相关
-        {"证书", "cert", "certificate"},         # 证书相关
-        {"脚本", "script", "javascript", "js"},  # 脚本相关
-        # 可按需扩展
-    ]
-
-    def _normalize_evidence_key(finding: DetectionFinding) -> str:
-        """生成规范化键：从 evidence 中提取所有数字，并结合描述关键词分组"""
-        ev = (finding.evidence or "") + " " + (finding.description or "")
-        # 提取所有数字（整数或小数）
-        numbers = re.findall(r'\d+\.?\d*', ev)
-        numbers_str = ",".join(sorted(set(numbers))) if numbers else "NO_NUM"
-        # 确定关键词组
-        group = "other"
-        for g in KEYWORD_GROUPS:
-            if any(kw in ev.lower() for kw in g):
-                group = "-".join(sorted(g))
-                break
-        return f"{group}|{numbers_str}"
-
-    # 合并规范化键相同的 finding
-    norm_best: Dict[str, DetectionFinding] = {}
-    for f in second_pass:
-        key = _normalize_evidence_key(f)
-        existing = norm_best.get(key)
-        if existing is None:
-            norm_best[key] = f
-        else:
-            if _SEVERITY_RANK.get(f.severity, 0) > _SEVERITY_RANK.get(existing.severity, 0):
-                norm_best[key] = f
-
-    return list(norm_best.values())
-
 def render_html_report(report: DetectionReport) -> str:
-    if report.target_ir.target_type == "apk":
+    """Render the HTML report for the given detection report.
+
+    URL reports and APK reports use different templates / panels, so this
+    function dispatches to the appropriate renderer based on target type.
+    """
+    target_type = getattr(report.target_ir, "target_type", None)
+    if target_type == "apk":
         return _render_apk_html_report(report)
     return _render_url_html_report(report)
+
 
 
 def _render_url_html_report(report: DetectionReport) -> str:
@@ -304,7 +237,7 @@ def render_markdown_report(report: DetectionReport) -> str:
                 "",
                 "### APK 鲁棒性验证",
                 f"- 鲁棒性分数：`{ir.apk.robustness.robustness_score}`",
-                f"- 检测到的对抗技术：{', '.join(ir.apk.robustness.adversarial_techniques) if ir.apk.robustness.adversarial_techniques else '无'}",
+                f"- 检测到的对抗技术：{', '.join(_top_level_adversarial_techniques(ir.apk.robustness)) if _top_level_adversarial_techniques(ir.apk.robustness) else '无'}",
                 f"- 防沙箱：`{ir.apk.robustness.anti_emulator_detected}`",
                 f"- 混淆：`{ir.apk.robustness.obfuscation_detected}`",
                 f"- 反射：`{ir.apk.robustness.reflection_detected}`",
@@ -312,6 +245,14 @@ def render_markdown_report(report: DetectionReport) -> str:
             ])
         if ir.apk.graph_data:
             lines.extend(["", "### APK 图结构分析", "- 已检测到 APK 图结构数据，可在 HTML 报告中查看 CFG / FCG / API 调用图统计。"])
+        static_content_summary = (report.apk_summary or {}).get("static_content_summary", {}) if isinstance(report.apk_summary, dict) else {}
+        if static_content_summary:
+            lines.extend(["", "### APK 静态内容解析与规则匹配"])
+            lines.append(f"- 已解析文本条数：`{static_content_summary.get('parsed_content_count', 0)}`")
+            lines.append(f"- 规则匹配结果：{static_content_summary.get('match_preview') or '未命中明显规则'}")
+            matched_rules = static_content_summary.get('matched_rules') or []
+            if matched_rules:
+                lines.append(f"- 命中规则数：`{len(matched_rules)}`")
     else:
         lines.append(ir.message or "该对象类型尚未实现。")
 
@@ -321,6 +262,11 @@ def render_markdown_report(report: DetectionReport) -> str:
 
         lines.extend(["", "## 四、页面线索"])
         lines.extend(_markdown_dict(report.page_summary))
+
+        browser_evidence_lines = _markdown_browser_evidence(report)
+        if browser_evidence_lines:
+            lines.extend(["", "### 浏览器证据补充"])
+            lines.extend(browser_evidence_lines)
 
         lines.extend(["", "## 五、截图证据"])
         lines.extend(_markdown_screenshots(report))
@@ -345,6 +291,11 @@ def render_markdown_report(report: DetectionReport) -> str:
         if robustness_lines:
             lines.extend(["", "## 四点四、鲁棒性分析"])
             lines.extend(robustness_lines)
+
+        apk_screenshot_lines = _markdown_apk_screenshots(report)
+        if apk_screenshot_lines:
+            lines.extend(["", "## 四点五、页面截图"])
+            lines.extend(apk_screenshot_lines)
 
     lines.extend(["", "## 六、风险证据"])
     if report.findings:
@@ -557,7 +508,9 @@ def _render_result_panel(report: DetectionReport) -> str:
 
 def _risk_formula_hint(report: DetectionReport) -> str:
     if report.target_ir.target_type == "apk":
-        return "APK 风险分数公式"
+        if report.deep_score is None:
+            return "APK 风险分数 = 证据分数 + 鲁棒性奖励（未开启深度研判时）"
+        return "APK 风险分数 = 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励"
     if report.target_ir.target_type == "url":
         return "URL 风险分数公式"
     return "风险分数公式"
@@ -565,7 +518,9 @@ def _risk_formula_hint(report: DetectionReport) -> str:
 
 def _risk_formula_expression(report: DetectionReport) -> str:
     if report.target_ir.target_type == "apk":
-        return "0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正 + 鲁棒性奖励"
+        if report.deep_score is None:
+            return "证据分数 + 鲁棒性奖励(0-15，基于鲁棒性分数映射)"
+        return "0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正(0/5/15) + 鲁棒性奖励(0-15，基于Sigmoid映射后的鲁棒性分数)"
     if report.target_ir.target_type == "url":
         return "0.5 × 证据分数 + 0.5 × 深度研判分数"
     return "根据对象类型使用对应评分口径"
@@ -609,14 +564,25 @@ def _render_artifact_panel(report: DetectionReport, ir, url, apk) -> str:
             ("证书签发者", apk.certificate_issuer or "-"),
             ("证书指纹", apk.certificate_sha256 or "-"),
         ]
+        static_content_summary = (report.apk_summary or {}).get("static_content_summary", {}) if isinstance(report.apk_summary, dict) else {}
+        if static_content_summary:
+            rows.extend([
+                ("静态内容解析", f"已解析 {static_content_summary.get('parsed_content_count', 0)} 条文本"),
+                ("规则匹配摘要", static_content_summary.get("match_preview") or "未命中明显规则"),
+                ("命中规则数", str(len(static_content_summary.get("matched_rules", []) or []))),
+            ])
         if apk.robustness:
+            robustness_techniques = _top_level_adversarial_techniques(apk.robustness)
             rows.extend([
                 ("鲁棒性分数", str(apk.robustness.robustness_score)),
-                ("对抗技术", ", ".join(apk.robustness.adversarial_techniques) or "-"),
+                ("对抗技术", ", ".join(robustness_techniques) or "-"),
+                ("抗静态检测", str(getattr(apk.robustness, "anti_static_detected", False))),
+                ("抗静态细分", _format_anti_static_categories(apk.robustness)),
                 ("防沙箱", str(apk.robustness.anti_emulator_detected)),
                 ("混淆", str(apk.robustness.obfuscation_detected)),
                 ("反射", str(apk.robustness.reflection_detected)),
                 ("动态加载", str(apk.robustness.dynamic_loading_detected)),
+                ("鲁棒性分数计算公式", "加权和 + Sigmoid 非线性映射 → 0-100"),
             ])
         items = "".join(f"<tr><th>{html.escape(k)}</th><td>{html.escape(v)}</td></tr>" for k, v in rows)
         artifact_html = f"<table class='table'>{items}</table>"
@@ -1173,58 +1139,96 @@ def _render_apk_graph_block(report: DetectionReport) -> str:
 
 
 def _render_apk_consistency_block(report: DetectionReport) -> str:
+    """
+    渲染一致性分析块
+    修复：更好地区分"未执行仲裁"和"仲裁结果为空"
+    """
     arbitration = _coerce_arbitration_result(report.arbitration_result)
-    if not arbitration:
+    
+    # 检查是否有仲裁结果
+    has_arbitration = bool(arbitration and (
+        arbitration.get("consistency_score") is not None or
+        arbitration.get("consistency_level") or
+        arbitration.get("discrepancies") or
+        arbitration.get("suspected_compromised")
+    ))
+    
+    if not has_arbitration:
+        # 检查是否执行了仲裁
         apk = report.target_ir.apk
-        arbitration = _coerce_arbitration_result(getattr(apk, "arbitration_result", None)) if apk else None
-    if not arbitration:
-        return """
-      <div style='height:14px'></div>
-      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
-        <div class='panel-inner'>
-          <h4 style='margin-top:0;'>一致性验证</h4>
-          <p class='subtle'>未获取一致性分析结果。可能原因：当前分析流程未启用仲裁器，或仲裁结果未返回；这不代表没有一致性分析，只是本次报告无法展示该结果。</p>
-          <table class='table'>
-            <tr><th>一致性分数</th><td>-</td></tr>
-            <tr><th>一致性等级</th><td>-</td></tr>
-            <tr><th>分歧点</th><td>未获取</td></tr>
-            <tr><th>被污染模块</th><td>未获取</td></tr>
-          </table>
-        </div>
-      </div>
-        """
+        if apk and getattr(apk, "arbitration_result", None) is not None:
+            # 执行了仲裁但结果为空
+            return """
+            <div style='height:14px'></div>
+            <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+                <div class='panel-inner'>
+                    <h4 style='margin-top:0;'>一致性验证</h4>
+                    <p class='subtle'>仲裁器已执行，但未返回有效结果。这可能是因为角色评分数据不足或仲裁计算异常。</p>
+                    <table class='table'>
+                        <tr><th>一致性分数</th><td>-</td></tr>
+                        <tr><th>一致性等级</th><td>-</td></tr>
+                        <tr><th>分歧点</th><td>未获取</td></tr>
+                        <tr><th>被污染模块</th><td>未获取</td></tr>
+                    </table>
+                </div>
+            </div>
+            """
+        else:
+            # 未执行仲裁
+            return """
+            <div style='height:14px'></div>
+            <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+                <div class='panel-inner'>
+                    <h4 style='margin-top:0;'>一致性验证</h4>
+                    <p class='subtle'>本次分析未执行仲裁器。若要启用一致性分析，请在深度研判中确保所有角色模型均已正常调用。</p>
+                </div>
+            </div>
+            """
 
+    # 有仲裁结果，正常展示
     consistency_score = arbitration.get("consistency_score")
     consistency_level = str(arbitration.get("consistency_level", "-") or "-").lower()
+    weighted_confidence = arbitration.get("weighted_confidence")
     discrepancies = list(arbitration.get("discrepancies", []) or [])
     suspected = list(arbitration.get("suspected_compromised", []) or [])
+    
     level_label, level_color = _consistency_level_style(consistency_level)
-    discrepancy_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in discrepancies) or "<li>无</li>"
-    suspected_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in suspected) or "<li>无</li>"
+    discrepancy_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in discrepancies[:5]) or "<li>无</li>"
+    suspected_items = "".join(f"<li>{html.escape(str(item))}</li>" for item in suspected[:5]) or "<li>无</li>"
+    
+    # 根据一致性等级显示不同颜色的说明
+    insight_text = {
+        "high": "✅ 三方结论高度一致，证据链可信度高。",
+        "medium": "⚠️ 三方结论存在一定分歧，建议关注分歧点。",
+        "low": "❌ 三方结论差异较大，建议人工复核各角色输出。",
+    }.get(consistency_level, "")
 
     return f"""
-      <div style='height:14px'></div>
-      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+    <div style='height:14px'></div>
+    <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
-          <h4 style='margin-top:0;'>一致性验证</h4>
-          <div style='margin-bottom:12px;'>
-            <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #60a5fa;'>
-              <strong>🔍 一致性分析说明：</strong>仲裁器通过比较「静态分析员」「行为分析员」「情报分析员」三方的评分差异，
-              判断各角色结论是否一致。一致性越高，说明证据链越稳固；若一致性低或出现分歧，则需重点关注被标记为「疑似污染」的模块。
+            <h4 style='margin-top:0;'>一致性验证</h4>
+            <div style='margin-bottom:12px;'>
+                <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid {level_color};'>
+                    <strong>🔍 一致性分析说明：</strong>仲裁器通过比较「静态分析员」「行为分析员」「情报分析员」三方的评分差异，
+                    判断各角色结论是否一致。一致性越高，说明证据链越稳固；若一致性低或出现分歧，则需重点关注被标记为「疑似污染」的模块。
+                </p>
+                <p style='margin-top:8px; color: {level_color};'>{insight_text}</p>
+            </div>
+            <p class='subtle'>
+                <span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>一致性 {html.escape(level_label)}</span>
+                <span class='pill muted' style='margin-left:8px;'>一致性分数 {html.escape(str(consistency_score if consistency_score is not None else '-'))}</span>
+                {f'<span class="pill muted" style="margin-left:8px;">加权置信度 {html.escape(str(weighted_confidence))}</span>' if weighted_confidence is not None else ''}
             </p>
-          </div>
-          <p class='subtle'>
-            <span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>一致性 {html.escape(level_label)}</span>
-            <span class='pill muted' style='margin-left:8px;'>一致性分数 {html.escape(str(consistency_score if consistency_score is not None else '-'))}</span>
-          </p>
-          <table class='table'>
-            <tr><th>一致性分数</th><td>{html.escape(str(consistency_score if consistency_score is not None else '-'))}</td></tr>
-            <tr><th>一致性等级</th><td><span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>{html.escape(str(consistency_level).upper())}</span></td></tr>
-            <tr><th>分歧点</th><td><ul>{discrepancy_items}</ul></td></tr>
-            <tr><th>被污染模块</th><td><ul>{suspected_items}</ul></td></tr>
-          </table>
+            <table class='table'>
+                <tr><th>一致性分数</th><td>{html.escape(str(consistency_score if consistency_score is not None else '-'))}/100</td></tr>
+                <tr><th>一致性等级</th><td><span class='pill' style='background:{level_color}; border-color:{level_color}; color:#fff;'>{html.escape(str(consistency_level).upper())}</span></td></tr>
+                <tr><th>分歧点</th><td><ul>{discrepancy_items}</ul></td></tr>
+                <tr><th>被污染模块</th><td><ul>{suspected_items}</ul></td></tr>
+                <tr><th>仲裁修正值</th><td>{html.escape(str(calculate_arbitration_adjustment(arbitration)))}/15</td></tr>
+            </table>
         </div>
-      </div>
+    </div>
     """
 
 
@@ -1234,31 +1238,36 @@ def _render_apk_robustness_block(report: DetectionReport) -> str:
     if not robustness:
         return ""
 
-    techniques = list(getattr(robustness, "adversarial_techniques", []) or [])
+    techniques = _top_level_adversarial_techniques(robustness)
+    categories = _format_anti_static_categories(robustness)
     score = getattr(robustness, "robustness_score", None)
+    anti_static = bool(getattr(robustness, "anti_static_detected", False))
     assessment = _robustness_assessment(score, techniques)
     techniques_html = "".join(f"<li>{html.escape(str(item))}</li>" for item in techniques) or "<li>无</li>"
-
-    warning_color = "#dc2626" if techniques else "#f59e0b" if (score is not None and float(score) >= 70) else "#16a34a"
+    score_formula = _robustness_score_formula_text()
+    score_text = str(score) if score is not None else "-"
+    warning_color = "#dc2626" if (techniques or anti_static) else "#f59e0b" if (score is not None and float(score) >= 70) else "#16a34a"
     return f"""
       <div style='height:14px'></div>
       <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
         <div class='panel-inner'>
           <h4 style='margin-top:0;'>鲁棒性分析</h4>
           <div style='margin-bottom:12px;'>
-            <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #f59e0b;'>
-              <strong>🛡️ 鲁棒性分析说明：</strong>鲁棒性验证器检测 APK 是否使用了<strong>防沙箱、混淆、反射、动态加载</strong>等对抗技术。
+            <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid {warning_color};'>
+              <strong>🛡️ 鲁棒性分析说明：</strong>鲁棒性验证器检测 APK 是否使用了<strong>抗静态检测、防沙箱、混淆、反射、动态加载</strong>等对抗技术。
               鲁棒性分数越高，说明样本越可能使用了规避分析的手段；分数越低，表示样本相对透明、更容易被静态分析覆盖。
             </p>
           </div>
-          <p class='subtle'>
-            <span class='pill' style='background:{warning_color}; border-color:{warning_color}; color:#fff;'>抗干扰能力：{html.escape(assessment)}</span>
-            <span class='pill muted' style='margin-left:8px;'>鲁棒性分数 {html.escape(str(score if score is not None else '-'))}</span>
-          </p>
           <table class='table'>
-            <tr><th>对抗技术</th><td><ul>{techniques_html}</ul></td></tr>
-            <tr><th>鲁棒性分数</th><td>{html.escape(str(score if score is not None else '-'))}</td></tr>
-            <tr><th>抗干扰能力评估</th><td>{html.escape(assessment)}</td></tr>
+            <tr><th>鲁棒性分数</th><td><strong>{html.escape(score_text)}</strong></td></tr>
+            <tr><th>抗检测性评估</th><td><span class='pill' style='background:{warning_color}; border-color:{warning_color}; color:#fff;'>{html.escape(assessment)}</span></td></tr>
+            <tr><th>抗静态检测</th><td>{html.escape(str(anti_static))}</td></tr>
+            <tr><th>抗静态细分</th><td>{html.escape(categories)}</td></tr>
+            <tr><th>对抗技术</th><td>
+              <ul style='margin:0; padding-left:18px;'>{techniques_html}</ul>
+            </td></tr>
+            <tr><th>分数公式</th><td>{html.escape(score_formula)}</td></tr>
+            <tr><th>分数解读</th><td>0-40 分为低抗检测性（弱），41-75 分为中抗检测性，76-100 分为高抗检测性（强）。</td></tr>
           </table>
         </div>
       </div>
@@ -1354,15 +1363,20 @@ def _markdown_apk_robustness_block(report: DetectionReport) -> list[str]:
     robustness = getattr(apk, "robustness", None) if apk else None
     if not robustness:
         return []
-    techniques = list(getattr(robustness, "adversarial_techniques", []) or [])
+    techniques = _top_level_adversarial_techniques(robustness)
+    anti_static = bool(getattr(robustness, "anti_static_detected", False))
+    categories = _format_anti_static_categories(robustness)
     score = getattr(robustness, "robustness_score", '-')
     return [
         "> **🛡️ 鲁棒性分析说明**：检测 APK 是否使用了防沙箱、混淆、反射、动态加载等对抗技术。",
         "> 鲁棒性分数越高，说明样本越可能使用了规避分析的手段；分数越低，表示样本相对透明。",
         "",
+        f"- 抗静态检测：`{anti_static}`",
+        f"- 抗静态细分：`{categories}`",
+        f"- 鲁棒性分数公式：`{_robustness_score_formula_text()}`",
         f"- 对抗技术：{', '.join(techniques) if techniques else '无'}",
         f"- 鲁棒性分数：`{score}`",
-        f"- 抗干扰能力评估：**{_robustness_assessment(score, techniques)}**",
+        f"- 抗检测性评估：**{_robustness_assessment(score, techniques)}**",
     ]
 
 
@@ -1415,11 +1429,20 @@ def _markdown_browser_evidence(report: DetectionReport) -> list[str]:
 def _apk_graph_data_map(graph_data):
     if not graph_data:
         return {}
+
     if isinstance(graph_data, dict):
         return graph_data
 
-    # 兼容未来可能直接传入 GraphStructure 数据类的情况。
-    mapped = {
+    to_dict = getattr(graph_data, "to_dict", None)
+    if callable(to_dict):
+        try:
+            mapped = to_dict()
+            if isinstance(mapped, dict):
+                return mapped
+        except Exception:
+            pass
+
+    return {
         "cfg": {"nodes": getattr(graph_data, "cfg_nodes", []) or [], "edges": getattr(graph_data, "edges", []) or []},
         "fcg": {"nodes": getattr(graph_data, "fcg_nodes", []) or [], "edges": getattr(graph_data, "fcg_edges", []) or []},
         "api_graph": {
@@ -1428,8 +1451,11 @@ def _apk_graph_data_map(graph_data):
             "api_call_counts": getattr(graph_data, "api_call_counts", {}) or {},
         },
         "stats": getattr(graph_data, "graph_stats", {}) or {},
+        "fallback": bool(getattr(graph_data, "fallback", False)),
+        "fallback_reason": str(getattr(graph_data, "fallback_reason", "") or ""),
+        "warnings": list(getattr(graph_data, "warnings", []) or []),
+        "source": getattr(graph_data, "source", {}) or {},
     }
-    return mapped
 
 
 def _consistency_level_style(consistency_level: str) -> tuple[str, str]:
@@ -1444,22 +1470,49 @@ def _consistency_level_style(consistency_level: str) -> tuple[str, str]:
 
 
 def _robustness_assessment(score, techniques: Sequence[str]) -> str:
-    technique_count = len([item for item in techniques if str(item).strip()])
+    """根据分数和检测到的技术数量给出评估。"""
     try:
         numeric_score = float(score)
     except (TypeError, ValueError):
         numeric_score = None
 
+    if numeric_score is not None:
+        if numeric_score <= 40:
+            return "弱"
+        if numeric_score <= 75:
+            return "中"
+        else:
+            return "强"
+
+    technique_count = len([item for item in techniques if str(item).strip()])
     if technique_count >= 3:
-        return "弱"
+        return "强"
     if technique_count >= 1:
         return "中"
-    if numeric_score is not None:
-        if numeric_score < 40:
-            return "弱"
-        if numeric_score < 70:
-            return "中"
-    return "强"
+    return "弱"
+
+
+def _format_anti_static_categories(robustness) -> str:
+    categories = list(getattr(robustness, "anti_static_categories", []) or [])
+    if not categories:
+        return "无"
+    return "、".join(str(item) for item in categories)
+
+
+def _top_level_adversarial_techniques(robustness) -> list[str]:
+    techniques = list(dict.fromkeys(str(item) for item in (getattr(robustness, "adversarial_techniques", []) or []) if str(item).strip()))
+    anti_static_categories = set(str(item) for item in (getattr(robustness, "anti_static_categories", []) or []) if str(item).strip())
+    return [item for item in techniques if item != "抗静态检测" and item not in anti_static_categories] + (["抗静态检测"] if getattr(robustness, "anti_static_detected", False) else [])
+
+
+def _robustness_score_formula_text() -> str:
+    return (
+        "鲁棒性分数 = Sigmoid(加权原始分)，其中加权原始分 = "
+        "24×抗静态检测 + 20×防沙箱 + 16×混淆 + 16×动态加载 + 12×反射 + "
+        "细分类别加成(最多12) + 技术多样性奖励(每项+3，封顶15) + "
+        "解析失败奖励(当APK图结构提取失败时 +25，因为解析失败本身是可疑信号)。"
+        "Sigmoid 映射将原始分平滑映射到 0-100 区间。"
+    )
 
 def _group_findings_by_severity(findings: Sequence[DetectionFinding]) -> dict[str, list[DetectionFinding]]:
     grouped: dict[str, list[DetectionFinding]] = {"critical": [], "high": [], "medium": [], "low": []}
