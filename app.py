@@ -196,16 +196,21 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
             if target_type == "apk"
             else run_detection(target, target_type=target_type, fetch_page=fetch_page, runtime_config=runtime_config)
         )
-        task_manager.update(task_id, progress=62, stage="static_done", message="静态分析已完成，正在整理证据")
+        task_manager.update(task_id, progress=30, stage="static_done", message="静态分析已完成，正在整理证据")
 
-        progress_callback = lambda stage, message, progress: task_manager.update(  # noqa: E731
-            task_id,
-            progress=progress,
-            stage=stage,
-            message=message,
-        )
+        current_progress = 30
+        def _progress_callback(stage, message, progress):  # noqa: E306
+            nonlocal current_progress
+            next_progress = int(progress or 0)
+            if next_progress < current_progress:
+                next_progress = current_progress
+            current_progress = min(100, next_progress)
+            task_manager.update(task_id, progress=current_progress, stage=stage, message=message)
+
+        progress_callback = _progress_callback
 
         if report.target_ir.target_type == "apk":
+            task_manager.update(task_id, progress=40, stage="apk_prepare", message="正在准备 APK 后续分析")
             report = _generate_apk_report_bundle(
                 static_report=report,
                 apk_mode=apk_mode,
@@ -215,13 +220,13 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
                 task_id=task_id,
             )
             if apk_mode == "dynamic" and apk_deep:
-                task_manager.update(task_id, progress=94, stage="dynamic_deep_done", message="APK 动态深度研判已完成，正在生成报告")
+                task_manager.update(task_id, progress=92, stage="dynamic_deep_done", message="APK 动态深度研判已完成，正在生成报告")
             elif apk_mode == "dynamic":
-                task_manager.update(task_id, progress=94, stage="dynamic_done", message="APK 动态沙箱已完成，正在生成报告")
+                task_manager.update(task_id, progress=90, stage="dynamic_done", message="APK 动态沙箱已完成，正在生成报告")
             elif apk_deep:
-                task_manager.update(task_id, progress=94, stage="deep_done", message="深度研判已完成，正在生成报告")
+                task_manager.update(task_id, progress=88, stage="deep_done", message="深度研判已完成，正在生成报告")
             else:
-                task_manager.update(task_id, progress=88, stage="static_only", message="静态分析完成，正在生成报告")
+                task_manager.update(task_id, progress=82, stage="static_only", message="静态分析完成，正在生成报告")
         else:
             if deep:
                 report = run_deep_url_detection_from_static(
@@ -230,9 +235,9 @@ def _run_analysis_pipeline(task_id: str, target: str, target_type: str, fetch_pa
                     runtime_config=runtime_config,
                     progress_callback=progress_callback,
                 )
-                task_manager.update(task_id, progress=94, stage="deep_done", message="深度研判已完成，正在生成报告")
+                task_manager.update(task_id, progress=88, stage="deep_done", message="深度研判已完成，正在生成报告")
             else:
-                task_manager.update(task_id, progress=88, stage="static_only", message="静态分析完成，正在生成报告")
+                task_manager.update(task_id, progress=82, stage="static_only", message="静态分析完成，正在生成报告")
 
         if report.target_ir.target_type != "apk":
             report = save_detection_report(report, output_dir=Path(settings.DETECTION_REPORT_DIR))

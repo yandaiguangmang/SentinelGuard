@@ -4,10 +4,12 @@ import inspect
 import json
 import re
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
 
 import httpx
 from openai import OpenAI
+from retry_helper import SEARCH_API_RETRY_CONFIG, with_graceful_retry
 
 from config import settings
 from SentinelGuard.agents.autogen_runner import build_multi_agent_orchestrator, build_role_conversation
@@ -141,13 +143,29 @@ class APKDeepAnalyzer:
         role_outputs: Dict[str, Dict[str, Any]] = {}
         if progress_callback:
             progress_callback("deep_prepare", "正在准备 APK 深度研判", 72)
-        for role in DEEP_ROLE_ORDER[1:]:
+
+        parallel_roles = ["静态分析员", "行为分析员", "情报分析员"]
+        if progress_callback:
+            progress_callback("deep_parallel_batch1", "正在进行静态/行为/情报并行分析", 78)
+
+        def _run_role(role: str) -> Dict[str, Any]:
             LOGGER.info("APK 深度研判开始执行角色：%s", role)
-            if progress_callback:
-                progress_callback(self._role_stage(role), f"正在进行{role}分析", self._role_progress(role))
             try:
                 role_payload = self._build_role_payload(role, static_report, base_payload)
-                role_result = self._call_role_model(role, role_payload)
+                return self._call_role_model(role, role_payload)
+            except Exception as exc:
+                LOGGER.exception("APK 深度研判角色 %s 执行异常：%s", role, exc)
+                return {"success": False, "error": exc, "elapsed": 0.0, "usage": None}
+
+        with ThreadPoolExecutor(max_workers=len(parallel_roles)) as executor:
+            future_to_role = {executor.submit(_run_role, role): role for role in parallel_roles}
+            for future in as_completed(future_to_role):
+                role = future_to_role[future]
+                try:
+                    role_result = future.result()
+                except Exception as exc:
+                    role_result = {"success": False, "error": exc, "elapsed": 0.0, "usage": None}
+
                 if not role_result.get("success"):
                     LOGGER.error(
                         "APK 深度研判角色 %s 调用失败：%s（elapsed=%.3fs）",
@@ -158,9 +176,9 @@ class APKDeepAnalyzer:
                     role_outputs[role] = self._build_fallback_role_output(role, static_report, role_result.get("error"))
                     continue
                 role_outputs[role] = self._normalize_role_output(role, role_result)
-            except Exception as exc:
-                LOGGER.exception("APK 深度研判角色 %s 执行异常：%s", role, exc)
-                role_outputs[role] = self._build_fallback_role_output(role, static_report, exc)
+
+        if progress_callback:
+            progress_callback("deep_parallel_batch1_done", "静态/行为/情报并行分析已完成", 83)
 
         role_scores = self._extract_role_scores(role_outputs, static_report)
         apk_ir = static_report.target_ir.apk
@@ -925,13 +943,32 @@ class APKDeepAnalyzer:
         return self._ensure_payload_within_limit(role, payload)
     
     def _call_role_model(self, role: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        try:
+        @with_graceful_retry(SEARCH_API_RETRY_CONFIG, default_return={"success": False, "error": "模型调用重试失败", "elapsed": 0.0, "usage": None})
+        def _invoke() -> Dict[str, Any]:
             conversation = self._get_role_conversation(role)
             task = json.dumps(payload, ensure_ascii=False, indent=2)
             system_message = ROLE_SYSTEM_PROMPTS[role]
             result = conversation.run(task, system_message=system_message)
-            
-            # 确保返回结构包含必要的字段
+
+            if isinstance(result, dict) and not result.get("success"):
+                error_text = str(result.get("error") or "未知错误")
+                if "503" in error_text or "Service Unavailable" in error_text or "HTTP 503" in error_text:
+                    raise RuntimeError(error_text)
+                LOGGER.error(
+                    "APK 深度研判角色 %s 调用失败：%s（elapsed=%.3fs）",
+                    role,
+                    error_text,
+                    float(result.get("elapsed") or 0.0),
+                )
+                return result
+
+            if not result.get("content"):
+                raise RuntimeError("模型返回内容为空")
+
+            return result
+
+        try:
+            result = _invoke()
             if not result.get("success"):
                 LOGGER.error(
                     "APK 深度研判角色 %s 调用失败：%s（elapsed=%.3fs）",
@@ -939,12 +976,6 @@ class APKDeepAnalyzer:
                     result.get("error") or "未知错误",
                     float(result.get("elapsed") or 0.0),
                 )
-                return result
-            
-            # 验证内容不为空
-            if not result.get("content"):
-                return {"success": False, "error": "模型返回内容为空", "elapsed": result.get("elapsed", 0.0), "usage": result.get("usage")}
-            
             return result
         except Exception as exc:
             LOGGER.exception("APK 深度研判 %s 模型调用异常", role)
@@ -1355,10 +1386,10 @@ class APKDeepAnalyzer:
     @staticmethod
     def _role_stage(role: str) -> str:
         return {
-            "静态分析员": "static",
-            "行为分析员": "behavior",
-            "情报分析员": "intel",
-            "处置建议员": "advice",
+            "静态分析员": "deep_static",
+            "行为分析员": "deep_behavior",
+            "情报分析员": "deep_intel",
+            "处置建议员": "deep_advice",
         }.get(role, "analysis")
 
     @staticmethod

@@ -137,7 +137,6 @@ def _enrich_with_androguard(apk_ir: APKIR, path: Path) -> APKIR:
         print(f"    - 关键文件数: {len(apk_ir.key_files)}")
     except Exception:
         apk_ir.key_files = apk_ir.key_files
-        print("error: 关键文件提取失败，可能存在异常 APK 文件或解析错误。")
 
     _attach_graph_data(apk_ir, apk)
 

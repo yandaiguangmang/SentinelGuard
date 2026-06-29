@@ -100,13 +100,13 @@ class APKDynamicAnalyzer:
         package_name = self._resolve_package_name_from_apk(apk_paths[0], apk_ir.package_name.strip())
 
         if progress_callback:
-            progress_callback("dynamic_prepare", "正在准备 APK 动态沙箱", 70)
+            progress_callback("dynamic_prepare", "正在准备 APK 动态沙箱", 42)
 
         self._ensure_adb_available()
         device_id = self._pick_device()
 
         if progress_callback:
-            progress_callback("dynamic_install", "正在安装 APK 到模拟器", 76)
+            progress_callback("dynamic_install", "正在安装 APK 到模拟器", 48)
         self._run_adb(["-s", device_id, "logcat", "-c"], check=False)
         self._run_adb(["-s", device_id, "shell", "logcat", "-c"], check=False)
         install_result = self._install_apk_bundle(device_id, apk_paths)
@@ -124,16 +124,16 @@ class APKDynamicAnalyzer:
             )
 
         if progress_callback:
-            progress_callback("dynamic_prepare", "正在收集设备与包信息", 72)
+            progress_callback("dynamic_prepare", "正在收集设备与包信息", 52)
         package_info = self._collect_package_info(device_id, package_name)
 
         if progress_callback:
-            progress_callback("dynamic_launch", "正在启动应用并采集运行时日志", 82)
+            progress_callback("dynamic_launch", "正在启动应用并采集运行时日志", 60)
         launch_result = self._launch_package(device_id, package_name)
         events.append(self._event("launch", "adb", launch_result.returncode, launch_result.stdout, launch_result.stderr))
 
         if progress_callback:
-            progress_callback("dynamic_collect", "正在采集 logcat、权限、文件与持久化线索", 87)
+            progress_callback("dynamic_collect", "正在采集 logcat、权限、文件与持久化线索", 66)
         logcat_output = self._capture_logcat(device_id)
         events.extend(self._extract_events_from_logcat(logcat_output, package_name))
 
@@ -157,7 +157,7 @@ class APKDynamicAnalyzer:
             events.append(self._event("pidof", "dumpsys", 0, package_info.get("pidof", ""), ""))
 
         if progress_callback:
-            progress_callback("dynamic_evidence", "正在整理动态证据并抓取截图", 92)
+            progress_callback("dynamic_evidence", "正在整理动态证据并抓取截图", 72)
         artifacts = self._write_dynamic_artifacts(
             static_report,
             device_id,
@@ -220,7 +220,7 @@ class APKDynamicAnalyzer:
         merged_findings = _deduplicate_semantic_findings([*sandbox_findings, *model_findings])
 
         if progress_callback:
-            progress_callback("dynamic_done", "APK 动态沙箱分析已完成", 96)
+            progress_callback("dynamic_done", "APK 动态沙箱分析已完成", 76)
 
         return {
             "findings": merged_findings,
@@ -773,7 +773,7 @@ class APKDynamicAnalyzer:
             return analyzer.analyze(static_report, progress_callback=progress_callback)
         finally:
             if progress_callback:
-                progress_callback("dynamic_deep_done", "APK 动态深度研判已完成", 96)
+                progress_callback("dynamic_deep_done", "APK 动态深度研判已完成", 80)
 
     def _build_lightweight_target_context(self, target_ir) -> Dict[str, Any]:
         target = {

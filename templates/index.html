@@ -94,7 +94,7 @@
           <span id="task-progress-status">等待开始</span>
           <span id="task-progress-stage">queued</span>
         </div>
-        <div id="task-progress-log" class="progress-log">提交后会在这里实时显示静态分析、深度研判和报告生成的进展。</div>
+        <div id="task-progress-log" class="progress-log">提交后会在这里实时显示静态分析、三员并行深度研判和报告生成的进展。</div>
       </div>
 
       <form method="post" action="/analyze" enctype="multipart/form-data">
@@ -462,6 +462,7 @@
     const progressStage = document.getElementById('task-progress-stage');
     const progressLog = document.getElementById('task-progress-log');
     const clientResultPanel = document.getElementById('client-result-panel');
+    let lastProgressValue = 0;
     const resultRiskLevel = document.getElementById('result-risk-level');
     const resultEvidenceScore = document.getElementById('result-evidence-score');
     const resultDeepScore = document.getElementById('result-deep-score');
@@ -525,16 +526,21 @@
         received: '任务已接收，准备分析',
         static: `${apkPrefix}静态分析中`,
         static_done: '静态分析已完成，正在整理证据',
+        apk_prepare: '正在准备 APK 后续分析',
+        apk_dynamic_prepare: '正在生成仅动态沙箱报告',
+        apk_dynamic_deep: '正在生成动态深度研判报告',
         deep_prepare: `正在准备${apkPrefix}深度研判`,
+        deep_parallel_batch1: '正在进行静态/行为/情报并行分析',
+        deep_parallel_batch1_done: '静态/行为/情报并行分析已完成',
         dynamic_prepare: '正在准备 APK 动态沙箱',
         dynamic_install: '正在安装 APK 到模拟器',
         dynamic_launch: '正在启动应用并采集运行时日志',
         dynamic_collect: '正在采集运行时线索',
         dynamic_evidence: '正在整理动态证据并抓取截图',
+        dynamic_done: 'APK 动态沙箱已完成，正在生成报告',
+        dynamic_deep_done: 'APK 动态深度研判已完成，正在生成报告',
         dynamic_advice: '正在进行处置建议分析',
         dynamic_host: '正在进行主持人总结',
-        dynamic_deep_done: 'APK 动态深度研判已完成，正在生成报告',
-        dynamic_done: 'APK 动态沙箱已完成，正在生成报告',
         deep_static: '正在进行静态分析',
         deep_behavior: '正在进行行为分析',
         deep_intel: '正在进行情报分析',
@@ -549,7 +555,9 @@
     }
 
     function updateProgressView(data) {
-      const progress = Number(data.progress ?? 0);
+      const rawProgress = Number(data.progress ?? 0);
+      const progress = Math.max(lastProgressValue, rawProgress);
+      lastProgressValue = progress;
       const stage = data.stage || 'queued';
       const message = data.message || '处理中';
       const status = data.status || 'running';
@@ -874,6 +882,7 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       stopPolling();
+      lastProgressValue = 0;
       progressPanel.classList.remove('error');
       progressPanel.style.display = 'block';
       progressTitle.textContent = '正在提交检测任务';
