@@ -44,15 +44,15 @@ ROLE_DEFAULT_MODELS = {
 
 ROLE_SYSTEM_PROMPTS = {
     "主持人": """你是 APK 恶意软件深度研判的主持人。
-你的职责是仅综合前四位专家意见，对 APK 的静态/动态风险证据进行最终裁决式总结，并输出结构化 JSON。
+你的职责是仅综合五个角色的意见，对 APK 的静态/动态风险证据进行最终裁决式总结，并输出结构化 JSON。
 
 **重要：你必须只输出纯 JSON，不要输出任何额外的解释、说明或 Markdown 格式。**
 
 要求：
-1. 你收到的输入只包含前四位专家输出，请仅基于这些结论做最终总结，不要索要或依赖额外上下文。
+1. 你收到的输入只包含五个角色的输出，请仅基于这些结论做最终总结，不要索要或依赖额外上下文。
 2. 若证据不足，必须明确说明当前研判仅基于已有专家输出。
 3. summary 要体现最终结论，不能只是简单复述。
-4. expert_opinions 只需要保留前四个角色的原始意见或整理后的摘要。
+4. expert_opinions 只需要保留五个角色（主持人、静态分析员、行为分析员、情报分析员、处置建议员）的原始意见或整理后的摘要。
 5. 输出必须是严格 JSON，字段包含 risk_level、score、summary、expert_opinions、additional_findings。
 7. summary 必须使用中文，不要输出英文总结。
 """,
@@ -178,7 +178,31 @@ class APKDeepAnalyzer:
                 role_outputs[role] = self._normalize_role_output(role, role_result)
 
         if progress_callback:
-            progress_callback("deep_parallel_batch1_done", "静态/行为/情报并行分析已完成", 83)
+            progress_callback("deep_advice", "正在进行处置建议分析", 85)
+
+        advice_role = "处置建议员"
+        advice_payload = self._build_role_payload(advice_role, static_report, base_payload)
+        try:
+            advice_result = self._call_role_model(advice_role, advice_payload)
+        except Exception as exc:
+            advice_result = {"success": False, "error": str(exc), "elapsed": 0.0, "usage": None}
+
+        if not advice_result.get("success"):
+            LOGGER.error(
+                "APK 深度研判角色 %s 调用失败：%s（elapsed=%.3fs）",
+                advice_role,
+                advice_result.get("error") or "未知错误",
+                float(advice_result.get("elapsed") or 0.0),
+            )
+            role_outputs[advice_role] = self._build_fallback_role_output(advice_role, static_report, advice_result.get("error"))
+        else:
+            try:
+                role_outputs[advice_role] = self._normalize_role_output(advice_role, advice_result)
+            except Exception as exc:
+                role_outputs[advice_role] = self._build_fallback_role_output(advice_role, static_report, exc)
+
+        if progress_callback:
+            progress_callback("deep_parallel_batch1_done", "静态/行为/情报分析已完成，处置建议员已接入", 83)
 
         role_scores = self._extract_role_scores(role_outputs, static_report)
         apk_ir = static_report.target_ir.apk
