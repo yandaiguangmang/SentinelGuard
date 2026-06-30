@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelGuard APK 检测报告</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --panel: rgba(15, 23, 42, .74);
+  --panel-2: rgba(255, 255, 255, .04);
+  --text: #e5eefb;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --line: rgba(148, 163, 184, .18);
+  --shadow: 0 18px 50px rgba(2, 6, 23, .3);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #172554 0, #0b1220 34%, #060912 100%);
+  color: var(--text);
+}
+a { color: #bfdbfe; }
+code {
+  background: rgba(148, 163, 184, .16);
+  padding: 2px 6px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(18px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .94), rgba(124, 58, 237, .82));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
+}
+.hero { max-width: 1240px; margin: 0 auto; padding: 22px 22px 18px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 38px); }
+.hero p { margin: 4px 0; color: #dbeafe; }
+.nav { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; }
+.nav a {
+  text-decoration: none; color: #dbeafe;
+  border: 1px solid rgba(219, 234, 254, .18);
+  padding: 7px 12px; border-radius: 999px;
+  background: rgba(15, 23, 42, .28);
+}
+.nav a:hover { background: rgba(168, 85, 247, .18); }
+.hero-mini { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.chip {
+  padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12); color: #e2e8f0; font-size: 12px;
+}
+.chip.warning { background: rgba(245, 158, 11, .12); }
+.chip.success { background: rgba(34, 197, 94, .12); }
+.chip.danger { background: rgba(239, 68, 68, .12); }
+.container { max-width: 1240px; margin: 22px auto 72px; padding: 0 18px 24px; }
+.grid { display: grid; gap: 18px; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two-col { grid-template-columns: minmax(0, 1.7fr) minmax(320px, .95fr); align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, .8), rgba(15, 23, 42, .56));
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.panel-inner { padding: 22px; }
+.section-title {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 16px; font-size: 20px;
+}
+.section-title small { color: var(--text-muted); font-weight: 500; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 999px; color: white;
+  font-size: 14px; font-weight: 800; letter-spacing: .04em;
+  background: #f59e0b;
+  box-shadow: 0 12px 24px rgba(0,0,0,.18);
+}
+.metric {
+  padding: 18px 18px 20px;
+  background: rgba(255,255,255,.04);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, .16);
+}
+.metric .label { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+.metric .value { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.metric .hint { margin-top: 8px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.metric.risk { border-color: rgba(239, 68, 68, .26); }
+.metric.score { border-color: rgba(34, 197, 94, .24); }
+.metric.mode { border-color: rgba(96, 165, 250, .22); }
+.metric.target { border-color: rgba(245, 158, 11, .22); }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pill { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(96,165,250,.16); color: #dbeafe; border: 1px solid rgba(96,165,250,.22); }
+.pill.muted { background: rgba(148,163,184,.12); color: #e2e8f0; border-color: rgba(148,163,184,.2); }
+.pill.high { background: rgba(239,68,68,.14); color: #fecaca; border-color: rgba(239,68,68,.22); }
+.pill.medium { background: rgba(245,158,11,.16); color: #fde68a; border-color: rgba(245,158,11,.22); }
+.pill.low { background: rgba(34,197,94,.14); color: #bbf7d0; border-color: rgba(34,197,94,.22); }
+.panel h3, .panel h4 { margin-top: 0; }
+.panel p { line-height: 1.75; color: #dbe4f3; }
+.subtle { color: var(--text-muted); }
+.scroll-box { overflow: visible; padding-right: 0; scroll-behavior: smooth; }
+.scroll-box.slim,
+.scroll-box.wide,
+.scroll-box.tall { max-height: none; }
+.screenshot-grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
+.screenshot-card { background: rgba(255,255,255,.04); border-radius: 16px; padding: 16px; border: 1px solid rgba(148,163,184,.16); }
+.screenshot-card h4 { margin: 0 0 10px; }
+.screenshot-preview { overflow: visible; border-radius: 14px; background: #0f172a; padding: 10px; }
+.screenshot-card img { max-width: 100%; border-radius: 12px; border: 1px solid rgba(148,163,184,.18); display: block; }
+.screenshot-meta { margin-top: 8px; word-break: break-all; }
+.hscroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
+.hscroll .table { min-width: 880px; }
+.hscroll td, .hscroll th { white-space: nowrap; }
+.grid-list { display: grid; gap: 12px; }
+.finding { border-radius: 16px; padding: 14px 16px; margin: 0; background: rgba(255,255,255,.04); border: 1px solid rgba(148, 163, 184, .16); border-left: 5px solid rgba(148, 163, 184, .48); }
+.finding.low { border-left-color: #22c55e; }
+.finding.medium { border-left-color: #f59e0b; }
+.finding.high, .finding.critical { border-left-color: #ef4444; }
+.finding h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.finding .meta { color: var(--text-muted); font-size: 13px; }
+.finding p { margin: 8px 0 0; }
+.finding .kv { display: grid; grid-template-columns: 88px 1fr; gap: 8px 12px; margin-top: 10px; font-size: 14px; }
+.finding .kv b { color: #bfdbfe; }
+.expert-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.expert-card { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); border: 1px solid rgba(148, 163, 184, .16); border-radius: 16px; padding: 14px 14px 12px; min-height: 160px; overflow: visible; }
+.expert-card h4 { margin: 0 0 8px; }
+.expert-card p { margin: 0; }
+.timeline { display: grid; gap: 12px; }
+.timeline-item { position: relative; padding-left: 18px; }
+.timeline-item::before { content: ''; position: absolute; left: 4px; top: 10px; bottom: -10px; width: 2px; background: rgba(148,163,184,.35); }
+.timeline-item:last-child::before { display: none; }
+.timeline-dot { position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 0 4px rgba(255,255,255,.06); }
+.timeline-item h4 { margin: 0 0 6px; }
+.timeline-item p { margin: 0; color: #dbe4f3; }
+.table { width: 100%; border-collapse: collapse; }
+.table td, .table th { border-bottom: 1px solid rgba(148, 163, 184, .16); padding: 10px 8px; vertical-align: top; text-align: left; }
+.table th { color: #bfdbfe; width: 180px; }
+.footer-note { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.section-anchor { scroll-margin-top: 110px; }
+.report-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+.report-tab-btn { border: 1px solid rgba(148,163,184,.2); background: #0f172a; color: #e5eefb; border-radius: 999px; padding: 10px 16px; cursor: pointer; }
+.report-tab-btn.active { background: linear-gradient(135deg,#2563eb,#22c55e); border-color: transparent; }
+.report-pane { display: none; }
+.report-pane.active { display: block; }
+.report-pane .panel { margin-top: 0; }
+@media (max-width: 980px) { .two-col { grid-template-columns: 1fr; } header { position: static; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <h1>SentinelGuard APK 检测报告</h1>
+    <p>APK 静态分析 · 一致性验证 · 鲁棒性分析 · 动态沙箱研判 · 上方总览、下方切页查看</p>
+    <div class="nav">
+      <a href="#result">总览</a>
+      <a href="#ir">APK 摘要</a>
+      <a href="#evidence">风险证据</a>
+      <a href="#screenshots">截图</a>
+      <a href="#discussion">协同研判</a>
+      <a href="#robustness">鲁棒性分析</a>
+      <a href="#graph">图结构分析</a>
+      <a href="#consistency">一致性验证</a>
+    </div>
+    <div class="hero-mini">
+      <span class="chip warning">APK 研判</span>
+      <span class="chip">证据数 35</span>
+      <span class="chip warning">风险 MEDIUM</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid summary-grid">
+    
+    <article class="panel metric risk">
+      <div class="label">风险等级</div>
+      <div class="value">MEDIUM</div>
+      <div class="hint">24 条高危 / 9 条中危证据</div>
+    </article>
+    
+    <article class="panel metric score">
+      <div class="label">证据分数</div>
+      <div class="value">70/100</div>
+      <div class="hint">基于已采集证据统一计算</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">深度研判分数</div>
+      <div class="value">96 /100</div>
+      <div class="hint">主持人总结后的单独评分</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">最终风险分数</div>
+      <div class="value">60/100</div>
+      <div class="hint">APK 风险分数 = 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励</div>
+    </article>
+    
+    <article class="panel metric mode">
+      <div class="label">分析模式</div>
+      <div class="value">模型深度检查报告</div>
+      <div class="hint">静态检测结果可继续叠加深度研判</div>
+    </article>
+    
+    <article class="panel metric target">
+      <div class="label">输入对象</div>
+      <div class="value">apk</div>
+      <div class="hint">C:\Users\lenovo\AppData\Local\Temp\sentinelguard_apk_bundle_dswnccuq</div>
+    </article>
+    
+  </div>
+
+  <section class="panel section-anchor" id="result" style="margin-top: 18px;">
+    <div class="panel-inner">
+      <div class="section-title">
+        <h3>检测总览</h3>
+        <small>模型深度检查报告</small>
+      </div>
+      
+      <p><span class="badge">MEDIUM</span></p>
+      <p>证据分数：<strong>70/100</strong></p>
+      <p>深度研判分数：<strong>96/100</strong></p>
+      <p>最终风险分数：<strong>60/100</strong></p>
+      <p class="subtle">APK 风险分数 = 0.4×证据分数 + 0.3×深度研判分数 + 仲裁修正 + 鲁棒性奖励：<code>0.4 × 证据分数 + 0.3 × 深度研判分数 + 仲裁修正(0/5/15) + 鲁棒性奖励(0-15，基于Sigmoid映射后的鲁棒性分数)</code></p>
+      <p>原始输入：<code>C:\Users\lenovo\AppData\Local\Temp\sentinelguard_apk_bundle_dswnccuq</code></p>
+      <p>报告类型：<strong>模型深度检查报告</strong></p>
+      <div class="pill-row"><span class='pill medium'>MEDIUM · 运行时暴露可疑网络线索</span><span class='pill high'>HIGH · 疑似动态载荷释放</span><span class='pill high'>HIGH · 发现持久化或高危服务注册线索</span><span class='pill high'>CRITICAL · 动态激活无障碍服务与设备管理器</span><span class='pill high'>HIGH · 动态注册通知监听服务</span><span class='pill high'>CRITICAL · 异常高频的动态类加载与反射调用</span><span class='pill high'>HIGH · 包含 Root 提权与 Shell 命令执行代码</span><span class='pill high'>CRITICAL · 尝试获取Root权限并执行系统命令</span></div>
+    
+      <p class='subtle'>未记录关联静态报告。</p>
+      
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>APK 动态沙箱摘要</h4>
+          <div class='scroll-box slim'>
+            <table class='table'><tr><th>device_id</th><td>emulator-5554</td></tr><tr><th>package_name</th><td>oasud.qwqrds.vjghasdh</td></tr><tr><th>static_file_name</th><td>23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61.apk</td></tr><tr><th>installed_apk_paths</th><td>C:\Users\lenovo\AppData\Local\Temp\sentinelguard_apk_bundle_dswnccuq\23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61.apk</td></tr><tr><th>install_mode</th><td>install</td></tr><tr><th>resolve_activity</th><td>priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+oasud.qwqrds.vjghasdh/.MainActivity</td></tr><tr><th>pidof</th><td></td></tr><tr><th>granted_dangerous_permissions</th><td>ANDROID.PERMISSION.INTERNET, ANDROID.PERMISSION.ACCESS_NETWORK_STATE</td></tr><tr><th>post_install_files</th><td>./vendor/lib64/egl/libEGL_angle.so, ./vendor/lib64/egl/libGLESv1_CM_angle.so, ./vendor/lib64/egl/libGLESv1_CM_emulation.so, ./vendor/lib64/egl/libGLESv2_emulation.so, ./vendor/lib64/egl/libEGL_emulation.so, ./vendor/lib64/egl/libGLESv2_angle.so, ./vendor/lib64/hw/gralloc.default.so, ./vendor/lib64/hw/android.hardware.graphics.mapper@3.0-impl-ranchu.so, ./vendor/lib64/hw/vulkan.ranchu.so, ./vendor/lib64/libGLESv1_enc.so, ./vendor/lib64/libGLESv2_enc.so, ./vendor/lib64/libGoldfishProfiler.so, ./vendor/lib64/libOpenglCodecCommon.so, ./vendor/lib64/libOpenglSystemCommon.so, ./vendor/lib64/lib_renderControl_enc.so, ./vendor/lib64/libandroidemu.so, ./vendor/lib64/libdrm.so, ./vendor/lib64/libvulkan_enc.so, ./vendor/overlay/framework-res__auto_generated_rro_vendor.apk, ./vendor/overlay/CarrierConfig__auto_generated_rro_vendor.apk</td></tr><tr><th>persistent_services</th><td>{&#x27;accessibility&#x27;: [&#x27;[com.google.android.apps.nexuslauncher][com.google.android.as][com.google.android.apps.wellbeing][com.google.android.packageinstaller][com.google.android.apps.nexuslauncher][com.google.android.apps.nexuslauncher][com.google.android.packageinstaller][com.google.android.apps.nexuslauncher][com.google.android.inputmethod.latin][oasud.qwqrds.vjghasdh][com.android.chrome][com.android.systemui][com.google.android.googlequicksearchbox][com.google.android.apps.youtube.music][com.google.android.packageinstaller]}]&#x27;], &#x27;device_policy&#x27;: [&#x27;6: oasud.qwqrds.vjghasdh&#x27;], &#x27;notification&#x27;: [&#x27;06-28 15:08:20.527 config: oasud.qwqrds.vjghasdh|removeAutomaticZenRules no changes&#x27;, &#x27;06-28 15:08:20.527 set_zen_mode: off,oasud.qwqrds.vjghasdh|removeAutomaticZenRules&#x27;, &#x27;06-28 16:18:28.770 config: oasud.qwqrds.vjghasdh|removeAutomaticZenRules no changes&#x27;, &#x27;06-28 16:18:28.772 set_zen_mode: off,oasud.qwqrds.vjghasdh|removeAutomaticZenRules&#x27;, &#x27;userId=0 value={com.mytelecomapp.topup, com.google.android.apps.diagnosticstool, com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationAssistantService, com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationListenerService, com.google.android.apps.safetyhub, oasud.qwqrds.vjghasdh, com.google.intelligence.sense, com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener, com.google.android.apps.wellbeing, com.google.android.dialer, com.google.android.gms, com.baidu.tieba, com.tencent.mobileqq, com.google.android.settings.intelligence, com.sina.weibo, com.google.android.GoogleCamera, com.rubenroy.minimaltodo, fetcher.pipeliner.helper}&#x27;]}</td></tr><tr><th>install_success</th><td>True</td></tr><tr><th>launch_success</th><td>True</td></tr><tr><th>event_count</th><td>27</td></tr><tr><th>logcat_excerpt_count</th><td>164</td></tr><tr><th>network_hit_count</th><td>12</td></tr><tr><th>runtime_window_seconds</th><td>20</td></tr><tr><th>dynamic_json_path</th><td>G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/dynamic_artifacts.json</td></tr><tr><th>dynamic_json_name</th><td>dynamic_artifacts.json</td></tr><tr><th>dynamic_summary_path</th><td>G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/dynamic_summary.json</td></tr><tr><th>dynamic_logcat_path</th><td>G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/logcat_excerpt.txt</td></tr><tr><th>dynamic_output_dir</th><td>G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh</td></tr><tr><th>ui_trace_dir</th><td>G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/ui_trace</td></tr><tr><th>ui_trace_paths</th><td>G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/ui_trace/oasud.qwqrds.vjghasdh_launch_20260630_152326_056291.png, G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/ui_trace/oasud.qwqrds.vjghasdh_evidence_20260630_152326_726192.png</td></tr></table>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </section>
+
+  <div class="report-tabs" role="tablist" aria-label="报告子页面">
+    <button class="report-tab-btn active" type="button" data-report-tab="ir">APK 摘要</button>
+    <button class="report-tab-btn" type="button" data-report-tab="evidence">风险证据</button>
+    <button class="report-tab-btn" type="button" data-report-tab="screenshots">截图</button>
+    <button class="report-tab-btn" type="button" data-report-tab="discussion">协同研判</button>
+    <button class="report-tab-btn" type="button" data-report-tab="robustness">鲁棒性分析</button>
+    <button class="report-tab-btn" type="button" data-report-tab="graph">图结构分析</button>
+    <button class="report-tab-btn" type="button" data-report-tab="consistency">一致性验证</button>
+  </div>
+
+  <section class="report-pane active" data-report-pane="ir">
+    <section class="panel section-anchor" id="ir" style="margin-top: 18px;">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>APK 摘要</h3>
+          <small>模型深度检查报告</small>
+        </div>
+        <div class='hscroll'><table class='table'><tr><th>APK 文件</th><td>23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61.apk</td></tr><tr><th>规范化路径</th><td>C:/Users/lenovo/AppData/Local/Temp/sentinelguard_apk_bundle_dswnccuq/23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61.apk</td></tr><tr><th>包名</th><td>oasud.qwqrds.vjghasdh</td></tr><tr><th>版本名</th><td>1</td></tr><tr><th>版本号</th><td>1</td></tr><tr><th>SHA256</th><td>23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61</td></tr><tr><th>大小</th><td>6257161 字节</td></tr><tr><th>权限数量</th><td>4</td></tr><tr><th>组件数量</th><td>4</td></tr><tr><th>证书主体</th><td>&lt;asn1crypto.x509.Name 2970804381008 b&#x27;071\x160\x14\x06\x03U\x04\x03\x0c\rAndroid Debug1\x100\x0e\x06\x03U\x04\n\x0c\x07Android1\x0b0\t\x06\x03U\x04\x06\x13\x02US&#x27;&gt;</td></tr><tr><th>证书签发者</th><td>&lt;asn1crypto.x509.Name 2970804383632 b&#x27;071\x160\x14\x06\x03U\x04\x03\x0c\rAndroid Debug1\x100\x0e\x06\x03U\x04\n\x0c\x07Android1\x0b0\t\x06\x03U\x04\x06\x13\x02US&#x27;&gt;</td></tr><tr><th>证书指纹</th><td>02c940a6936c664cb1706474bab3c165e630c52444ed66f8ceea915ef0abe7e8</td></tr><tr><th>静态内容解析</th><td>已解析 160 条文本</td></tr><tr><th>规则匹配摘要</th><td>API 调用: start, su, init；行为模式: root_attempt</td></tr><tr><th>命中规则数</th><td>60</td></tr></table></div>
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="evidence">
+    <section class="panel section-anchor" id="evidence">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>风险证据</h3>
+          <small>按严重度与规则优先级呈现</small>
+        </div>
+        <div class="scroll-box tall"><h4>CRITICAL（11）</h4><div class='grid-list'>
+    <div class="finding critical">
+      <h4>动态激活无障碍服务与设备管理器 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_PRIVILEGE_PERSISTENCE</div>
+      <p>动态沙箱监测到应用成功在系统中激活了无障碍服务（Accessibility）和设备管理器（Device Policy），这赋予了应用模拟用户点击、防卸载、强行锁屏以及劫持用户界面的高级控制权。</p>
+      <div class="kv">
+        <b>证据</b><span><code>persistent_services.accessibility 列表中包含 oasud.qwqrds.vjghasdh，且 persistent_services.device_policy 包含 6: oasud.qwqrds.vjghasdh。</code></span>
+        <b>建议</b><span>立即在受控环境中撤销该应用的设备管理器与无障碍权限，并进行强行卸载。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>异常高频的动态类加载与反射调用 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_DYNAMIC_CODE_EXECUTION</div>
+      <p>静态与调用图分析显示，样本中 DexClassLoader 构造函数调用次数达 22,786 次，Method.invoke 达 147,607 次。这表明样本内部存在复杂的动态解密、多阶段载荷释放与反射执行行为，用以规避静态杀毒引擎的检测。</p>
+      <div class="kv">
+        <b>证据</b><span><code>api_call_counts_top 中 Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt; 计数 22786，Ljava/lang/reflect/Method;-&gt;invoke 计数 147607。</code></span>
+        <b>建议</b><span>建议提取运行过程中的内存 Dump，还原其在第二阶段动态加载的实际 DEX 载荷进行关联分析。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>尝试获取Root权限并执行系统命令 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_ROOT_ATTEMPT</div>
+      <p>在DEX文件中检测到大量调用系统命令执行函数（Ljava/lang/Runtime;-&gt;exec），并发现 &#x27;su&#x27;, &#x27;rm&#x27;, &#x27;mv&#x27; 等高危命令字符串。这表明该应用试图获取设备的最高权限（Root），并执行文件删除、移动等恶意操作，可能用于篡改系统或安装其他恶意模块。</p>
+      <div class="kv">
+        <b>证据</b><span><code>API调用图谱显示 Ljava/lang/Runtime;-&gt;exec 调用788次；静态字符串中发现 &#x27;su&#x27;, &#x27;rm&#x27;, &#x27;mv&#x27; 等命令。</code></span>
+        <b>建议</b><span>立即隔离受影响设备，检查设备是否已被Root。分析其可能下载或释放的其他恶意载荷。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>通过反射和动态类加载执行隐藏代码 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_DYNAMIC_CODE_LOADING</div>
+      <p>该应用极高频次地使用Java反射（Method.invoke 调用超过14万次）和动态类加载器（DexClassLoader）。这是一种典型的恶意软件对抗静态分析的技术，其核心恶意逻辑可能被加密存储在资源或DEX文件中，在运行时动态解密并加载执行，从而绕过静态检测。</p>
+      <div class="kv">
+        <b>证据</b><span><code>API调用图谱显示 Ljava/lang/reflect/Method;-&gt;invoke (147607次), Ljava/lang/reflect/Field;-&gt;get (106175次), Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt; (22786次)。存在多个DEX文件（classes.dex, classes2.dex, classes3.dex）。</code></span>
+        <b>建议</b><span>对该样本进行脱壳处理，或在动态调试环境中Dump内存，以获取其在运行时加载的真实恶意代码进行进一步分析。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>静态命中系统命令与潜在 Root 尝试 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_SYSTEM_COMMAND_SU</div>
+      <p>检测到与系统命令执行和提权相关的关键词与 API，包含 su/sh/rm/mv/ps 字符串与 Runtime.exec 调用，规则聚类为 root_attempt。</p>
+      <div class="kv">
+        <b>证据</b><span><code>APK_DANGEROUS_API_SYSTEM_COMMAND 命中: &quot;su&quot;,&quot;rm&quot;,&quot;mv&quot;,&quot;sh&quot;,&quot;ps&quot;；api_graph top: &quot;Ljava/lang/Runtime;-&gt;exec&quot;；规则: APK_MALICIOUS_BEHAVIOR_ROOT_ATTEMPT；静态证据多次命中 su。</code></span>
+        <b>建议</b><span>对命中的字符串与调用链进行反编译溯源，确认是否在可到达代码路径中实际执行；于受控真机/Root 测试床延长运行时长，辅以进程/文件/命令钩子验证是否有提权或命令执行。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>建议立即阻断分发 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_001</div>
+      <p>样本具备明显的恶意执行链特征，且动态沙箱已确认可安装、可启动，存在继续扩散到真实终端的风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>install_success=true; launch_success=true; static 命中 code_execution/system_command/root_attempt; Runtime.exec=788; DexClassLoader=22786</code></span>
+        <b>建议</b><span>在下载源、分发平台、MDM/EDR 策略中立即阻断该包及同哈希样本，拉黑 package_name 与 sha256。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>建议禁止在真实设备安装 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_002</div>
+      <p>样本具备命令执行、Root 尝试和动态加载能力，真实设备安装后可能带来权限滥用、持久化和横向控制风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>package_name=oasud.qwqrds.vjghasdh; permissions 包含 INTERNET/WRITE_EXTERNAL_STORAGE; 动态沙箱已成功启动 MainActivity</code></span>
+        <b>建议</b><span>对终端用户和测试人员下发禁止安装提示，生产设备上执行卸载与风险排查。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>动态获取无障碍/设备管理/通知监听三大特权 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：AGG_DYNAMIC_PRIVILEGE_TRIAD</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>persistent_services.accessibility/notification/device_policy 中均出现 oasud.qwqrds.vjghasdh，具备持久化与信息拦截能力。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>异常高频反射与动态类加载 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：AGG_ABNORMAL_DYNAMIC_LOADING</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Method.invoke=147607 次，DexClassLoader.&lt;init&gt;=22786 次；指向深度加壳/对抗与按需下发代码。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>系统命令与潜在 Root 尝试 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：AGG_ROOT_COMMAND_ATTEMPTS</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Runtime.exec=788；字符串命中 su/sh/rm/mv/ps；符合恶意持久化/清理与提权链路。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding critical">
+      <h4>定性为恶意远控/金融木马并建议阻断 <span class="pill critical">CRITICAL</span></h4>
+      <div class="meta">规则：AGG_FINAL_CLASSIFICATION</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态已获取敏感特权+静态高危能力全集合；多角色一致评为高危，建议立即阻断与清除。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    </div><h4>HIGH（13）</h4><div class='grid-list'>
+    <div class="finding high">
+      <h4>疑似动态载荷释放 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：APK_DYNAMIC_PAYLOAD_DROP</div>
+      <p>运行后在应用目录或临时目录中发现 dex、jar、apk、so、zip 等可疑落地文件。</p>
+      <div class="kv">
+        <b>证据</b><span><code>./vendor/lib64/egl/libEGL_angle.so; ./vendor/lib64/egl/libGLESv1_CM_angle.so; ./vendor/lib64/egl/libGLESv1_CM_emulation.so; ./vendor/lib64/egl/libGLESv2_emulation.so; ./vendor/lib64/egl/libEGL_emulation.so; ./vendor/lib64/egl/libGLESv2_angle.so; ./vendor/lib64/hw/gralloc.default.so; ./vendor/lib64/hw/android.hardware.graphics.mapper@3.0-impl-ranchu.so; ./vendor/lib64/hw/vulkan.ranchu.so; ./vendor/lib64/libGLESv1_enc.so</code></span>
+        <b>建议</b><span>建议结合文件哈希、反编译和后续加载日志确认是否存在动态加载或脱壳行为。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>发现持久化或高危服务注册线索 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：APK_DYNAMIC_PERSISTENT_SERVICE</div>
+      <p>运行时系统服务状态中出现无障碍、设备管理器或通知相关注册线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>[com.google.android.apps.nexuslauncher][com.google.android.as][com.google.android.apps.wellbeing][com.google.android.packageinstaller][com.google.android.apps.nexuslauncher][com.google.android.apps.nexuslauncher][com.google.android.packageinstaller][com.google.android.apps.nexuslauncher][com.google.android.inputmethod.latin][oasud.qwqrds.vjghasdh][com.android.chrome][com.android.systemui][com.google.android.googlequicksearchbox][com.google.android.apps.youtube.music][com.google.android.packageinstaller]}]; 6: oasud.qwqrds.vjghasdh; 06-28 15:08:20.527 config: oasud.qwqrds.vjghasdh|removeAutomaticZenRules no changes; 06-28 15:08:20.527 set_zen_mode: off,oasud.qwqrds.vjghasdh|removeAutomaticZenRules; 06-28 16:18:28.770 config: oasud.qwqrds.vjghasdh|removeAutomaticZenRules no changes; 06-28 16:18:28.772 set_zen_mode: off,oasud.qwqrds.vjghasdh|removeAutomaticZenRules; userId=0 value={com.mytelecomapp.topup, com.google.android.apps.diagnosticstool, com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationAssistantService, com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationListenerService, com.google.android.apps.safetyhub, oasud.qwqrds.vjghasdh, com.google.intelligence.sense, com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener, com.google.android.apps.wellbeing, com.google.android.dialer, com.google.android.gms, com.baidu.tieba, com.tencent.mobileqq, com.google.android.settings.intelligence, com.sina.weibo, com.google.android.GoogleCamera, com.rubenroy.minimaltodo, fetcher.pipeliner.helper}</code></span>
+        <b>建议</b><span>建议重点复核是否存在无障碍滥用、设备管理器驻留或通知监听行为。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>动态注册通知监听服务 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_NOTIFICATION_LISTENER</div>
+      <p>样本在运行期间将自身注册为系统通知监听器，能够实时读取系统所有通知内容，常用于在后台静默拦截银行、社交软件的短信验证码或敏感推送。</p>
+      <div class="kv">
+        <b>证据</b><span><code>persistent_services.notification 列表中包含 oasud.qwqrds.vjghasdh 服务的注册痕迹。</code></span>
+        <b>建议</b><span>阻断该应用对系统通知的访问权限，防止双因子验证码（2FA）泄露。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>包含 Root 提权与 Shell 命令执行代码 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_BEHAVIOR_ROOT_COMMAND_EXECUTION</div>
+      <p>样本中硬编码了 su、sh、rm、mv 等系统命令，并存在 Root 提权尝试，表明其具备破坏系统分区、静默安装/卸载其他应用或执行任意 Shell 脚本的能力。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态规则命中 su, sh, mv, rm 等敏感 API，且 Runtime.exec 调用次数达 788 次。</code></span>
+        <b>建议</b><span>监控其在真实设备上的提权日志，防止其利用已知系统漏洞实施 Root 提权。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>使用随机化包名和调试签名进行伪装 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_OBFUSCATED_PACKAGE</div>
+      <p>应用的包名 &#x27;oasud.qwqrds.vjghasdh&#x27; 呈现无意义的随机字符组合，这是一种常见的代码混淆手段，旨在增加逆向分析和追踪溯源的难度。此外，应用使用了通用的 &#x27;Android Debug&#x27; 证书进行签名，表明其来源可疑，并非通过官方应用市场发布。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Package Name: oasud.qwqrds.vjghasdh; Certificate Subject: CN=Android Debug, O=Android, C=US</code></span>
+        <b>建议</b><span>将该包名和签名证书哈希（02c940a6936c664cb1706474bab3c165e630c52444ed66f8ceea915ef0abe7e8）加入黑名单，阻断该开发者发布的所有应用。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>疑似利用系统服务实现持久化驻留 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_PERSISTENCE_HINT</div>
+      <p>动态沙箱补充证据显示，该应用包名出现在系统的辅助功能（Accessibility）、设备策略（Device Policy）和通知服务（Notification）的活跃列表中。这些都是恶意软件常用的持久化手段，特别是辅助功能，一旦被滥用，可以监控用户操作、窃取输入内容并模拟用户点击，造成严重危害。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱摘要中 &#x27;persistent_services&#x27; 字段下 &#x27;accessibility&#x27;, &#x27;device_policy&#x27;, &#x27;notification&#x27; 列表均包含包名 &#x27;oasud.qwqrds.vjghasdh&#x27;。</code></span>
+        <b>建议</b><span>检查设备系统设置，确保该应用未被激活为设备管理器或开启辅助功能服务。若已被激活，应立即撤销其权限并卸载应用。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>调试签名证书指向非官方发布/重打包风险 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_DEBUG_CERT</div>
+      <p>样本使用 Android Debug 签名，通常不用于正式发布，结合未知来源时代表潜在重打包或测试包外泄风险。</p>
+      <div class="kv">
+        <b>证据</b><span><code>certificate_subject/issuer: &quot;Android Debug&quot;；certificate_sha256: 02c940a6936c664cb1706474bab3c165e630c52444ed66f8ceea915ef0abe7e8</code></span>
+        <b>建议</b><span>核验来源与分发渠道（官方应用商店/开发者官网/企业 MDM）；对比同名应用历史版本签名链与指纹；如来源可疑，视同高风险投递器直接阻断。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>需要结合来源与分发渠道做最终定性 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_SOURCE_VETTING</div>
+      <p>签名为调试证书、包名异常且静态高危命中明显，若来源为私链/群发/仿冒站，风险显著提高；若为企业内测需代码审计确认。</p>
+      <div class="kv">
+        <b>证据</b><span><code>签名调试证书 + 无商店信誉信息 + 高危静态命中；动态未证伪。</code></span>
+        <b>建议</b><span>核验应用来源（官方商店页、开发者域名、MDM 分发记录）与签名连续性；如来源不可信，按高风险立即阻断；如为内部构建，组织安全评审与白名单管理。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>建议继续沙箱复核 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_003</div>
+      <p>当前动态窗口较短，仅观察到安装与启动成功，未完整覆盖后续恶意链路；需要继续在受控环境中验证其联网、命令执行、文件操作与持久化行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>runtime_window_seconds=20; network_hit_count=12; logcat 中仅见安装/系统广播，未覆盖更长时间行为</code></span>
+        <b>建议</b><span>扩大沙箱时长，记录进程树、文件落地、shell 命令、C2 连接、WebView/JS 交互与持久化配置变化。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>建议保留样本留痕 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_004</div>
+      <p>样本包含多项高风险证据且具备抗静态特征，应完整保留供复盘、溯源和签名比对。</p>
+      <div class="kv">
+        <b>证据</b><span><code>sha256=23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61; certificate_sha256=02c940a6936c664cb1706474bab3c165e630c52444ed66f8ceea915ef0abe7e8; robustness_score=13</code></span>
+        <b>建议</b><span>保存 APK 原件、SHA256、证书指纹、manifest、logcat_excerpt、dynamic_artifacts、动态摘要和安装记录，作为 IOC 与证据链。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>建议排查动态加载与反射链 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_006</div>
+      <p>反射、DexClassLoader 调用量极高，提示存在动态解密、模块下发或规避静态检测的可能。</p>
+      <div class="kv">
+        <b>证据</b><span><code>Ljava/lang/reflect/Method;-&gt;invoke=147607; Ljava/lang/reflect/Field;-&gt;get=106175; Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt;=22786</code></span>
+        <b>建议</b><span>重点复核 classes.dex/classes2.dex/classes3.dex 中的加载器、反射入口、加密解密函数和被动下发代码。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>建议核查网络外联与命令下发 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_007</div>
+      <p>动态沙箱期间出现网络命中，同时静态上存在 HttpURLConnection.connect 与系统命令执行线索，可能构成远程控制或命令下发链。</p>
+      <div class="kv">
+        <b>证据</b><span><code>network_hit_count=12; Ljava/net/HttpURLConnection;-&gt;connect=460; system_command 命中 su/rm/mv/sh/ps</code></span>
+        <b>建议</b><span>继续抓包分析域名/IP/URL、请求体、证书校验及下发脚本，确认是否存在 C2 或远程任务执行。</span>
+      </div>
+    </div>
+    
+    <div class="finding high">
+      <h4>调试证书与随机化包名伪装 <span class="pill high">HIGH</span></h4>
+      <div class="meta">规则：AGG_DEBUG_CERT_PACKAGENAME</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>证书 Subject/Issuer=Android Debug（SHA256: 02c940a6...e7e8）；包名 oasud.qwqrds.vjghasdh 无语义。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    </div><h4>MEDIUM（9）</h4><div class='grid-list'>
+    <div class="finding medium">
+      <h4>运行时暴露可疑网络线索 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：APK_DYNAMIC_NETWORK</div>
+      <p>logcat 中出现可疑网络地址、域名或远程连接线索，说明样本可能存在联网行为。</p>
+      <div class="kv">
+        <b>证据</b><span><code>settings.get.glo; package.install; vmdl1138852990.tmp; HardwareBuffer.close; oasud.qwqrds.vjghasdh</code></span>
+        <b>建议</b><span>后续可结合抓包或代理进行复核。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>收集设备指纹信息 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_STATIC_INFO_GATHERING</div>
+      <p>静态字符串中发现了格式化的设备信息字符串，如&#x27;~ phone/AppShellVer:1 UUID/... &#x27;，这通常用于生成设备唯一指纹。动态沙箱日志也显示应用在启动后立即尝试执行 &#x27;settings.get.global&#x27; 命令读取系统全局设置。这些行为表明应用在运行初期就会收集设备信息，可能用于上报或为其后续恶意行为提供决策依据。</p>
+      <div class="kv">
+        <b>证据</b><span><code>静态字符串: &#x27;~ phone/AppShellVer:1 UUID/00000000-0000-0000-0000-000000000000...&#x27;; 动态日志: &#x27;StartCommandInProcess(...settings.get.glo...)&#x27;</code></span>
+        <b>建议</b><span>监控该应用的网络通信，分析其上传的数据内容，以确定信息泄露的范围。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>包名呈随机/无语义特征 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_SUSPICIOUS_PACKAGE_NAME</div>
+      <p>包名 oasud.qwqrds.vjghasdh 缺乏品牌/语义信息，常见于临时构建、重打包或投递器伪装。</p>
+      <div class="kv">
+        <b>证据</b><span><code>package_name: oasud.qwqrds.vjghasdh</code></span>
+        <b>建议</b><span>结合渠道核验开发者身份与上架信息；若非官方渠道获取且包名异常，建议停止分发与安装并进行取证。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>存在反射与 DexClassLoader 引用，疑似具备动态加载能力 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_REFLECTION_DEX</div>
+      <p>静态 API 图显示大量反射与类加载相关调用，可能用于动态加载或规避静态检测，但亦可能来自通用库。</p>
+      <div class="kv">
+        <b>证据</b><span><code>api_graph counts: Method.invoke(147607), Field.get(106175), DexClassLoader.&lt;init&gt;(22786)</code></span>
+        <b>建议</b><span>复核是否存在外部 DEX/ZIP/JAR 加载路径与实际可达调用；运行时开启文件与网络监控，关注下载-落地-加载链条；若结合可疑来源，按潜在投递器/动态加载风险处置。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>WRITE_EXTERNAL_STORAGE 可被用于落地/数据外泄 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_PERMISSION_STORAGE</div>
+      <p>样本申请写外部存储权限，若与命令执行或动态加载结合，可能用于落地载荷或写入配置。</p>
+      <div class="kv">
+        <b>证据</b><span><code>permissions: WRITE_EXTERNAL_STORAGE；静态命中可疑命令与反射/类加载调用。</code></span>
+        <b>建议</b><span>动态运行时监控文件系统（/sdcard 等）创建/修改；比对落地文件哈希并限制外部存储写入策略。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>可疑 UA/上报头部指纹，疑与自定义协议或投递框架有关 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_UA_APPSHELL</div>
+      <p>发现 &quot;~ phone/AppShellVer:1 UUID/000... CID/000... APP/&lt;pkg&gt;&quot; 字符串，类似自定义 UA/上报头部，常用于设备指纹或指令通道。</p>
+      <div class="kv">
+        <b>证据</b><span><code>extracted_strings: &quot;~ phone/AppShellVer:1 UUID/00000000-0000-0000-0000-000000000000 CID/000... APP/oasud.qwqrds.vjghasdh&quot;</code></span>
+        <b>建议</b><span>检索使用位置与网络代码；在代理环境中观察首启请求头与目标域；若指向未知 C2/私有服务，建议阻断并提取 IOC。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>建议核查签名与来源可信度 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_005</div>
+      <p>签名主体显示 Android Debug 风格，来源可信度不足；配合可疑包名与高危行为，需重点核验是否为二次打包或调试签名样本。</p>
+      <div class="kv">
+        <b>证据</b><span><code>certificate_subject/certificate_issuer 均为 Android Debug; package_name=oasud.qwqrds.vjghasdh</code></span>
+        <b>建议</b><span>核对市场来源、发布者历史、签名链是否匹配官方版本；若不匹配，按仿冒/重打包样本处置。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>建议排查持久化与权限滥用 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：DEEP_APK_ADVICE_008</div>
+      <p>动态记录中出现 device_policy、notification、accessibility 相关痕迹，需警惕辅助功能/通知/设备管理滥用。</p>
+      <div class="kv">
+        <b>证据</b><span><code>persistent_services.accessibility 包含 oasud.qwqrds.vjghasdh; persistent_services.device_policy=6: oasud.qwqrds.vjghasdh; notification 配置被读取/调整</code></span>
+        <b>建议</b><span>在复测中重点确认是否申请辅助功能、设备管理、通知监听等敏感能力，并检查是否尝试开启持久化控制。</span>
+      </div>
+    </div>
+    
+    <div class="finding medium">
+      <h4>动态观测窗口有限 <span class="pill medium">MEDIUM</span></h4>
+      <div class="meta">规则：AGG_RUNTIME_OBS_WINDOW_LIMIT</div>
+      <p>模型认为该目标存在额外风险线索。</p>
+      <div class="kv">
+        <b>证据</b><span><code>动态沙箱仅 20 秒窗口，network_hit_count=12 未见对外域名/IP 细节，关键路径可能未触发。</code></span>
+        <b>建议</b><span>结合静态报告进一步复核。</span>
+      </div>
+    </div>
+    </div><h4>LOW（2）</h4><div class='grid-list'>
+    <div class="finding low">
+      <h4>动态沙箱未复现高危行为，存在运行时覆盖不足 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_DYNSBX_RUNTIME_GAP</div>
+      <p>沙箱仅运行约 20 秒，日志以系统安装/角色广播为主，未观察到外联与命令执行，可能未触发关键路径或存在环境门槛。</p>
+      <div class="kv">
+        <b>证据</b><span><code>runtime_window_seconds: 20；logcat 为安装与包管理流程；network_hit_count: 12（无明确外域）；launch_success: true 但无显著行为。</code></span>
+        <b>建议</b><span>延长运行时间并加入 UI/手势驱动；在真机/不同版本系统下复测；接入网络代理/SSL 解密与命令钩子；必要时模拟首启向导、通知授权、延迟触发等。</span>
+      </div>
+    </div>
+    
+    <div class="finding low">
+      <h4>沙箱枚举到 device_policy/notification 列表含该包，疑为系统噪声 <span class="pill low">LOW</span></h4>
+      <div class="meta">规则：DEEP_APK_INTEL_DEVICE_POLICY_SIGNAL</div>
+      <p>动态摘要中 device_policy 与通知监听枚举出现包名，但清单未见 DeviceAdminReceiver/相关权限，倾向于沙箱侧系统枚举噪声。</p>
+      <div class="kv">
+        <b>证据</b><span><code>persistent_services.device_policy: &quot;6: oasud.qwqrds.vjghasdh&quot;；manifest receivers 仅有 androidx.profileinstaller.ProfileInstallReceiver</code></span>
+        <b>建议</b><span>复核清单是否含设备管理组件与策略请求；如无相应声明，忽略该噪声信号；如存在相关组件则进一步验证其启用与行为。</span>
+      </div>
+    </div>
+    </div></div>
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="screenshots">
+    <section class="panel section-anchor" id="screenshots">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>APK / 页面截图证据</h3>
+          <small>静态与动态截图均可展示</small>
+        </div>
+        
+      <div class='screenshot-grid'>
+        
+          <article class='screenshot-card'>
+            <h4>APK 截图 1 · oasud.qwqrds.vjghasdh_launch_20260630_152326_056291.png</h4>
+            <div class='screenshot-preview'>
+              <img src='data:image/png;base64,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zn/+2p+Vl0HuasOHDY8//z//S0WODQAA3elwQ4ewcXAEDo6oYrEYLS0tsfyN5fHgIw/G4sWvd/h+7969Y/KkKTH70tlx7Ihje/yN//60tLTEywtfjgcffrC8jHDE7+YmGXNcXDrr0pgyaUr07du3G6+y83bt2hXNzc1desy6uroeO68KAACQi8BBt2hra4uNmzbGgoULYt7T82L9+nUx7sTxNVo1NQAAIABJREFUccH5F8S4E8ZFfX19j5s09VBt3bo1Hnr0oXjl1VciIuLUyafGJRdfYhlYAACALiRwwBFQLBbLE4/27t37qIk3AAAAPYXAAQAAAKTnbWQAAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgvUKpVCp190UAAAAAHA4jOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAAAAANITOAAAAID0BA4AAAAgPYEDAAAASE/gAP5/duyABAAAAEDQ/9ftCHSGAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOADrWKarAAAcXklEQVQAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAPYEBwAAALAnOAAAAIA9wQEAAADsCQ4AAABgT3AAAAAAe4IDAAAA2BMcAAAAwJ7gAAAAAGrfDlKrvOI4DB9BuDejXDBLMFAHdgWSmWQVpR0IuiQFBy2uIjgLrqAOLMQlRIij+92Jt2v4KPbwJs+zgt/oP3g5J0/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIEDgAAACBP4AAAAADyBA4AAAAgT+AAAAAA8gQOAAAAIE/gAAAAAPIeH5fZEwAAAAD+Gy84AAAAgDyBAwAAAMgTOAAAAIA8gQMAAADIEzgAAACAPIEDAAAAyBM4AAAAgDyBAwAAAMgTOAAAAIA8gQMAAADIEzgAAACAPIEDAAAAyBM4AAAAgDyBAwAAAMgTOAAAAIA8gQMAAADIEzgAAACAPIEDAAAAyBM4AAAAgDyBAwAAAMgTOAAAAIA8gQMAAADIEzgAAACAPIEDAAAAyBM4AAAAgLzHswcA0HQ4HMb1p+tx8/Vm7Jf97DlA3Mn2ZJw/PR8XLy7GZrOZPQeAoEc/9sfj7BEAtHz558v468Of4+773ewpwD2zO92N33/7Yzz75dnsKQDE+KICwCq3327Hu/dvxQ3gp7j7fjfevX87br/dzp4CQIzAAcAqVx+vxrIss2cA99iyLOPq49XsGQDECBwArPL589+zJwAPgFsDwFoCBwCr+JoC/B/cGgDWEjgAWGV3ups9AXgA3BoA1hI4AFjl+fNfZ08AHgC3BoC1BA4AVrl8eTm22+3sGcA9tt1ux+XLy9kzAIgROABY5ezJ2Xj96o3n48BPsTvdjdev3oyzJ2ezpwAQ8+jH/nicPQKAnsPhMK4/XY+brzdjv+xnzwHiTrYn4/zp+bh4cTE2m83sOQAECRwAAABAni8qAAAAQJ7AAQAAAOQJHAAAAECewAEAAADkCRwAAABAnsABAAAA5AkcAAAAQJ7AAQAAAOQJHAAAAECewAEAAADkCRwAAABAnsABAAAA5AkcAAAAQJ7AAQAAAOQJHAAAAECewAEAAADkCRwAAABAnsABAAAA5AkcAAAAQJ7AAQAAAOQJHAAAAECewAEAAADkCRwAAABAnsABAAAA5AkcAAAAQN6/C4JNY4NTt64AAAAASUVORK5CYII=' alt='APK 截图 1'>
+            </div>
+            <div class='subtle screenshot-meta'>路径：G:/project-code/SentinelGuard/information/apk_dynamic/20260630_152326_052281_oasud.qwqrds.vjghasdh/ui_trace/oasud.qwqrds.vjghasdh_launch_20260630_152326_056291.png</div>
+          </article>
+        
+      </div>
+    
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="discussion">
+    <section class="panel section-anchor" id="discussion">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>APK 协同研判</h3>
+          <small>主持人 / 静态 / 行为 / 情报 / 处置 / 模型映射</small>
+        </div>
+        
+      <div style="height: 14px"></div>
+      <div class="grid two-col">
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">主持人总结</h4>
+            <p class="subtle">综合四位专家的证据与意见：该样本在动态运行中成功激活无障碍服务、设备管理器与通知监听服务，构成典型的“持久化+拦截+控制”高危特权组合，能够实现防卸载、屏幕劫持、凭证窃取与验证码拦截；同时静态侧存在大规模反射与动态类加载（DexClassLoader 2.2万次、Method.invoke 14.7万次）以及系统命令/Root 尝试（Runtime.exec 多次、硬编码 su/sh/rm 等），并伴随调试证书与随机化包名伪装，指向加壳与对抗下的恶意远控/金融木马链路。尽管情报侧提示动态窗口较短、未见明确外联，存在未触发关键路径的不确定性，但基于已观测到的敏感特权已被激活与高危能力集齐全，可在当前证据下将其定性为高危恶意样本（恶意远控/金融木马）。建议立即阻断分发与清除，并在受控沙箱中做延长运行与网络/文件行为复核。以上研判仅基于当前五位专家的已有输出。</p>
+            <div style="height: 14px"></div>
+            <h4 style="margin-top:0;">研判时间线</h4>
+            <div class="timeline">
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>1. 静态分析员</h4>
+              <p class="subtle" style="margin-bottom:6px;">聚焦域名结构、参数、敏感关键词等静态特征。</p>
+              <p><strong>模型：</strong><span class='pill muted'>gemini-2.5-pro</span></p>
+              <p><strong>输出：</strong>{&#x27;opinion&#x27;: &#x27;综合静态分析证据，该APK为高风险恶意软件。静态分析发现其包含执行系统命令、尝试获取Root权限、动态加载代码等多种恶意行为特征。包名随机化、使用调试签名等迹象也符合恶意软件的典型特征。动态沙箱证据交叉印证了其安装后尝试读取系统设置、注册持久化服务等可疑活动，确认其恶意意图。&#x27;, &#x27;risk_hint&#x27;: &#x27;critical&#x27;, &#x27;additional_findings_count&#x27;: 5, &#x27;additional_findings_preview&#x27;: [{&#x27;rule_id&#x27;: &#x27;DEEP_APK_STATIC_ROOT_ATTEMPT&#x27;, &#x27;title&#x27;: &#x27;尝试获取Root权限并执行系统命令&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &quot;API调用图谱显示 Ljava/lang/Runtime;-&gt;exec 调用788次；静态字符串中发现 &#x27;su&#x27;, &#x27;rm&#x27;, &#x27;mv&#x27; 等命令。&quot;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_STATIC_DYNAMIC_CODE_LOADING&#x27;, &#x27;title&#x27;: &#x27;通过反射和动态类加载执行隐藏代码&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &#x27;API调用图谱显示 Ljava/lang/reflect/Method;-&gt;invoke (147607次), Ljava/lang/reflect/Field;-&gt;get (106175次), Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt; (22786次)。存在多个DEX文件（classes.dex, classes2.dex, classes3.dex）。&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_STATIC_OBFUSCATED_PACKAGE&#x27;, &#x27;title&#x27;: &#x27;使用随机化包名和调试签名进行伪装&#x27;, &#x27;severity&#x27;: &#x27;high&#x27;, &#x27;evidence&#x27;: &#x27;Package Name: oasud.qwqrds.vjghasdh; Certificate Subject: CN=Android Debug, O=Android, C=US&#x27;}]}</p>
+              <p><strong>补充说明：</strong>聚焦域名结构、参数、敏感关键词等静态特征。当前输出已纳入协同研判汇总，供主持人综合判断。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>2. 行为分析员</h4>
+              <p class="subtle" style="margin-bottom:6px;">聚焦跳转链、自动跳转、下载与表单行为。</p>
+              <p><strong>模型：</strong><span class='pill muted'>gemini-2.5-flash</span></p>
+              <p><strong>输出：</strong>{&#x27;opinion&#x27;: &#x27;该样本（包名：oasud.qwqrds.vjghasdh）呈现出极高风险的恶意远控及金融木马行为特征。静态分析表明，样本采用了深度加壳与混淆对抗技术，其内部包含极其异常的高频动态类加载（DexClassLoader 调用达 2.2 万次）与反射调用（Method.invoke 达 14.7 万次），并硬编码了 su、sh、rm 等提权与系统命令。动态沙箱运行日志提供了决定性的恶意行为证据：样本在运行期间成功激活了无障碍服务（Accessibility Service）、设备管理器（Device Policy）以及通知监听服务（Notification Listener）。这种“无障碍 + 设备管理器 + 通知监听”的敏感特权组合是 Android 银行木马和间谍软件的典型标配，旨在实现防卸载、屏幕劫持、敏感凭证窃取以及短信验证码静默拦截。综合研判，该样本为高危害性的恶意远控/金融木马，建议立即予以阻断和清除。&#x27;, &#x27;risk_hint&#x27;: &#x27;critical&#x27;, &#x27;additional_findings_count&#x27;: 4, &#x27;additional_findings_preview&#x27;: [{&#x27;rule_id&#x27;: &#x27;DEEP_APK_BEHAVIOR_PRIVILEGE_PERSISTENCE&#x27;, &#x27;title&#x27;: &#x27;动态激活无障碍服务与设备管理器&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &#x27;persistent_services.accessibility 列表中包含 oasud.qwqrds.vjghasdh，且 persistent_services.device_policy 包含 6: oasud.qwqrds.vjghasdh。&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_BEHAVIOR_NOTIFICATION_LISTENER&#x27;, &#x27;title&#x27;: &#x27;动态注册通知监听服务&#x27;, &#x27;severity&#x27;: &#x27;high&#x27;, &#x27;evidence&#x27;: &#x27;persistent_services.notification 列表中包含 oasud.qwqrds.vjghasdh 服务的注册痕迹。&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_BEHAVIOR_DYNAMIC_CODE_EXECUTION&#x27;, &#x27;title&#x27;: &#x27;异常高频的动态类加载与反射调用&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &#x27;api_call_counts_top 中 Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt; 计数 22786，Ljava/lang/reflect/Method;-&gt;invoke 计数 147607。&#x27;}]}</p>
+              <p><strong>补充说明：</strong>聚焦跳转链、自动跳转、下载与表单行为。当前输出已纳入协同研判汇总，供主持人综合判断。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>3. 情报分析员</h4>
+              <p class="subtle" style="margin-bottom:6px;">说明离线/外部情报可用性及局限。</p>
+              <p><strong>模型：</strong><span class='pill muted'>gpt-5</span></p>
+              <p><strong>输出：</strong>{&#x27;opinion&#x27;: &#x27;综合样本情报与运行时线索：该 APK（文件名: 23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61.apk，包名: oasud.qwqrds.vjghasdh，SHA256: 23b0c2e740a824ff6e81d27c706f229fb1017ef3d711cfad1021b08cbac14c61）使用 Android Debug 调试证书签名（Subject/Issuer 均为 &quot;Android Debug&quot;，证书指纹: 02c940a6936c664cb1706474bab3c165e630c52444ed66f8ceea915ef0abe7e8），与正式发布习惯不符。包名呈随机/无语义特征，结合仅声明 INTERNET/ACCESS_NETWORK_STATE 与 WRITE_EXTERNAL_STORAGE 等少量权限、组件较少，指向“轻壳/外联+动态加载或投递”类特征。静态侧命中多条高危规则：存在系统命令与代码执行相关线索（&quot;su&quot;、&quot;sh&quot;、&quot;rm&quot;、&quot;mv&quot;、&quot;ps&quot; 以及 Runtime.exec、DexClassLoader、反射调用等），并被规则聚类为 root_attempt 行为。提取的可疑字符串包含 &quot;~ phone/AppShellVer:1 ... APP/oasud.qwqrds.vjghasdh&quot;，类似自定义 UA/上报头部指纹，常见于下载器/投递器或私有协议。运行时（动态沙箱）方面：样本在模拟器成功安装与拉起，但 20 秒的窗口中仅见系统安装流程日志与角色授予检查，未观察到可见外联、文件操作或命令执行；network_hit_count 统计为 12，但未见明确对外域名/IP 通联记录，且日志主要为系统广播与包管理信息。这表明高危代码路径可能未被触发，或样本具备时序/交互/环境门槛。当前为离线快速研判，存在典型边界与不确定性：1) 签名与来源未知，无法判定是否内部调试包/重打包；2) 动态窗口短且在模拟器环境，可能未覆盖关键路径（行为分析员提示未进行完整动态沙箱）；3) 静态命中存在误报可能（库代码/死代码/占位字符串），需通过反编译与调用链确认。基于以上，建议在处置上按高风险对待，但最终定性需结合来源与分发渠道（官方商店/开发者官网/企业 MDM）与签名信誉进行核验：如来自非可信分发（私链、群发、短信、仿冒站）且使用调试证书，应直接阻断；如为内部测试版本，需要对代码路径进行复核并在受控环境延长运行、开展网络与文件行为观测后再行定性。&#x27;, &#x27;risk_hint&#x27;: &#x27;high&#x27;, &#x27;additional_findings_count&#x27;: 9, &#x27;additional_findings_preview&#x27;: [{&#x27;rule_id&#x27;: &#x27;DEEP_APK_INTEL_DEBUG_CERT&#x27;, &#x27;title&#x27;: &#x27;调试签名证书指向非官方发布/重打包风险&#x27;, &#x27;severity&#x27;: &#x27;high&#x27;, &#x27;evidence&#x27;: &#x27;certificate_subject/issuer: &quot;Android Debug&quot;；certificate_sha256: 02c940a6936c664cb1706474bab3c165e630c52444ed66f8ceea915ef0abe7e8&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_INTEL_SUSPICIOUS_PACKAGE_NAME&#x27;, &#x27;title&#x27;: &#x27;包名呈随机/无语义特征&#x27;, &#x27;severity&#x27;: &#x27;medium&#x27;, &#x27;evidence&#x27;: &#x27;package_name: oasud.qwqrds.vjghasdh&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_INTEL_SYSTEM_COMMAND_SU&#x27;, &#x27;title&#x27;: &#x27;静态命中系统命令与潜在 Root 尝试&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &#x27;APK_DANGEROUS_API_SYSTEM_COMMAND 命中: &quot;su&quot;,&quot;rm&quot;,&quot;mv&quot;,&quot;sh&quot;,&quot;ps&quot;；api_graph top: &quot;Ljava/lang/Runtime;-&gt;exec&quot;；规则: APK_MALICIOUS_BEHAVIOR_ROOT_ATTEMPT；静态证据多次命中 su。&#x27;}]}</p>
+              <p><strong>补充说明：</strong>说明离线/外部情报可用性及局限。当前输出已纳入协同研判汇总，供主持人综合判断。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>4. 处置建议员</h4>
+              <p class="subtle" style="margin-bottom:6px;">给出拦截、隔离、复核与留痕建议。</p>
+              <p><strong>模型：</strong><span class='pill muted'>gpt-5.4-mini</span></p>
+              <p><strong>输出：</strong>{&#x27;opinion&#x27;: &#x27;建议立即阻断分发并禁止在真实终端安装；当前样本已在沙箱中成功安装并启动，结合静态与动态证据同时出现 code_execution、system_command、root_attempt、DexClassLoader、Runtime.exec、su/rm/mv/sh/ps 等高危迹象，且存在反射调用密集、动态加载/加壳/伪装头部特征。建议将该 APK 视为高概率恶意样本处理：隔离留样、不要继续在生产设备或业务账号环境中复测；如业务需要验证，仅允许在受控沙箱中复核其网络行为、命令执行链与持久化能力。样本应保留哈希、安装日志、logcat、动态产物与签名信息用于溯源和横向排查。&#x27;, &#x27;risk_hint&#x27;: &#x27;critical&#x27;, &#x27;additional_findings_count&#x27;: 8, &#x27;additional_findings_preview&#x27;: [{&#x27;rule_id&#x27;: &#x27;DEEP_APK_ADVICE_001&#x27;, &#x27;title&#x27;: &#x27;建议立即阻断分发&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &#x27;install_success=true; launch_success=true; static 命中 code_execution/system_command/root_attempt; Runtime.exec=788; DexClassLoader=22786&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_ADVICE_002&#x27;, &#x27;title&#x27;: &#x27;建议禁止在真实设备安装&#x27;, &#x27;severity&#x27;: &#x27;critical&#x27;, &#x27;evidence&#x27;: &#x27;package_name=oasud.qwqrds.vjghasdh; permissions 包含 INTERNET/WRITE_EXTERNAL_STORAGE; 动态沙箱已成功启动 MainActivity&#x27;}, {&#x27;rule_id&#x27;: &#x27;DEEP_APK_ADVICE_003&#x27;, &#x27;title&#x27;: &#x27;建议继续沙箱复核&#x27;, &#x27;severity&#x27;: &#x27;high&#x27;, &#x27;evidence&#x27;: &#x27;runtime_window_seconds=20; network_hit_count=12; logcat 中仅见安装/系统广播，未覆盖更长时间行为&#x27;}]}</p>
+              <p><strong>补充说明：</strong>给出拦截、隔离、复核与留痕建议。当前输出已纳入协同研判汇总，供主持人综合判断。</p>
+            </div>
+            
+            <div class="timeline-item">
+              <span class="timeline-dot"></span>
+              <h4>5. 主持人</h4>
+              <p class="subtle" style="margin-bottom:6px;">汇总各方证据，先定风险基调。</p>
+              <p><strong>模型：</strong><span class='pill muted'>gpt-5</span></p>
+              <p><strong>输出：</strong>综合四位专家的证据与意见：该样本在动态运行中成功激活无障碍服务、设备管理器与通知监听服务，构成典型的“持久化+拦截+控制”高危特权组合，能够实现防卸载、屏幕劫持、凭证窃取与验证码拦截；同时静态侧存在大规模反射与动态类加载（DexClassLoader 2.2万次、Method.invoke 14.7万次）以及系统命令/Root 尝试（Runtime.exec 多次、硬编码 su/sh/rm 等），并伴随调试证书与随机化包名伪装，指向加壳与对抗下的恶意远控/金融木马链路。尽管情报侧提示动态窗口较短、未见明确外联，存在未触发关键路径的不确定性，但基于已观测到的敏感特权已被激活与高危能力集齐全，可在当前证据下将其定性为高危恶意样本（恶意远控/金融木马）。建议立即阻断分发与清除，并在受控沙箱中做延长运行与网络/文件行为复核。以上研判仅基于当前五位专家的已有输出。</p>
+              <p><strong>补充说明：</strong>汇总各方证据，先定风险基调。当前输出已纳入协同研判汇总，供主持人综合判断。</p>
+            </div>
+            </div>
+            
+          </div>
+        </div>
+        <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.02);">
+          <div class="panel-inner">
+            <h4 style="margin-top:0;">处置要点</h4>
+            <ul>
+              <li>优先核验最终域名、证书与跳转落点。</li>
+              <li>不要在高危或中危页面输入账号、验证码和支付信息。</li>
+              <li>对下载型落点优先在隔离环境或沙箱中复核。</li>
+              <li>静态规则与深度研判的结论应结合人工确认。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    
+        
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="robustness">
+    <section class="panel section-anchor" id="robustness">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>鲁棒性分析</h3>
+          <small>抗检测技术与鲁棒性评分</small>
+        </div>
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>鲁棒性分析</h4>
+          <div style='margin-bottom:12px;'>
+            <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #dc2626;'>
+              <strong>🛡️ 鲁棒性分析说明：</strong>鲁棒性验证器检测 APK 是否使用了<strong>抗静态检测、防沙箱、混淆、反射、动态加载</strong>等对抗技术。
+              鲁棒性分数越高，说明样本越可能使用了规避分析的手段；分数越低，表示样本相对透明、更容易被静态分析覆盖。
+            </p>
+          </div>
+          <table class='table'>
+            <tr><th>鲁棒性分数</th><td><strong>17.0</strong></td></tr>
+            <tr><th>抗检测性评估</th><td><span class='pill' style='background:#dc2626; border-color:#dc2626; color:#fff;'>弱</span></td></tr>
+            <tr><th>抗静态检测</th><td>True</td></tr>
+            <tr><th>抗静态细分</th><td>加壳、混淆、伪装头部、资源异常</td></tr>
+            <tr><th>对抗技术</th><td>
+              <ul style='margin:0; padding-left:18px;'><li>抗静态检测</li></ul>
+            </td></tr>
+            <tr><th>分数公式</th><td>鲁棒性分数 = Sigmoid(加权原始分)，其中加权原始分 = 24×抗静态检测 + 20×防沙箱 + 16×混淆 + 16×动态加载 + 12×反射 + 细分类别加成(最多12) + 技术多样性奖励(每项+3，封顶15) + 解析失败奖励(当APK图结构提取失败时 +25，因为解析失败本身是可疑信号)。Sigmoid 映射将原始分平滑映射到 0-100 区间。</td></tr>
+            <tr><th>分数解读</th><td>0-40 分为低抗检测性（弱），41-75 分为中抗检测性，76-100 分为高抗检测性（强）。</td></tr>
+          </table>
+        </div>
+      </div>
+    
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="graph">
+    <section class="panel section-anchor" id="graph">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>CFG / FCG / API 调用图分析</h3>
+          <small>控制流、函数调用与敏感 API 统计</small>
+        </div>
+        
+      <div style='height:14px'></div>
+      <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+          <h4 style='margin-top:0;'>CFG / FCG / API 调用图分析</h4>
+          
+      <div style='margin-bottom:12px;'>
+        <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #60a5fa;'>
+          <strong>📊 图结构分析说明：</strong>CFG（控制流图）用于观察函数内部的分支、跳转与返回结构；
+          FCG（函数调用图）用于观察函数之间的调用关系与依赖传播；API 调用图则聚焦敏感接口命中情况。
+          如果某个函数的控制流复杂、调用密集且命中了敏感 API，通常意味着它更值得优先复核。
+        </p>
+      </div>
+    
+          <div style='margin:10px 0 12px; padding:10px 14px; border-radius:12px; background: rgba(255,255,255,.04); border-left:3px solid #60a5fa;'>
+            <p class='subtle' style='margin:0; font-size:14px; line-height:1.7;'>
+              <strong>📎 指标说明：</strong>
+              <strong>CFG 节点数</strong>表示函数内部被提取到的控制流节点数量，<strong>CFG 边数</strong>表示控制流跳转关系数量；
+              <strong>FCG 节点数</strong>表示函数调用图中的函数/方法数量，<strong>FCG 边数</strong>表示方法之间的调用关系数量；
+              <strong>FCG 密度</strong> = FCG 边数 ÷ [FCG 节点数 × (FCG 节点数 - 1)]，数值越大说明函数调用关系越紧密、耦合越强。
+            </p>
+          </div>
+          <p class='subtle'>以下统计基于 APK 解析出的 CFG、FCG 与 API 调用图，仅展示关键数字，不绘制图形。</p>
+          <p class='subtle'>图结构状态：<strong>已生成</strong></p>
+          <table class='table'>
+            <tr><th>CFG 节点数</th><td>150586</td></tr>
+            <tr><th>CFG 边数</th><td>76150</td></tr>
+            <tr><th>FCG 节点数</th><td>53933</td></tr>
+            <tr><th>FCG 边数</th><td>125834</td></tr>
+            <tr><th>FCG 密度</th><td>0.0000</td></tr>
+            <tr><th>API 调用图节点数</th><td>53601</td></tr>
+            <tr><th>API 调用图边数</th><td>81372</td></tr>
+            <tr><th>API 总调用数</th><td>286345</td></tr>
+            <tr><th>敏感 API 调用分布</th><td>Ljava/lang/reflect/Method;-&gt;invoke:147607, Ljava/lang/reflect/Field;-&gt;get:106175, Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt;:22786, Landroid/net/Uri;-&gt;parse:5955, Ljava/lang/reflect/Field;-&gt;set:2115, Ljava/lang/Runtime;-&gt;exec:788, Ljava/net/HttpURLConnection;-&gt;connect:460, Landroid/provider/Settings$Secure;-&gt;getString:385, Landroid/app/PendingIntent;-&gt;getActivity:38, Landroid/content/Intent;-&gt;setPackage:9, Landroid/telephony/TelephonyManager;-&gt;getDeviceId:9, Ljava/lang/ClassLoader;-&gt;loadClass:6</td></tr>
+          </table>
+          <div style='height:12px'></div>
+          <h4>API 调用明细</h4>
+          <ul><li><code>Ljava/lang/reflect/Method;-&gt;invoke</code>：147607</li><li><code>Ljava/lang/reflect/Field;-&gt;get</code>：106175</li><li><code>Ldalvik/system/DexClassLoader;-&gt;&lt;init&gt;</code>：22786</li><li><code>Landroid/net/Uri;-&gt;parse</code>：5955</li><li><code>Ljava/lang/reflect/Field;-&gt;set</code>：2115</li><li><code>Ljava/lang/Runtime;-&gt;exec</code>：788</li><li><code>Ljava/net/HttpURLConnection;-&gt;connect</code>：460</li><li><code>Landroid/provider/Settings$Secure;-&gt;getString</code>：385</li><li><code>Landroid/app/PendingIntent;-&gt;getActivity</code>：38</li><li><code>Landroid/content/Intent;-&gt;setPackage</code>：9</li><li><code>Landroid/telephony/TelephonyManager;-&gt;getDeviceId</code>：9</li><li><code>Ljava/lang/ClassLoader;-&gt;loadClass</code>：6</li><li><code>Landroid/location/LocationManager;-&gt;getLastKnownLocation</code>：5</li><li><code>Ljava/lang/Class;-&gt;forName</code>：5</li><li><code>Landroid/telephony/TelephonyManager;-&gt;getImei</code>：2</li></ul>
+          
+      <div style='margin-top:12px;'>
+        <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.03); padding:10px 14px; border-radius:12px; border-left:3px solid #f59e0b;'>
+          <strong>🔎 如何解读：</strong>CFG 节点/边越多，说明函数内部逻辑越复杂；FCG 节点/边越多且 FCG 密度越高，说明函数间调用越密集、耦合越强；
+          API 调用数越高且越集中在少数函数中，越可能存在权限滥用、命令执行或动态加载等行为链。
+        </p>
+        <p class='subtle' style='font-size:13px; margin-top:8px;'>
+          当前样本的 FCG 密度为 <strong>0.0000</strong>，全图密度参考值为 <strong>-</strong>。
+        </p>
+      </div>
+    
+        </div>
+      </div>
+    
+        
+      </div>
+    </section>
+  </section>
+
+  <section class="report-pane" data-report-pane="consistency">
+    <section class="panel section-anchor" id="consistency">
+      <div class="panel-inner">
+        <div class="section-title">
+          <h3>一致性验证结果</h3>
+          <small>仅展示一致性验证内容</small>
+        </div>
+        
+    <div style='height:14px'></div>
+    <div class='panel' style='box-shadow:none; background: rgba(255,255,255,.02);'>
+        <div class='panel-inner'>
+            <h4 style='margin-top:0;'>一致性验证</h4>
+            <div style='margin-bottom:12px;'>
+                <p class='subtle' style='font-size:14px; background: rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; border-left:3px solid #16a34a;'>
+                    <strong>🔍 一致性分析说明：</strong>仲裁器通过比较「静态分析员」「行为分析员」「情报分析员」三方的评分差异，
+                    判断各角色结论是否一致。一致性越高，说明证据链越稳固；若一致性低或出现分歧，则需重点关注被标记为「疑似污染」的模块。
+                </p>
+                <p style='margin-top:8px; color: #16a34a;'>✅ 三方结论高度一致，证据链可信度高。</p>
+            </div>
+            <p class='subtle'>
+                <span class='pill' style='background:#16a34a; border-color:#16a34a; color:#fff;'>一致性 HIGH</span>
+                <span class='pill muted' style='margin-left:8px;'>一致性分数 89.0</span>
+                <span class="pill muted" style="margin-left:8px;">加权置信度 91.0</span>
+            </p>
+            <table class='table'>
+                <tr><th>一致性分数</th><td>89.0/100</td></tr>
+                <tr><th>一致性等级</th><td><span class='pill' style='background:#16a34a; border-color:#16a34a; color:#fff;'>HIGH</span></td></tr>
+                <tr><th>分歧点</th><td><ul><li>无</li></ul></td></tr>
+                <tr><th>被污染模块</th><td><ul><li>无</li></ul></td></tr>
+                <tr><th>仲裁修正值</th><td>3/15</td></tr>
+            </table>
+        </div>
+    </div>
+    
+        
+        
+    <div style="margin-top: 18px;" class="panel">
+        <div class="panel-inner">
+            <div class="section-title">
+                <h3>分析性能统计</h3>
+                <small>深度研判耗时与 Token 消耗</small>
+            </div>
+            <p>总耗时：<strong>178.31 秒</strong></p>
+            <div class="scroll-box slim">
+                <table class="table">
+                    <thead><tr>
+                        <th>角色</th><th>耗时</th><th>输入 Token</th><th>输出 Token</th><th>总 Token</th>
+                    </tr></thead>
+                    <tbody>
+        <tr>
+            <td>行为分析员</td>
+            <td>22.25 秒</td>
+            <td>48425</td>
+            <td>3119</td>
+            <td>51544</td>
+        </tr>
+        
+        <tr>
+            <td>静态分析员</td>
+            <td>43.35 秒</td>
+            <td>49942</td>
+            <td>3597</td>
+            <td>53539</td>
+        </tr>
+        
+        <tr>
+            <td>情报分析员</td>
+            <td>73.40 秒</td>
+            <td>37865</td>
+            <td>4938</td>
+            <td>42803</td>
+        </tr>
+        
+        <tr>
+            <td>处置建议员</td>
+            <td>12.86 秒</td>
+            <td>37431</td>
+            <td>1572</td>
+            <td>39003</td>
+        </tr>
+        
+        <tr>
+            <td>主持人</td>
+            <td>65.43 秒</td>
+            <td>2728</td>
+            <td>5123</td>
+            <td>7851</td>
+        </tr>
+        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+  const reportTabs = document.querySelectorAll('.report-tab-btn');
+  const reportPanes = document.querySelectorAll('.report-pane');
+  function activateReportTab(name) {
+    reportTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.reportTab === name));
+    reportPanes.forEach(pane => pane.classList.toggle('active', pane.dataset.reportPane === name));
+    const pane = document.querySelector('.report-pane[data-report-pane="' + name + '"]');
+    if (pane) pane.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  reportTabs.forEach(btn => btn.addEventListener('click', () => activateReportTab(btn.dataset.reportTab)));
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 import subprocess
@@ -15,6 +16,8 @@ from SentinelGuard.analyzers.apk_deep_analyzer import APKDeepAnalyzer
 from SentinelGuard.report import _deduplicate_semantic_findings
 from SentinelGuard.scoring import combine_apk_scores, risk_level_from_score, score_from_findings
 from SentinelGuard.state import AnalysisRuntimeConfig, DetectionFinding, DetectionReport
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -92,6 +95,7 @@ class APKDynamicAnalyzer:
         self.enable_deep_model = enable_deep_model
 
     def analyze(self, static_report: DetectionReport, progress_callback=None) -> Dict[str, Any]:
+        overall_start = time.perf_counter()
         apk_ir = static_report.target_ir.apk
         if not apk_ir:
             raise ApkDynamicAnalyzerError("缺少 APK 预检信息，无法执行动态分析。")
@@ -196,6 +200,47 @@ class APKDynamicAnalyzer:
             model_result = self._analyze_dynamic_context(static_report, dynamic_context, progress_callback=progress_callback)
         else:
             model_result = self._build_non_deep_context_result(static_report, dynamic_context)
+
+        total_elapsed = time.perf_counter() - overall_start
+        stats = model_result.get("stats") if isinstance(model_result, dict) else None
+        if not isinstance(stats, dict):
+            stats = {
+                "total_elapsed": total_elapsed,
+                "roles": {},
+            }
+        else:
+            stats = dict(stats)
+            stats.setdefault("total_elapsed", total_elapsed)
+
+        LOGGER.info("APK 动态分析完成：总耗时 %.2fs", total_elapsed)
+        if stats.get("roles"):
+            total_prompt_tokens = 0
+            total_completion_tokens = 0
+            total_tokens = 0
+            for role, info in stats.get("roles", {}).items():
+                usage = (info or {}).get("usage") or {}
+                elapsed = float((info or {}).get("elapsed") or 0.0)
+                prompt_tokens = int(usage.get("prompt_tokens") or 0)
+                completion_tokens = int(usage.get("completion_tokens") or 0)
+                role_total_tokens = int(usage.get("total_tokens") or 0)
+                total_prompt_tokens += prompt_tokens
+                total_completion_tokens += completion_tokens
+                total_tokens += role_total_tokens
+                LOGGER.info(
+                    "APK 动态分析角色统计 [%s]：elapsed=%.2fs prompt=%s completion=%s total=%s",
+                    role,
+                    elapsed,
+                    prompt_tokens,
+                    completion_tokens,
+                    role_total_tokens,
+                )
+            LOGGER.info(
+                "APK 动态分析 token 汇总：prompt=%s completion=%s total=%s",
+                total_prompt_tokens,
+                total_completion_tokens,
+                total_tokens,
+            )
+        model_result["stats"] = stats
         model_findings = model_result.get("additional_findings", [])
         if not self.enable_deep_model:
             # _build_non_deep_context_result 已经返回了完整的 findings 和正确的 score
@@ -214,6 +259,7 @@ class APKDynamicAnalyzer:
                 "score": model_result.get("score", 0),
                 "evidence_score": model_result.get("evidence_score", 0),
                 "deep_score": None,
+                "stats": stats,
             }
 
         # ===== 开启深度研判时，保持原有逻辑 =====
@@ -247,6 +293,7 @@ class APKDynamicAnalyzer:
             ),
             "evidence_score": score_from_findings(merged_findings),
             "deep_score": model_result.get("deep_score"),
+            "stats": stats,
         }
 
     def _ensure_adb_available(self) -> None:

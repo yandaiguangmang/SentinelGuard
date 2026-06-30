@@ -1549,7 +1549,7 @@ def _build_discussion_timeline(report: DetectionReport) -> str:
         model_name = str(report.expert_models.get(role, "unknown") or "unknown")
         reason = _role_summary_reason(role, opinion if opinion != "无" else "")
         if reason == "已返回独立研判结果。":
-            reason = "—"
+            reason = f"{role_map.get(role, '')}当前输出已纳入协同研判汇总，供主持人综合判断。"
         items.append(
             f"""
             <div class="timeline-item">

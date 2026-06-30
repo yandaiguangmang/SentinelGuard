@@ -189,6 +189,7 @@ def run_deep_url_detection_from_static(static_report: DetectionReport, persist_r
         deep_score=deep_score,
         findings=merged_findings,
         expert_opinions=deep_result["expert_opinions"],
+        stats=deep_result.get("stats"),
         expert_models=expert_models,
         deep_summary=deep_result.get("deep_summary", ""),
         redirect_chain=static_report.redirect_chain,
@@ -263,6 +264,7 @@ def _build_apk_deep_report(
             expert_opinions=static_report.expert_opinions,
             expert_models=_build_expert_model_map(),
             deep_summary=f"APK 深度研判失败，已降级到仲裁置信度评分。原因：{exc}",
+            stats={},
             redirect_chain=static_report.redirect_chain,
             page_summary=static_report.page_summary,
             apk_summary=static_report.apk_summary,
@@ -304,6 +306,7 @@ def _build_apk_deep_report(
         expert_opinions=result.get("expert_opinions", static_report.expert_opinions),
         expert_models=result.get("expert_models", _build_expert_model_map()),
         deep_summary=result.get("deep_summary", ""),
+        stats=result.get("stats"),
         redirect_chain=static_report.redirect_chain,
         page_summary=static_report.page_summary,
         screenshots=static_report.screenshots,
@@ -532,6 +535,7 @@ def _sentence(prefix: str, items: List[str]) -> str:
     if not items:
         return f"{prefix}暂未发现明显异常。"
     return f"{prefix}：" + "、".join(items[:6]) + "。"
+
 
 
 

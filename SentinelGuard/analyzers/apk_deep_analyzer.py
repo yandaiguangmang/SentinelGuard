@@ -4,6 +4,7 @@ import inspect
 import json
 import re
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
 
@@ -138,9 +139,11 @@ class APKDeepAnalyzer:
         self.robustness_validator = RobustnessValidator()
 
     def analyze(self, static_report: DetectionReport, progress_callback=None) -> Dict[str, Any]:
+        overall_start = time.perf_counter()
         base_payload = self._build_payload(static_report)
 
         role_outputs: Dict[str, Dict[str, Any]] = {}
+        role_stats: Dict[str, Dict[str, Any]] = {}
         if progress_callback:
             progress_callback("deep_prepare", "正在准备 APK 深度研判", 72)
 
@@ -174,8 +177,16 @@ class APKDeepAnalyzer:
                         float(role_result.get("elapsed") or 0.0),
                     )
                     role_outputs[role] = self._build_fallback_role_output(role, static_report, role_result.get("error"))
+                    role_stats[role] = {
+                        "elapsed": float(role_result.get("elapsed") or 0.0),
+                        "usage": role_result.get("usage"),
+                    }
                     continue
                 role_outputs[role] = self._normalize_role_output(role, role_result)
+                role_stats[role] = {
+                    "elapsed": float(role_result.get("elapsed") or 0.0),
+                    "usage": role_result.get("usage"),
+                }
 
         if progress_callback:
             progress_callback("deep_advice", "正在进行处置建议分析", 85)
@@ -200,6 +211,10 @@ class APKDeepAnalyzer:
                 role_outputs[advice_role] = self._normalize_role_output(advice_role, advice_result)
             except Exception as exc:
                 role_outputs[advice_role] = self._build_fallback_role_output(advice_role, static_report, exc)
+        role_stats[advice_role] = {
+            "elapsed": float(advice_result.get("elapsed") or 0.0),
+            "usage": advice_result.get("usage"),
+        }
 
         if progress_callback:
             progress_callback("deep_parallel_batch1_done", "静态/行为/情报分析已完成，处置建议员已接入", 83)
@@ -227,6 +242,10 @@ class APKDeepAnalyzer:
         LOGGER.info("APK 深度研判开始执行角色：主持人")
         host_payload = self._build_host_payload(static_report, role_outputs)
         host_result = self._call_role_model("主持人", host_payload)
+        role_stats["主持人"] = {
+            "elapsed": float(host_result.get("elapsed") or 0.0),
+            "usage": host_result.get("usage"),
+        }
         if not host_result.get("success"):
             LOGGER.error(
                 "APK 深度研判主持人调用失败：%s（elapsed=%.3fs）",
@@ -244,9 +263,9 @@ class APKDeepAnalyzer:
         try:
             if progress_callback:
                 progress_callback("deep_done", "APK 深度研判已完成", 96)
-            return self._normalize_result(host_result, static_report, role_outputs, arbitration_result, robustness_result, role_scores)
+            result = self._normalize_result(host_result, static_report, role_outputs, arbitration_result, robustness_result, role_scores)
         except Exception as exc:
-            return self._build_host_fallback_result(
+            result = self._build_host_fallback_result(
                 static_report=static_report,
                 role_outputs=role_outputs,
                 arbitration_result=arbitration_result,
@@ -254,6 +273,40 @@ class APKDeepAnalyzer:
                 role_scores=role_scores,
                 error=exc,
             )
+
+        total_elapsed = time.perf_counter() - overall_start
+        result["stats"] = {
+            "total_elapsed": total_elapsed,
+            "roles": role_stats,
+        }
+
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        total_tokens = 0
+        for role_info in role_stats.values():
+            usage = role_info.get("usage") or {}
+            total_prompt_tokens += int(usage.get("prompt_tokens") or 0)
+            total_completion_tokens += int(usage.get("completion_tokens") or 0)
+            total_tokens += int(usage.get("total_tokens") or 0)
+
+        LOGGER.info(
+            "APK 深度研判完成：总耗时 %.2fs，token 消耗 prompt=%s completion=%s total=%s",
+            total_elapsed,
+            total_prompt_tokens,
+            total_completion_tokens,
+            total_tokens,
+        )
+        for role, info in role_stats.items():
+            usage = info.get("usage") or {}
+            LOGGER.info(
+                "APK 深度研判角色统计 [%s]：elapsed=%.2fs prompt=%s completion=%s total=%s",
+                role,
+                float(info.get("elapsed") or 0.0),
+                usage.get("prompt_tokens", 0),
+                usage.get("completion_tokens", 0),
+                usage.get("total_tokens", 0),
+            )
+        return result
 
     def _get_role_conversation(self, role: str):
         if getattr(self.orchestrator, "agents", None) is not self.role_conversations:
